@@ -26,19 +26,19 @@ from rdm.graph.validate import validate, validate_command  # noqa: E402
 
 
 def _dhf(tmp_path: Path, *, needs=("Need1", "Need2"),
-         inputs=(("item-01-001", "Need1"), ("item-01-002", "Need2")), layout: str = "gherkin") -> Path:
+         requirements=(("item-01-001", "Need1"), ("item-01-002", "Need2")), layout: str = "gherkin") -> Path:
     """A committed repository whose spec (context ``core``, slice 01) holds the
-    user needs ``needs`` and the requirements ``inputs``, ``(item id, the need
+    user needs ``needs`` and the requirements ``requirements``, ``(item id, the need
     it addresses or None)``; and controlled documents. Returns its DHF. In
     plain Gherkin (the default) each need is a Feature, one with no
     requirement an empty one; ``layout="loyly"`` makes each an Allium surface."""
     repo = tmp_path / "proj"
     docs = repo / "dhf" / "documents"
     (docs / "design").mkdir(parents=True)
-    write_spec(repo, tuple((ident, f"{ident} text", [need] if need else []) for ident, need in inputs),
+    write_spec(repo, tuple((ident, f"{ident} text", [need] if need else []) for ident, need in requirements),
                {n: ("core", "User", n) for n in needs}, {"01": "core"}, layout=layout)
     if layout == "gherkin":
-        for need in set(needs) - {need for _, need in inputs}:
+        for need in set(needs) - {need for _, need in requirements}:
             (repo / "spec" / "core" / f"{need}.feature").write_text(f"Feature: {need}\n  {need}\n")
     (docs / "vv.md").write_text("---\nid: VVP-1\n---\n# Plan\n")
     (docs / "design" / "core.md").write_text("---\nid: SDS-1\n---\n# Core\n")
@@ -122,7 +122,7 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
     with verification_step("A requirement addressing no user need, and a run claiming no requirement, are warnings"):
         # Only a needs adapter can leave a requirement addressing no need: under plain Gherkin each sits
         # under a Feature.
-        wdhf = _dhf(tmp_path / "warn", needs=(), inputs=(("item-01-001", None),), layout="loyly")
+        wdhf = _dhf(tmp_path / "warn", needs=(), requirements=(("item-01-001", None),), layout="loyly")
         wresults = _results(tmp_path / "warn", {"item-01-001": ["passed"], "item-09-001": ["passed"]})
         warnings = {(r.label, r.message) for r in validate(project(wdhf, wresults)) if r.severity == "Warning"}
         assert ("item-01-001", "requirement addresses no user need") in warnings

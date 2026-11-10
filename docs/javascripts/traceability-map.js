@@ -15,10 +15,10 @@
     root.classList.add("rdm-map--none");
     return;
   }
-  const KIND = {need: "User need", risk: "Risk", input: "Requirement", test: "Tagged test", context: "Bounded context"};
-  const ORDER = ["need", "risk", "input", "test", "context"];
-  const LANES = [["need", "Needs · risks"], ["input", "Requirements"], ["test", "Tests"]];
-  const PART = {need: 0, risk: 0, input: 1, test: 2};
+  const KIND = {need: "User need", risk: "Risk", requirement: "Requirement", test: "Tagged test", context: "Bounded context"};
+  const ORDER = ["need", "risk", "requirement", "test", "context"];
+  const LANES = [["need", "Needs · risks"], ["requirement", "Requirements"], ["test", "Tests"]];
+  const PART = {need: 0, risk: 0, requirement: 1, test: 2};
   const FLOW = new Set(["traces to", "controlled by", "verifies"]);
   const byId = new Map(DATA.nodes.map(n => [n.id, n]));
   const ctxName = iri => (iri || "").split("context/").pop();
@@ -26,11 +26,11 @@
   const shortLabel = n => n.kind === "test" ? testName(n.label).replace(/^test_/, "").replace(/_/g, " ") : n.label;
   // A requirement no passing run verifies is a gap.
   const verified = new Set(DATA.edges.filter(e => e.rel === "verifies" && (byId.get(e.s) || {}).status === "passed").map(e => e.t));
-  const gaps = DATA.nodes.filter(n => n.kind === "input" && !verified.has(n.id));
+  const gaps = DATA.nodes.filter(n => n.kind === "requirement" && !verified.has(n.id));
 
   // Theme: Cytoscape styles take values, not CSS variables, so read the tokens and restyle on change.
   const tok = () => { const s = getComputedStyle(root); const g = k => s.getPropertyValue("--" + k).trim();
-    const o = Object.fromEntries(["bg", "surface", "sunk", "fg", "muted", "line", "edge", "need", "risk", "input", "test", "component", "context", "other",
+    const o = Object.fromEntries(["bg", "surface", "sunk", "fg", "muted", "line", "edge", "need", "risk", "requirement", "test", "component", "context", "other",
                                     "body", "mono", "lime", "nexus", "maroon", "hilite", "white", "charcoal"].map(k => [k, g(k)]));
     o.limeInk = g("lime-ink"); o.onMaroon = g("on-maroon");
     // The canvas cannot draw transparent tints, so each is mixed with the page
@@ -42,7 +42,7 @@
       const [r, g2, b, a] = m[1].split(",").map(Number);
       o[k] = "#" + [r, g2, b].map((c, i) => Math.round(c * a + base[i] * (1 - a)).toString(16).padStart(2, "0")).join("");
     }
-    o.inputInk = g("input-ink");
+    o.requirementInk = g("requirement-ink");
     return o; };
   function style(t) {
     return [
@@ -76,7 +76,7 @@
   // The whole map: every need, risk, requirement and test, left to right.
   function mapElements() {
     const els = DATA.nodes.filter(n => n.kind in PART).map(n => ({data: {id: n.id, label: shortLabel(n), kind: n.kind},
-                                      classes: n.kind === "input" && !verified.has(n.id) ? "gap" : ""}));
+                                      classes: n.kind === "requirement" && !verified.has(n.id) ? "gap" : ""}));
     DATA.edges.filter(e => FLOW.has(e.rel)).forEach((e, i) => {
       const [s, t] = e.rel === "traces to" || e.rel === "verifies" ? [e.t, e.s] : [e.s, e.t];  // always left to right
       els.push({data: {id: "f" + i, source: s, target: t, rel: e.rel}});
@@ -88,7 +88,7 @@
   const lanes = document.getElementById("lanes");
   function setLanes(list) {
     const t = tok(); lanes.innerHTML = "";
-    list.forEach(([k, text]) => { const s = document.createElement("span"); s.className = "lane"; s.textContent = text; s.style.color = (k === "input" ? t.inputInk : t[k]) || t.other;
+    list.forEach(([k, text]) => { const s = document.createElement("span"); s.className = "lane"; s.textContent = text; s.style.color = (k === "requirement" ? t.requirementInk : t[k]) || t.other;
       if (k === "test") { s.style.background = t.lime; s.style.color = t.limeInk; }  // Lime is a fill, never text on Ivory
       lanes.appendChild(s); });
   }
@@ -131,11 +131,11 @@
   function renderPanel(n, tr) {
     panel.innerHTML = "";
     const t = tok();
-    add("div", "kind", KIND[n.kind]).style.color = n.kind === "input" ? t.inputInk : t[n.kind];
+    add("div", "kind", KIND[n.kind]).style.color = n.kind === "requirement" ? t.requirementInk : t[n.kind];
     add("div", "pid", n.kind === "test" ? testName(n.label) : n.label);
     if (n.kind === "test") add("div", "hint", n.label.split("::")[0]);
     if (n.text) add("p", "ptext", n.text);
-    if (n.kind === "input") facts([["Owned by", ctxName(n.owner)], ["Verified", verified.has(n.id) ? "yes, by a passing run" : "no passing run"]]);
+    if (n.kind === "requirement") facts([["Owned by", ctxName(n.owner)], ["Verified", verified.has(n.id) ? "yes, by a passing run" : "no passing run"]]);
     if (n.kind === "test") facts([["Last run", n.status]]);
     if (n.kind === "risk") facts([["Category", n.category], ["Level", n.level], ["Residual", n.decision]]);
     const reach = {}; tr.nodes().forEach(m => { const k = m.data("kind"); if (m.id() !== n.id && k) reach[k] = (reach[k] || 0) + 1; });
@@ -189,7 +189,7 @@
     cy.elements().removeClass("lit hit").addClass("faded"); set.removeClass("faded"); set.addClass("hit");
     focusEls = set; if (set.nonempty()) cy.animate({fit: {eles: set, padding: 48}, duration: 280});
     panel.innerHTML = "";
-    add("div", "kind", "Verification gap").style.color = tok().input;
+    add("div", "kind", "Verification gap").style.color = tok().requirement;
     add("div", "pid", `${gaps.length} requirements`);
     add("p", "ptext", "No passing run of a test that claims these requirements is in the results, so the release gate would block them.");
     linkList("Requirements", gaps.slice());

@@ -58,7 +58,7 @@ def aggregate_by_id(
     """Bucket ``observations`` by declared ID and derive a status per bucket.
 
     Args:
-        declared_ids: the IDs to aggregate (e.g. the user-need registry).
+        declared_ids: the IDs to aggregate (e.g. the spec's requirement ids).
         observations: the items to fold in (test results, ...).
         ids_of: the ID(s) an observation references.
         new: build a fresh aggregate for an ID (called as ``new(uid)``).
@@ -83,8 +83,8 @@ def aggregate_by_id(
 
 class StatusReportMixin:
     """Provides ``_ids_with`` for reports whose ``by_id`` maps declared IDs to
-    aggregates carrying a ``status`` attribute. The IDs may be user needs, design
-    inputs, etc. -- the mixin is agnostic."""
+    aggregates carrying a ``status`` attribute. The IDs may be user needs,
+    requirements, etc. -- the mixin is agnostic."""
 
     by_id: dict
 

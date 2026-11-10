@@ -33,7 +33,7 @@
   /* The record's kinds, as the traceability map draws them */
   --rdm-kind-need: var(--rdm-maroon);       /* outlined */
   --rdm-kind-risk: var(--rdm-maroon);       /* filled */
-  --rdm-kind-input: var(--rdm-nexus);
+  --rdm-kind-requirement: var(--rdm-nexus);
   --rdm-kind-test: var(--rdm-lime);         /* a Lime chip, Charcoal text */
   --rdm-kind-component: var(--rdm-charcoal);
   --rdm-kind-context: var(--rdm-maroon);

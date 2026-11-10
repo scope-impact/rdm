@@ -18,9 +18,9 @@ It is written primarily for engineers working on {{device.name}}, who have the s
 
 This document applies to {{device.name}} release {{device.version}}.
 
-# Design Inputs
+# Requirements
 
-[[Design inputs are the verifiable requirements the design must satisfy (ISO 13485:2016 7.3.3, 21 CFR 820.30(c)).]]
+[[The requirements are the design inputs: the verifiable requirements the design must satisfy (ISO 13485:2016 7.3.3, 21 CFR 820.30(c)).]]
 
 TODO: Name where the spec's requirements (Gherkin scenarios tagged with ids) live and how each is verified by an acceptance test whose Allure result claims it, so `rdm story release-gate` can check every one of them against the executed results.
 

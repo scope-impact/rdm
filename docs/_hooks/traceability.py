@@ -1,7 +1,10 @@
 """MkDocs build hook: traceability from the graph, for RDM and its worked example.
 
-Before the build, run each record's acceptance tests into its Allure results,
-so the evidence is live. Then project each record into its RDF graph and
+Before the build, run RDM's acceptance tests into its Allure results, so its
+evidence is live. The worked example (Löyly's pi harness) is drawn from the
+Allure results its ``run-acceptance.sh`` left, if any: its suites need a JDK
+and the Clojure CLI and take minutes, so the build does not run them; without
+results its map shows the spec alone. Then project each record into its RDF graph and
 answer a handful of SPARQL queries: the spec's user needs and requirements,
 risks, bounded contexts, and the test runs that claim each requirement. The answers go to
 ``assets/<name>.json``, which the page of the same name draws with
@@ -22,8 +25,8 @@ from pathlib import Path
 from mkdocs.structure.files import File
 
 ROOT = Path(__file__).resolve().parents[2]
-EXAMPLE = ROOT / "examples" / "github-document-control"
-# page name -> the project whose acceptance tests run, and its DHF
+EXAMPLE = ROOT / "examples" / "loyly-pi-harness"
+# page name -> the project whose DHF the map is drawn from
 MAPS = {"traceability-map": ROOT, "example-traceability-map": EXAMPLE}
 
 
@@ -52,7 +55,7 @@ def graph_data(dhf: Path, results: Path) -> dict:
         node(r["n"], "need", r["id"], text=r["t"] or "")
     for r in q("SELECT ?n ?id ?t ?ctx WHERE { ?n a rdm:Requirement ; dcterms:identifier ?id "
                "OPTIONAL { ?n rdm:text ?t } OPTIONAL { ?n rdm:ownedBy ?ctx } }"):
-        node(r["n"], "input", r["id"], text=r["t"] or "", owner=r["ctx"])
+        node(r["n"], "requirement", r["id"], text=r["t"] or "", owner=r["ctx"])
     for r in q("SELECT ?n ?l WHERE { ?n a rdm:BoundedContext OPTIONAL { ?n rdfs:label ?l } }"):
         node(r["n"], "context", r["l"] or r["n"].split("context/")[-1])
     for r in q("""SELECT ?n ?id ?h ?lvl ?dec ?cat WHERE { ?n a rdm:Risk ; dcterms:identifier ?id
@@ -79,13 +82,12 @@ def graph_data(dhf: Path, results: Path) -> dict:
 
 
 def on_pre_build(config) -> None:
-    for name, project in MAPS.items():
-        try:
-            subprocess.run([sys.executable, "-m", "pytest", "tests/acceptance", "-q",
-                            "--clean-alluredir", "--alluredir", "dhf/allure-results"],
-                           cwd=project, capture_output=True, timeout=600)
-        except Exception:
-            pass  # the map then shows the results the record already has, or none
+    try:
+        subprocess.run([sys.executable, "-m", "pytest", "tests/acceptance", "-q",
+                        "--clean-alluredir", "--alluredir", "dhf/allure-results"],
+                       cwd=ROOT, capture_output=True, timeout=600)
+    except Exception:
+        pass  # the map then shows the results the record already has, or none
 
 
 def on_files(files, config):

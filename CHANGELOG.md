@@ -30,6 +30,12 @@
     job runs the suites and RDM's gates.
   - `rdm adopt` and `rdm init` templates describe a Gherkin spec, not only a
     Löyly one.
+  - Removed the Part 11 example (`examples/github-document-control`): Löyly's
+    pi harness is the worked example, on the docs site and in CI.
+  - The last design-input leftovers are gone: a requirement's user needs are
+    `addresses` (was `traces_to`) in `requirements()`, the verification data
+    and the verification report; the traceability map's requirement nodes are
+    kind `requirement` (was `input`).
   - Evidence is Allure results only: graded verdicts (Löyly's sealed graders)
     are not counted (ADR 0002).
   - Removed: design inputs (`design_inputs:`), the user-need registry

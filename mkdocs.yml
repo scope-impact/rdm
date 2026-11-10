@@ -116,7 +116,7 @@ nav:
           - CLI: reference/cli.md
           - API: reference/api.md
           - Glossary: reference/glossary.md
-          - "Worked example: Part 11": reference/worked-example.md
+          - "Worked example: Löyly's pi harness": reference/worked-example.md
       - 9. Changelog: revision-history.md
   - Design history (RDM on RDM):
       - Overview: dhf/README.md

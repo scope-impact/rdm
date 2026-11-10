@@ -55,11 +55,11 @@
 )
 #let code(s) = block(fill: charcoal.transparentize(94%), inset: 5pt, radius: 2pt, width: 100%, raw(s, block: true))
 #let kb(n) = if n < 1024 [#n B] else [#calc.round(n / 1024, digits: 1) KB]
-#let di-label(id) = label("di-" + id)
+#let req-label(id) = label("req-" + id)
 // An identifier that may wrap: a break opportunity after each underscore and dot.
 #let ident(s) = text(font: mono-font, size: 0.9em, s.replace("_", "_\u{200B}").replace(".", ".\u{200B}").replace("/", "/\u{200B}"))
 #let first-line(s) = s.split("\n").first()
-#let page-of(id) = context link(di-label(id), str(counter(page).at(di-label(id)).first()))
+#let page-of(id) = context link(req-label(id), str(counter(page).at(req-label(id)).first()))
 
 // Attachments the test made are shown; captured output and the copy of the
 // requirement are listed by checksum only.
@@ -178,32 +178,32 @@ request; this report is its evidence.
 #table(
   columns: (auto, auto, auto, 1fr, auto, auto), stroke: 0.4pt + charcoal.transparentize(84%), inset: 4pt,
   ..("Requirement", "User needs", "Control for", "Tests", "Result", "Page").map(h => text(weight: "bold", h)),
-  ..d.requirements.map(di => (
-    link(di-label(di.id), di.id),
-    di.traces_to.join(", "),
-    either(if di.control_for.len() > 0 { di.control_for.map(r => r.id).join(", ") }, "—"),
-    either(if di.runs.len() > 0 { di.runs.map(r => ident(r.test.split("::").last())).join(linebreak()) }, "none"),
-    badge(di.status),
-    page-of(di.id),
+  ..d.requirements.map(req => (
+    link(req-label(req.id), req.id),
+    req.addresses.join(", "),
+    either(if req.control_for.len() > 0 { req.control_for.map(r => r.id).join(", ") }, "—"),
+    either(if req.runs.len() > 0 { req.runs.map(r => ident(r.test.split("::").last())).join(linebreak()) }, "none"),
+    badge(req.status),
+    page-of(req.id),
   )).flatten(),
 )
 
 // ---------------------------------------------------------------- 5. evidence
 
-#for di in d.requirements {
+#for req in d.requirements {
   pagebreak(weak: true)
-  [#heading(level: 2, [#di.id #h(4pt) #badge(di.status)])#di-label(di.id)]
-  block(inset: (left: 8pt), stroke: (left: 2pt + maroon), di.text)
+  [#heading(level: 2, [#req.id #h(4pt) #badge(req.status)])#req-label(req.id)]
+  block(inset: (left: 8pt), stroke: (left: 2pt + maroon), req.text)
   field-table(
-    ("Acceptance criterion", if di.control_for.len() > 0 [risk-based: a risk control] else [baseline: from its user needs]),
-    ("Bounded context", di.context),
-    ("User needs", either(if di.traces_to.len() > 0 { di.traces_to.join(", ") }, "none")),
-    if di.control_for.len() > 0 { ("Control for", di.control_for.map(risk-ref).join(linebreak())) },
-    ("Verification method", [automated test tagged #di.id]),
-    ("Design outputs", either(if di.outputs.len() > 0 { di.outputs.map(raw).join(", ") }, "none declared")),
+    ("Acceptance criterion", if req.control_for.len() > 0 [risk-based: a risk control] else [baseline: from its user needs]),
+    ("Bounded context", req.context),
+    ("User needs", either(if req.addresses.len() > 0 { req.addresses.join(", ") }, "none")),
+    if req.control_for.len() > 0 { ("Control for", req.control_for.map(risk-ref).join(linebreak())) },
+    ("Verification method", [automated test tagged #req.id]),
+    ("Design outputs", either(if req.outputs.len() > 0 { req.outputs.map(raw).join(", ") }, "none declared")),
   )
-  if di.runs.len() == 0 { block(text(fill: bad, [No run of a test tagged #di.id.])) }
-  for r in di.runs {
+  if req.runs.len() == 0 { block(text(fill: bad, [No run of a test tagged #req.id.])) }
+  for r in req.runs {
     heading(level: 3, [#ident(r.test) #h(4pt) #badge(r.status)])
     field-table(
       ("Run", [#either(r.start, "start not recorded") · #either(r.duration, "duration not recorded")]),
@@ -263,4 +263,4 @@ show this report describes that evidence.
   captured output and the copy of the requirement the test run records are
   listed by checksum, not printed; both are in the results.
 - The test that verifies a requirement passing does not by itself show that
-  it proves the input; that judgement is the reviewer's, in the pull request.
+  it proves the requirement; that judgement is the reviewer's, in the pull request.

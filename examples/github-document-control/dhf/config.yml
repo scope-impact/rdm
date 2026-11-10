@@ -1,5 +1,0 @@
-md_extensions:
-  - 'rdm.md_extensions.VocabularyExtension'
-  - 'rdm.md_extensions.AuditNoteExclusionExtension'
-# The spec RDM holds this record to (relative to this DHF): the example keeps its own.
-spec: ../.pi/plan

@@ -181,7 +181,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     _passing(results, commit, dirty=True)
     _problems(results)
     report = build_report(dhf, results)
-    by_id = {di["id"]: di for di in report["requirements"]}
+    by_id = {req["id"]: req for req in report["requirements"]}
     with verification_step("otherwise it is not release-grade, and each reason is named"):
         attach("reasons", report["reasons"])
         assert report["release_grade"] is False
@@ -205,22 +205,22 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
     with verification_step("traceability: each requirement in spec order with its user needs, the risks it is a "
                            "control "
                            "for, and its tests"):
-        assert [di["id"] for di in report["requirements"]] == ["item-01-001", "item-01-002", "item-01-003",
+        assert [req["id"] for req in report["requirements"]] == ["item-01-001", "item-01-002", "item-01-003",
                                                               "item-01-010"]
-        assert by_id["item-01-001"]["traces_to"] == ["Alarm"] and by_id["item-01-001"]["context"] == "alarms"
+        assert by_id["item-01-001"]["addresses"] == ["Alarm"] and by_id["item-01-001"]["context"] == "alarms"
         assert [r["id"] for r in by_id["item-01-001"]["control_for"]] == ["RISK-7"]
         assert by_id["item-01-003"]["control_for"] == []
     with verification_step("each requirement is a baseline or a risk-based acceptance criterion; each risk it is a "
                            "control "
                            "for shows its status and residual decision, and the register's state is summarised"):
         # risk-based: a risk allocates it as a control; baseline: none does
-        assert [bool(di["control_for"]) for di in report["requirements"]] == [True, True, False, False]
+        assert [bool(req["control_for"]) for req in report["requirements"]] == [True, True, False, False]
         assert by_id["item-01-001"]["control_for"] == [{"id": "RISK-7", "status": "proposed", "residual": "acceptable"}]
         # item-01-002 failed: the residual of the risk it is a control for is not evaluated.
         assert by_id["item-01-002"]["control_for"] == [
             {"id": "RISK-9", "status": "proposed", "residual": "not evaluated"}]
         assert report["risk_register"] == {"risks": 3, "proposed": 3, "not_evaluated": 1, "policy": "proposed"}
-        assert [di["status"] for di in report["requirements"]] == ["verified", "failed", "untested", "untested"]
+        assert [req["status"] for req in report["requirements"]] == ["verified", "failed", "untested", "untested"]
     run, failed = by_id["item-01-001"]["runs"][0], by_id["item-01-002"]["runs"][0]
     with verification_step("each run: its test's file and function, result, date and duration, failure message and "
                            "trace"):
@@ -328,10 +328,10 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         linked = build_report(dhf, results)
         names = {f["name"] for f in linked["files"]}
         assert "link-attachment.txt" not in names and "e-result.json" in names
-        runs = [r for di in linked["requirements"] for r in di["runs"] if r["test"] == "test_link"]
+        runs = [r for req in linked["requirements"] for r in req["runs"] if r["test"] == "test_link"]
         assert [a["kind"] for a in runs[0]["attachments"]] == ["missing"]
-    with verification_step("every run counts, tagged with a declared input or not; an unreadable or linked result, and "
-                           "uncommitted changes to the record, are each a reason it is not release-grade"):
+    with verification_step("every run counts, tagged with a declared requirement or not; an unreadable or linked "
+                           "result, and uncommitted changes to the record, are each a reason it is not release-grade"):
         untagged = clean_results / "u-result.json"
         untagged.write_text(json.dumps({"name": "test_untagged", "status": "failed",
                                         "labels": [{"name": "commit", "value": clean_commit}]}))

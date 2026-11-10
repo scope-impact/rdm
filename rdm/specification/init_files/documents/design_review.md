@@ -6,9 +6,9 @@ title: Design Review
 
 # Purpose
 
-This document records the **design review(s)** for {{ device.name }} software. A design review is a documented, comprehensive, and systematic examination of the design to evaluate the adequacy of the design inputs and the design's ability to meet them, and to identify problems.
+This document records the **design review(s)** for {{ device.name }} software. A design review is a documented, comprehensive, and systematic examination of the design to evaluate the adequacy of the requirements (the design inputs) and the design's ability to meet them, and to identify problems.
 
-A design review of the design inputs (the requirements of the product's spec: its Gherkin scenarios tagged with ids) must be conducted and approved *before* design work transitions into backlog/implementation tasks.
+A design review of the requirements (the product's spec: its Gherkin scenarios tagged with ids; the design inputs of 21 CFR 820.30(c)) must be conducted and approved *before* design work transitions into backlog/implementation tasks.
 
 [[Design reviews satisfy ISO 13485:2016 7.3.5 and 21 CFR 820.30(e). Each review must include participants who do not have direct responsibility for the design stage being reviewed, plus any needed specialists. Results, participants, and dates must be documented.]]
 
@@ -22,11 +22,11 @@ TODO: Record each design review below. Add one subsection per review. A review i
 
 ENDTODO
 
-## Design Review 1 — Design Inputs
+## Design Review 1 — Requirements
 
 **Date:** TODO
 
-**Design stage reviewed:** Design Inputs (the requirements of the product's spec)
+**Design stage reviewed:** Requirements (the product's spec)
 
 **Disposition:** TODO (Approved / Approved with actions / Rejected)
 
@@ -44,10 +44,10 @@ ENDTODO
 
 TODO: Confirm each item was examined during the review. Replace with review-specific notes and evidence.
 
-- Design inputs are complete, unambiguous, and verifiable.
-- Design inputs do not conflict with one another.
+- Requirements are complete, unambiguous, and verifiable.
+- Requirements do not conflict with one another.
 - Each requirement addresses a user need of the spec (by default, the Feature it sits under) and is verified by a test whose Allure result claims it with a `tag` label of its id (the scenario is the acceptance criterion; the spec is the source of truth).
-- Risks associated with the design inputs have been considered ({{ workflow.risk_management_file }}).
+- Risks associated with the requirements have been considered ({{ workflow.risk_management_file }}).
 - Open issues and action items have been captured below.
 
 ENDTODO

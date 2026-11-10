@@ -29,9 +29,7 @@ procedure against it:
 rdm gap part11_document_control documents/document_control_procedure.md
 ```
 
-RDM holds [its own](../dhf/documents/document_control.md) to the same checklist,
-and the [worked example](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
-is a complete project built on it.
+RDM holds [its own](../dhf/documents/document_control.md) to the same checklist.
 
 ## Your own checklists
 
@@ -57,6 +55,3 @@ clause no document references:
 ```yaml
 - run: rdm gap part11_document_control documents/document_control_procedure.md
 ```
-
-The worked example verifies one of its requirements with exactly this, including a check
-that the check does detect a gap.

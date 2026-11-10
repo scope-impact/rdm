@@ -49,7 +49,7 @@ def _state(needs=None, verified=("item-01-001",), orphans=()) -> State:
     report = VerificationReport(by_id={i: RequirementVerification(i, status=VERIFIED) for i in verified},
                                 orphan_ids=list(orphans))
     needs = {"Alarm": ["item-01-001"]} if needs is None else needs
-    return State("dhf", [{"id": "item-01-001", "traces_to": ["Alarm"]}], needs, report)
+    return State("dhf", [{"id": "item-01-001", "addresses": ["Alarm"]}], needs, report)
 
 
 def test_no_requirements_blocks() -> None:

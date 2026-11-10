@@ -153,7 +153,7 @@ def _run(result: dict, reader: _Reader, tagged: list[str]) -> dict:
               for label in result.get("labels") or [] if isinstance(label, dict)]
     commit, dirty = run_version(result)
     message, trace = _details(result)
-    requirement = {REQUIREMENT_ATTACHMENT.format(di) for di in tagged}
+    requirement = {REQUIREMENT_ATTACHMENT.format(req) for req in tagged}
     name = str(result.get("fullName") or result.get("name") or "")
     return {
         "test": test_of(name),
@@ -178,15 +178,15 @@ def _all_attachments(node: dict):
         yield from _all_attachments(step)
 
 
-def _assess(inputs: list[dict], others: list[dict], commits: list[str], record: tuple[str | None, bool],
+def _assess(requirements: list[dict], others: list[dict], commits: list[str], record: tuple[str | None, bool],
             orphans: list[str], unreadable: list[str]) -> tuple[list[str], list[dict]]:
     """The reasons the evidence is not release-grade (none: it is), and the
     anomalies. Every run counts: those of the requirements, and ``others``,
     the runs that claim no requirement of the spec."""
-    runs = [run for di in inputs for run in di["runs"]] + others
+    runs = [run for req in requirements for run in req["runs"]] + others
     record_commit, record_dirty = record
     reasons = []
-    unverified = [di["id"] for di in inputs if di["status"] != "verified"]
+    unverified = [req["id"] for req in requirements if req["status"] != "verified"]
     if unverified:
         reasons.append(f"{len(unverified)} requirement(s) not verified: {', '.join(unverified)}")
     if unreadable:
@@ -205,11 +205,11 @@ def _assess(inputs: list[dict], others: list[dict], commits: list[str], record: 
         reasons.append("the record has uncommitted changes")
 
     anomalies = []
-    for di in inputs:
-        if not di["runs"]:
-            anomalies.append({"subject": di["id"], "kind": "no run", "detail": "no run of a test tagged with it"})
-        for run in di["runs"]:
-            subject = f"{di['id']} · {run['test']}"
+    for req in requirements:
+        if not req["runs"]:
+            anomalies.append({"subject": req["id"], "kind": "no run", "detail": "no run of a test tagged with it"})
+        for run in req["runs"]:
+            subject = f"{req['id']} · {run['test']}"
             if run["status"] != "passed":
                 anomalies.append({"subject": subject, "kind": run["status"], "detail": run["message"] or ""})
             for attachment in _all_attachments(run):
@@ -251,33 +251,33 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     verification = verification or build_verification(dhf_dir, results_dir)
     status = {row["requirement"]: row for group in verification["groups"] for row in group["requirements"]}
     register, control_for, policy_state = _register(
-        dhf_dir, {di for di, row in status.items() if row["status"] == "verified"})
+        dhf_dir, {req for req, row in status.items() if row["status"] == "verified"})
 
     root = repo_root(dhf_dir)
     reader = _Reader(results_dir)
     declared = requirements(dhf_dir)
-    ids = {di["id"] for di in declared}
+    ids = {req["id"] for req in declared}
     runs: dict[str, list[dict]] = {}
     others: list[dict] = []  # runs that claim no requirement of the spec: they count too
     results, unreadable = read_results(results_dir)
     for result in sorted(results, key=lambda r: (r.get("start") or 0, str(r.get("fullName", "")))):
-        tagged = [di for di in requirement_tags(result) if di in ids]
+        tagged = [req for req in requirement_tags(result) if req in ids]
         run = _run(result, reader, tagged)
-        for di in tagged:
-            runs.setdefault(di, []).append(run)
+        for req in tagged:
+            runs.setdefault(req, []).append(run)
         if not tagged:
             others.append(run)
 
-    inputs = [{
-        "id": di["id"],
-        "text": di["text"],
-        "context": di["context"],
-        "traces_to": di["traces_to"],
-        "control_for": sorted(control_for.get(di["id"], []), key=lambda r: sort_key(r["id"])),
-        "status": status[di["id"]]["status"],
-        "outputs": status[di["id"]]["outputs"],
-        "runs": runs.get(di["id"], []),
-    } for di in declared]
+    reqs = [{
+        "id": req["id"],
+        "text": req["text"],
+        "context": req["context"],
+        "addresses": req["addresses"],
+        "control_for": sorted(control_for.get(req["id"], []), key=lambda r: sort_key(r["id"])),
+        "status": status[req["id"]]["status"],
+        "outputs": status[req["id"]]["outputs"],
+        "runs": runs.get(req["id"], []),
+    } for req in declared]
 
     record_commit = head(root)[0] if root else None
     # Uncommitted changes to the record itself: what the runs verified is in no commit.
@@ -285,8 +285,8 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     spec_files = sorted({str((spec.root / i.source.rsplit(":", 1)[0]).resolve()) for i in spec.items}) if spec else []
     record_paths = [str(dhf_dir.resolve())] + spec_files
     record_dirty = bool(root and git(root, "status", "--porcelain", "--", *record_paths))
-    commits = sorted({run["commit"] for run in [*others, *(r for di in inputs for r in di["runs"])] if run["commit"]})
-    reasons, anomalies = _assess(inputs, others, commits, (record_commit, record_dirty), verification["orphans"],
+    commits = sorted({run["commit"] for run in [*others, *(r for req in reqs for r in req["runs"])] if run["commit"]})
+    reasons, anomalies = _assess(reqs, others, commits, (record_commit, record_dirty), verification["orphans"],
                                  unreadable)
     executor, environment = read_run_facts(results_dir)
     return {
@@ -310,7 +310,7 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
         "anomalies": anomalies,
         "summary": verification["summary"],
         "left_out": {"shown": sorted(SHOWN_LABELS), "runner": sorted(RUNNER_LABELS)},
-        "requirements": inputs,
+        "requirements": reqs,
         "files": reader.files,
     }
 
@@ -337,8 +337,8 @@ def render_pdf(report: dict, results_dir: Path, output: Path) -> Path:
         workdir = Path(tmp)
         (workdir / LAYOUT).write_text((files("rdm.publishing") / LAYOUT).read_text(encoding="utf-8"), encoding="utf-8")
         (workdir / "attachments").mkdir()
-        for di in report["requirements"]:
-            for run in di["runs"]:
+        for req in report["requirements"]:
+            for run in req["runs"]:
                 for attachment in _all_attachments(run):
                     if attachment["kind"] == "image":
                         shutil.copy2(Path(results_dir) / attachment["source"], workdir / "attachments")

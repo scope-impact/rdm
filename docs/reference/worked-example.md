@@ -4,18 +4,28 @@ hide:
   - toc
 ---
 
-# Worked example: Part 11 document control
+# Worked example: Löyly's pi harness
 
-[`examples/github-document-control`](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
-is a complete project laid out as `rdm init` and `rdm adopt` lay
-one out: git and GitHub as a 21 CFR Part 11 document control system, with
-GitHub rulesets as design outputs, the pull-request approval as the
-electronic signature, a risk register whose controls are requirements of its spec,
-and RDM's reusable gates on every pull request. Its README lists where it uses
-each part of RDM.
+[`examples/loyly-pi-harness`](https://github.com/scope-impact/rdm/tree/main/examples/loyly-pi-harness)
+keeps the design history file of a real product with RDM, from outside it:
+the regeneration harness of [Löyly](https://github.com/scope-impact/loyly),
+an agentic software factory. Its spec (spec v2) holds 201 requirements as
+stamped Gherkin scenarios in six contexts, with user needs in an event
+model, Allium rules and an event storm; six clojure.test suites verify it.
+Löyly knows nothing of RDM or Allure:
 
-Its traceability, from its knowledge graph, rebuilt on every docs build from a
-live run of its acceptance tests, the same way as [RDM's own](../traceability-map.md):
+- RDM reads the spec from its `loyly` submodule (`spec:` in the example's
+  `dhf/config.yml`), its needs through the Löyly adapter.
+- `run-acceptance.sh` runs the harness's suites unchanged, with a small
+  bridge (`bridge/user.clj`) on the JVM's boot class path that writes each
+  test as an Allure result, tagged with the requirement it claims and
+  labelled with the Löyly commit it tested.
+- RDM's gates then hold the harness to its own spec: all 201 requirements
+  verified, every need addressed. CI runs it all on every change to RDM.
+
+Its README says how to run it. Its traceability, from its knowledge graph,
+the same way as [RDM's own](../traceability-map.md) (from the spec alone
+when the build has no results of its suites):
 
 <div class="rdm-map" data-src="../../assets/example-traceability-map.json">
 --8<-- "docs/_hooks/traceability_map.html"

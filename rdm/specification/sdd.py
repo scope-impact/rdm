@@ -37,12 +37,12 @@ def load_spec(dhf_dir: Path) -> Spec | None:
 
 def requirements(dhf_dir: Path, spec: Spec | None = None) -> list[dict]:
     """Every requirement in spec order: ``{id, text, rule, source, context,
-    traces_to}``, ``traces_to`` the user needs it addresses."""
+    addresses}``, ``addresses`` the user needs it addresses."""
     spec = spec if spec is not None else load_spec(dhf_dir)
     if spec is None:
         return []
     return [{"id": i.requirement, "text": i.title, "rule": i.rule, "source": i.source,
-             "context": i.context, "traces_to": spec.needs_of(i),
+             "context": i.context, "addresses": spec.needs_of(i),
              "covers": [f"{kind}.{name}" for kind, name in i.obligations]} for i in spec.items]
 
 

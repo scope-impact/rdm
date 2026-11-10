@@ -42,17 +42,17 @@ def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
             "skipped": verification.skipped,
             "tests": sorted(set(verification.tests)),
             "outputs": sorted(verification.outputs),
-            "traces_to": req["traces_to"],
+            "addresses": req["addresses"],
         }
 
     rows = {r["id"]: _row(r) for r in reqs}
     groups = []
     for need in needs:
-        members = [rows[r["id"]] for r in reqs if need.id in r["traces_to"]]
+        members = [rows[r["id"]] for r in reqs if need.id in r["addresses"]]
         if members:
             groups.append({"user_need": need.id, "text": need.text, "actors": need.actors,
                            "surfaces": need.surfaces, "requirements": members})
-    unassigned = [rows[r["id"]] for r in reqs if not r["traces_to"]]
+    unassigned = [rows[r["id"]] for r in reqs if not r["addresses"]]
     if unassigned:
         groups.append({"user_need": "(no user need)", "text": "", "actors": [], "surfaces": [],
                        "requirements": unassigned})

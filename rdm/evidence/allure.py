@@ -230,7 +230,7 @@ def reconcile(sdd_ids: set[str], results_dir: Path | None) -> VerificationReport
       - ``untested`` if no covering test ran (or only skipped/unknown).
 
     IDs referenced by tests but not declared are returned as orphans. With
-    no results directory (None), every input is untested.
+    no results directory (None), every requirement is untested.
     """
     unreadable: list[str] = []
     results = parse_results(Path(results_dir), unreadable) if results_dir is not None else []
