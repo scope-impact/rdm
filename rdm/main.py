@@ -216,14 +216,14 @@ def parse_arguments(arguments):
     story_subparsers = story_parser.add_subparsers(dest='story_command', metavar='<subcommand>')
 
     # rdm story verify
-    story_verify_help = 'generate verification data (SDD user needs x Allure results) for the DHF'
+    story_verify_help = 'generate verification data (the spec'"'"'s requirements x Allure results) for the DHF'
     story_verify_parser = story_subparsers.add_parser('verify', help=story_verify_help)
     story_verify_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     story_verify_parser.add_argument('--allure-results', help='Path to an Allure results directory')
     story_verify_parser.add_argument('-o', '--output', help='Output data file (default: verification.yml)')
 
     # rdm story release-gate
-    release_gate_help = 'block release unless every design input is verified by a passing test'
+    release_gate_help = 'block release unless every requirement of the spec is verified by a passing test'
     release_gate_parser = story_subparsers.add_parser('release-gate', help=release_gate_help)
     release_gate_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     release_gate_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
@@ -242,7 +242,7 @@ def parse_arguments(arguments):
     bundle_parser.add_argument('-o', '--output', help='output directory (default: release-evidence/)')
 
     # rdm story evidence-report
-    report_help = 'render the verification report (PDF): every run behind each design input, with its evidence'
+    report_help = 'render the verification report (PDF): every run behind each requirement, with its evidence'
     report_parser = story_subparsers.add_parser('evidence-report', help=report_help)
     report_parser.add_argument('--dhf', help='Path to DHF directory (default: dhf/)')
     report_parser.add_argument('--allure-results', help='Path to an Allure results directory (required)')
