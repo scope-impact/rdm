@@ -1,8 +1,7 @@
-"""Acceptance tests for the gap-analysis context's design inputs (see dhf/).
+"""Acceptance tests for the compliance context's requirements (.pi/spec/compliance).
 
-Each test ("live BDD") verifies a gap-analysis design
-input, tagged with `@allure.story` and its DI id, exercising the real
-`rdm/compliance/gaps.py` engine.
+Each test verifies one requirement, tagged `@allure.tag("item-05-NNN")`,
+exercising the real `rdm/compliance/gaps.py` engine.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
 
@@ -34,7 +33,7 @@ from tests.acceptance.evidence import verification_step  # noqa: E402
 @allure.tag("item-05-001")
 @allure.label("output", "rdm/compliance/gaps.py")
 def test_reports_missing_checklist_references(tmp_path: Path) -> None:
-    """DI-10: a missing required reference makes the audit exit non-zero; a fully
+    """item-05-001: a missing required reference makes the audit exit non-zero; a fully
     covered document exits zero. A reference is a delimited [[KEY]] — a bare
     prose mention does not count, and a longer key never satisfies a shorter."""
     checklist = tmp_path / "cl.txt"
@@ -131,7 +130,7 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
 @allure.tag("item-05-002")
 @allure.label("output", "rdm/compliance/checklists/")
 def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
-    """DI-11: the standard checklists ship, and a built-in name resolves its
+    """item-05-002: the standard checklists ship, and a built-in name resolves its
     includes when audited."""
     with verification_step("the built-in checklists are listed by name"):
         list_default_checklists()
@@ -186,7 +185,7 @@ def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
 @allure.tag("item-05-003")
 @allure.label("output", "rdm/compliance/gaps.py")
 def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> None:
-    """DI-12: coverage is tabulated per checklist; verbose names the missing items."""
+    """item-05-003: coverage is tabulated per checklist; verbose names the missing items."""
     checklist = tmp_path / "iso_checklist.txt"
     checklist.write_text("ISO-1 one\nISO-2 two\nISO-3 three\n")
     source = tmp_path / "process.md"
@@ -216,7 +215,7 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
 @allure.tag("item-05-004")
 @allure.label("output", "rdm/compliance/checklists/part11_document_control.txt")
 def test_rdm_claims_git_as_its_own_document_control(tmp_path: Path, capsys) -> None:
-    """DI-25: the Part 11 document-control checklist ships as a built-in, and
+    """item-05-004: the Part 11 document-control checklist ships as a built-in, and
     RDM's own document-control statement passes gap analysis against it."""
     import shutil
 

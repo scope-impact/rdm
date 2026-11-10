@@ -74,7 +74,8 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
 
     with verification_step("query: SPARQL with the prefixes predeclared"):
         error, rows = out["query"]
-        assert not error and [r["id"] for r in rows["rows"]] == ["item-01-001", "item-01-002"] and rows["truncated"] is False
+        assert not error and [r["id"] for r in rows["rows"]] == ["item-01-001", "item-01-002"]
+        assert rows["truncated"] is False
 
     with verification_step("trace a requirement: its scenario, context, source, needs, coverage and runs"):
         error, req = out["trace_req"]

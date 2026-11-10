@@ -88,6 +88,7 @@ def test_results_are_projected_in_full(tmp_path: Path) -> None:
         assert not any("tracker.example" in q.object.value or q.object.value == "alarms" for q in executions)
         assert not any("c-container" in n or "s-attachment" in n for n in nodes)  # nothing from the container
     with verification_step("item tags and output labels still link the run to its requirement and its code"):
-        assert ("exercises", P + "requirement/item-01-001") in a and ("exercisesOutput", P + "source/src/alarms.py") in a
+        assert ("exercises", P + "requirement/item-01-001") in a
+        assert ("exercisesOutput", P + "source/src/alarms.py") in a
 
 

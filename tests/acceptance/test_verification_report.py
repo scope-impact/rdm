@@ -202,7 +202,8 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             ("item-01-010", "no run"),
             ("item-01-009", "orphan tag"),
         ]
-    with verification_step("traceability: each requirement in spec order with its user needs, the risks it is a control "
+    with verification_step("traceability: each requirement in spec order with its user needs, the risks it is a "
+                           "control "
                            "for, and its tests"):
         assert [di["id"] for di in report["requirements"]] == ["item-01-001", "item-01-002", "item-01-003",
                                                               "item-01-010"]
@@ -216,7 +217,8 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert [bool(di["control_for"]) for di in report["requirements"]] == [True, True, False, False]
         assert by_id["item-01-001"]["control_for"] == [{"id": "RISK-7", "status": "proposed", "residual": "acceptable"}]
         # item-01-002 failed: the residual of the risk it is a control for is not evaluated.
-        assert by_id["item-01-002"]["control_for"] == [{"id": "RISK-9", "status": "proposed", "residual": "not evaluated"}]
+        assert by_id["item-01-002"]["control_for"] == [
+            {"id": "RISK-9", "status": "proposed", "residual": "not evaluated"}]
         assert report["risk_register"] == {"risks": 3, "proposed": 3, "not_evaluated": 1, "policy": "proposed"}
         assert [di["status"] for di in report["requirements"]] == ["verified", "failed", "untested", "untested"]
     run, failed = by_id["item-01-001"]["runs"][0], by_id["item-01-002"]["runs"][0]
@@ -265,7 +267,8 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
                          "No run of a test tagged item-01-010", "not recorded (no executor.json", __version__):
             assert expected in text, expected
         assert f"line {TEXT_LINES + 5}" not in text and "captured noise" not in text
-        assert "Not printed: requirement item-01-001" in text and "runner-vm-17" not in text and "4242-MainThread" not in text
+        assert "Not printed: requirement item-01-001" in text
+        assert "runner-vm-17" not in text and "4242-MainThread" not in text
         assert "severity: critical" not in text and "Acceptance criteria" not in text
         assert "risk-based: a risk control" in text and "baseline: from its user needs" in text
         assert "3 rating(s) are proposals no person has approved" in text and "on a proposed rating" in text

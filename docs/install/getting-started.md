@@ -24,26 +24,24 @@ It prints the next steps.
 
 ### Your first passing release gate
 
-1. Register your first user need in
-   `dhf/documents/verification_and_validation_plan.md` (`user_needs:`, an
-   `id` such as `UN-001` and its text), and replace its `TODO` markers.
-2. Declare the design inputs that refine it in a design document: a
-   Markdown file under `dhf/documents/design/` whose frontmatter has
-   `kind: design`, `context:` and `design_inputs:` (each an `id` such as
-   `DI-1`, its `text` and the needs it `traces_to`); see
-   [Design inputs and tests](../use/spec-and-tests.md).
-3. Tag the acceptance test that verifies each one with
-   `@allure.story("DI-1")`, and run the suite with Allure.
-4. Run `rdm story release-gate --dhf dhf --allure-results dhf/allure-results`.
-   It passes once every design input has a passing tagged run and every
-   user need is addressed.
-5. Open a pull request: its review by someone other than you is the
+1. Have the spec: your factory's `.pi/plan` and `.pi/spec/` in the
+   repository (or a submodule; then name its plan directory as `spec:` in
+   `dhf/config.yml`). Its stamped scenarios are your requirements, its
+   event-model screens and Allium surfaces your user needs; see
+   [The spec and its tests](../use/spec-and-tests.md).
+2. Tag the acceptance test that verifies each requirement with
+   `@allure.tag("item-01-001")` (a Gherkin runner writes the scenario's tags
+   for you), and run the suite with Allure.
+3. Run `rdm story release-gate --dhf dhf --allure-results dhf/allure-results`.
+   It passes once every requirement has a passing tagged run and every user
+   need is addressed.
+4. Open a pull request: its review by someone other than you is the
    approval. Then set `acceptance-tests` and `release-gate` to `true` in the
    CI workflow.
 
 Where an existing acceptance-level test (one that checks a requirement end
-to end) already verifies a design input, tag it with the input's id rather
-than writing a new one; unit tests stay untagged.
+to end) already verifies a scenario, tag it with the scenario's item id
+rather than writing a new one; unit tests stay untagged.
 
 ## A new project: `rdm init`
 
@@ -53,7 +51,7 @@ cd regulatory
 ```
 
 `rdm init` scaffolds a whole documentation project: the document templates
-(the design-controls set, 510(k) documents and more), data files, render
+(the IEC 62304 set, 510(k) documents and more), data files, render
 config, the Pandoc and Typst setup, a `Makefile`, a Docker setup and a
 `.gitignore`, and prints the
 next steps. Start with `data/device.yml`, your device's facts;
@@ -76,6 +74,6 @@ JetBrains Mono; Noto Sans and DejaVu Sans Mono stand in) must be installed, or
 use the Docker setup: `docker compose run rdm make pdfs` builds an image with
 all of them and the RDM release that laid the project down.
 
-Then [Authoring and rendering](../use/documents.md), [Design inputs and tests](../use/spec-and-tests.md)
+Then [Authoring and rendering](../use/documents.md), [The spec and its tests](../use/spec-and-tests.md)
 and [gap analysis](../use/gap-analysis.md). Don't use `rdm init` in a repository
 that already has code; use `rdm adopt`.

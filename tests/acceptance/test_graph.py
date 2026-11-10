@@ -170,7 +170,7 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
 @allure.tag("item-06-002")
 @allure.label("output", "rdm/graph/cli.py")
 def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
-    """DI-36: the store is replaced (never merged) on each build; queries run
+    """item-06-002: the store is replaced (never merged) on each build; queries run
     over the store or an in-memory projection; `serve` exposes the store as a
     SPARQL endpoint whose default graph is the union of the named graphs."""
     dhf, results = _record(tmp_path)
@@ -196,7 +196,8 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
         assert capsys.readouterr().out.strip() == "false"  # v2 was built without results
         assert graph_cli.graph_query_command(
             "CONSTRUCT { ?i rdm:tracesTo ?n } WHERE { ?i rdm:tracesTo ?n }", dhf_dir=dhf) == 0
-        assert "<urn:dhf:acme:requirement/item-01-001> <https://github.com/scope-impact/rdm/ns#tracesTo>" in capsys.readouterr().out
+        traced = "<urn:dhf:acme:requirement/item-01-001> <https://github.com/scope-impact/rdm/ns#tracesTo>"
+        assert traced in capsys.readouterr().out
 
     with verification_step("Query refuses SPARQL Update and SERVICE: nothing changes, nothing reaches the network"):
         for refused in ("CLEAR ALL", "SELECT * WHERE { SERVICE <http://127.0.0.1:9/x> { ?s ?p ?o } }"):
