@@ -16,7 +16,7 @@ over these documents reports those items as missing, as expected.
 
 | Part | Where | What it holds |
 |---|---|---|
-| **The spec** | `spec/<context>/<need>.feature` (outside `dhf/`) | RDM's requirements and user needs, in Gherkin: each Feature a user need, each scenario tagged `@item-NN-SSS` a requirement |
+| **The spec** | `.pi/spec/<context>/` (outside `dhf/`; `.pi/plan/` links the slices) | RDM's requirements and user needs, written the Löyly way: each accepted scenario of `spec.feature`, stamped `@item-NN-SSS`, a requirement; each event-model screen, with its Allium surface, a user need |
 | **The tests** | `tests/acceptance/` | each test claims the requirement it verifies with `@allure.tag("item-NN-SSS")` |
 | **This directory** | `dhf/` | the documents below, and generated evidence |
 

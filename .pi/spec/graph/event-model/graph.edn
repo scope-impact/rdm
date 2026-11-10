@@ -1,0 +1,26 @@
+;; .pi/spec/graph/event-model/graph.edn: the commands of the graph context and the events
+;; they produce. Allium: ../allium/graph.allium (rules GraphBuild, GraphValidate,
+;; ExplorerFile, ServeAgent).
+{:graph
+ {:commands
+  {:graph/build
+   {:description "Project the record into its named graphs and replace the store (rdm graph build). Issued by: regulatory author."
+    :grain/allium [{:spec ".pi/spec/graph/allium/graph.allium" :kind :rule :name "GraphBuild"}]
+    :produces #{:graph/graph-built}}
+   :graph/validate
+   {:description "Validate the gate shapes, and any supplied, over the projection (rdm graph validate). Issued by: regulatory author, or CI."
+    :grain/allium [{:spec ".pi/spec/graph/allium/graph.allium" :kind :rule :name "GraphValidate"}]
+    :produces #{:graph/graph-validated}}
+   :graph/explorer-file
+   {:description "Write the graph as an AWS Graph Explorer file (rdm graph explorer-file). Issued by: regulatory author."
+    :grain/allium [{:spec ".pi/spec/graph/allium/graph.allium" :kind :rule :name "ExplorerFile"}]
+    :produces #{:graph/explorer-file-written}}
+   :graph/serve-agent
+   {:description "Serve the record to an agent over stdio (rdm graph mcp). Issued by: agent harness."
+    :grain/allium [{:spec ".pi/spec/graph/allium/graph.allium" :kind :rule :name "ServeAgent"}]
+    :produces #{:graph/agent-served}}}
+  :events
+  {:graph/graph-built {:description "The record was projected and the store replaced."}
+   :graph/graph-validated {:description "The shapes were validated over the projection; each result reported."}
+   :graph/explorer-file-written {:description "The graph was written as a Graph Explorer file."}
+   :graph/agent-served {:description "An agent read the record through the read-only tools."}}}}

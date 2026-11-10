@@ -1,0 +1,21 @@
+;; .pi/spec/specification/event-model/scaffolding.edn: the commands of the specification
+;; context and the events they produce. Allium: ../allium/scaffolding.allium (rules Init,
+;; Adopt; entity ValidationRecord).
+{:specification
+ {:commands
+  {:specification/init
+   {:description "Scaffold a new documentation project into a directory that does not yet exist (rdm init). Issued by: regulatory author."
+    :grain/allium [{:spec ".pi/spec/specification/allium/scaffolding.allium" :kind :rule :name "Init"}]
+    :produces #{:specification/project-scaffolded}}
+   :specification/adopt
+   {:description "Bring an existing repository under RDM, skipping what exists (rdm adopt). Issued by: regulatory author."
+    :grain/allium [{:spec ".pi/spec/specification/allium/scaffolding.allium" :kind :rule :name "Adopt"}]
+    :produces #{:specification/repository-adopted}}
+   :specification/record-validation
+   {:description "Record a person's validation of a user need in dhf/validation, through a reviewed pull request. Issued by: reviewer."
+    :grain/allium [{:spec ".pi/spec/specification/allium/scaffolding.allium" :kind :entity :name "ValidationRecord"}]
+    :produces #{:specification/user-need-validated}}}
+  :events
+  {:specification/project-scaffolded {:description "A new documentation project was laid down from the templates."}
+   :specification/repository-adopted {:description "An existing repository was brought under RDM; what existed was skipped and reported."}
+   :specification/user-need-validated {:description "A person recorded an approved validation of a user need."}}}}

@@ -1,0 +1,128 @@
+-- allium: 3
+-- .pi/spec/risk/allium/risk.allium
+--
+-- Scope: the risk context: the risk register kept in the record (the risks of every
+-- kind: risk document's frontmatter), each risk scored only against the risk policy the
+-- project declares, and the residual decision the release gate holds a release to. The
+-- surface is the need this context is home to: risk-register (event-model/area.edn). RDM
+-- ships no default policy.
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- The spec RDM reads (specification): a risk's controls are its requirements.
+external entity Spec {}
+
+-- One executed test run (test_evidence): a control counts once it has a passing run.
+external entity TestRun {}
+
+-- The person who rates the risks and owns the register.
+external entity RiskOwnerAccount {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+-- The project's risk policy, declared once (risk_policy in a document's frontmatter).
+entity RiskPolicy {
+    source: String
+    severities: List<String>
+    probabilities: List<String>
+    levels: Map<String, List<String>>           -- one level for each severity and probability pair
+    acceptability: Map<String, acceptable | justify | unacceptable>
+    status: proposed | approved
+}
+
+-- One risk of the register, from the frontmatter of a kind: risk document.
+entity Risk {
+    id: String
+    category: safety | security
+    stride: String?                            -- a security risk's STRIDE category
+    linked: List<Risk>
+    hazard: String
+    situation: String
+    harm: String
+    severity: String
+    probability: String
+    recorded_level: String?
+    controls: List<String>                     -- requirement ids, item-NN-SSS
+    residual_severity: String?                 -- defaults to the initial severity
+    residual_probability: String?
+    accepted_by: String?
+    acceptance_rationale: String?
+    status: proposed | approved                -- the document's when the risk gives none
+    document: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Read the declared risk policy. Only a policy the project declares evaluates a risk.
+rule ReadRiskPolicy {
+    when: ReadRiskPolicy(owner, dhf)
+    -- 1. each severity and probability pair has exactly one level, and each level is
+    --    acceptable, acceptable only with a justification, or unacceptable
+    requires: well_formed(policy)
+    -- 2. no second document declares a risk policy
+    requires: count(declared_policies(dhf)) <= 1
+    ensures: RiskPolicyRead(source: policy.source)
+}
+
+------------------------------------------------------------
+-- Invariants
+------------------------------------------------------------
+
+invariant OneRiskPerId {
+    for a in Risks:
+        for b in Risks:
+            a != b implies a.id != b.id
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor RiskOwner {
+    identified_by: RiskOwnerAccount where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+-- A team can keep its risk register in the record, each risk scored from its own matrix
+-- and each control a verified requirement, and cannot release while a risk is unscored,
+-- uncontrolled, or residually unacceptable without a named acceptance.
+surface RiskRegisterDesk {
+    facing owner: RiskOwner
+    context risk: Risk
+
+    exposes:
+        risk.id
+        risk.category
+        risk.severity
+        risk.probability
+        risk.controls
+        risk.status
+
+    @guarantee RegisterReadFromFrontmatter
+        -- Every field of a risk is read from the frontmatter of a kind: risk document,
+        -- and a risk is evaluated only against the one risk policy the project declares.
+
+    @guarantee MalformedRegisterBlocks
+        -- A register or policy that cannot be evaluated as written (a missing or
+        -- duplicate id, an empty part, an unknown category, an undefined or mis-scored
+        -- level, a control that is no requirement, controls with no residual) blocks
+        -- release, naming the risk or the document.
+
+    @guarantee UncontrolledRiskBlocks
+        -- A residual not evaluated (a control with no passing test), unacceptable, or
+        -- acceptable only with a justification nobody recorded blocks release, as does
+        -- an unknown status; a proposed rating only warns.
+
+    @guarantee RisksProjectedWithShapes
+        -- The register is projected into the graph, each risk with its residual
+        -- decision, and the graph's shapes block exactly what the release gate blocks.
+}

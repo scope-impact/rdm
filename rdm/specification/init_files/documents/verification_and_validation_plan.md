@@ -13,13 +13,13 @@ This document describes the plan regarding how {{device.name}} will be verified 
 # User Needs
 
 The user needs {{device.name}} validates against, and its requirements, are
-read from its Gherkin spec: each scenario tagged with an id is a
-requirement, verified by the tests whose Allure results claim it with a
-`tag` label of that id; each Feature, by default, is a user need (an adapter
-can read richer needs, such as a Löyly spec's event-model screens). RDM finds
-the spec at `spec/` or `features/` in the repository (or a Löyly plan at
-`.pi/plan`), or wherever `spec` in the render configuration names, and the
-release gate (`rdm story release-gate`) holds the record to it.
+read from its spec, written the Löyly way in `.pi/` (`rdm init` lays down a
+skeleton): each context's `spec.feature` holds the accepted scenarios, each
+stamped with an id (`@item-NN-SSS`) and verified by the tests whose Allure
+results claim it with a `tag` label of that id; the user needs are the
+screens of each context's event model, with their Allium surfaces and the
+event-storm events behind them. The release gate (`rdm story release-gate`)
+holds the record to it.
 
 # Scope
 

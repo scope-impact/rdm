@@ -10,16 +10,22 @@ validated (does it meet the user needs and its intended use?).
 
 # The spec
 
-RDM does not hold the requirements: it reads them from the product's
-Gherkin spec, written wherever the product is specified. RDM finds it at
-`spec/` or `features/` in the repository (or a Löyly plan at `.pi/plan`), or
-wherever `spec` in `dhf/config.yml` names.
+RDM does not hold the requirements: it reads them from the product's spec,
+written the Löyly way in `.pi/` (`rdm adopt` lays down a skeleton when the
+repository has none): a plan of slices in `.pi/plan/`, each linking to a
+bounded context in `.pi/spec/<context>/`. A repository that keeps plain
+Gherkin under `spec/` or `features/`, or names its spec as `spec` in
+`dhf/config.yml`, is read the same way.
 
-- **Requirements** are the spec's scenarios tagged with an id (`@REQ-12`,
-  `@item-02-001`).
-- **User needs** are, by default, the spec's Features, each with its
-  description as the need's text; an adapter can read richer needs (a Löyly
-  spec's event-model screens and Allium surfaces).
+- **Requirements** are the accepted scenarios of each context's
+  `spec.feature`, each stamped with an id (`@item-NN-SSS`, NN its slice),
+  written as concrete Given/When/Then examples and tagged with the Allium
+  rule or guarantee they cover.
+- **User needs** are the screens of each context's event model, with the
+  Allium surfaces they link (who they face, the rules they provide, what they
+  guarantee) and the event-storm events behind them. A requirement addresses
+  the needs whose rules or guarantees its tags name. (In plain Gherkin, each
+  Feature is a need.)
 
 # Verification approach
 

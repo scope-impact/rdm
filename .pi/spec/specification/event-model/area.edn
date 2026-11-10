@@ -1,0 +1,18 @@
+;; .pi/spec/specification/event-model/area.edn
+;; Specification: a project comes under RDM (init, adopt), and validation by a person shows
+;; at release. Allium: ../allium/scaffolding.allium.
+{:specification
+ {:description "Specification: scaffolding a project, adopting a repository, and validation visible at release."
+  :screens
+  {:specification/scaffold-project
+   {:description "A regulatory author can scaffold a new compliant documentation project from a single command."
+    :grain/allium [{:spec ".pi/spec/specification/allium/scaffolding.allium" :kind :surface :name "ScaffoldProject"}]
+    :commands #{:specification/init}}
+   :specification/adopt-repository
+   {:description "An existing repository can be brought under RDM from a single command, without disturbing its current contents."
+    :grain/allium [{:spec ".pi/spec/specification/allium/scaffolding.allium" :kind :surface :name "AdoptRepository"}]
+    :commands #{:specification/adopt}}
+   :specification/validation-visible
+   {:description "A reviewer can see, at release, which user needs have no approved validation by a person."
+    :grain/allium [{:spec ".pi/spec/specification/allium/scaffolding.allium" :kind :surface :name "ValidationAtRelease"}]
+    :commands #{:specification/record-validation}}}}}

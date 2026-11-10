@@ -54,6 +54,18 @@ def test_init_scaffolds_a_project(tmp_path: Path, capsys) -> None:
         assert (docs / "design_review.md").is_file()
         assert (docs / "traceability_matrix.md").is_file()
 
+    with verification_step("the spec skeleton is laid down the Löyly way, and RDM reads it: one context, one "
+                           "user need (an event-model screen with its Allium surface), no requirement yet"):
+        from rdm.specification.spec import load
+
+        assert (project / ".pi" / "plan" / "01-core").is_symlink()
+        for rel in ("spec.feature", "drafts.feature", "allium/core.allium", "event-model/area.edn"):
+            assert (project / ".pi" / "spec" / "core" / rel).is_file(), rel
+        assert (project / ".pi" / "spec" / "event-storm.edn").is_file()
+        spec = load(project)
+        assert [n.id for n in spec.needs] == ["core/desk"] and spec.needs[0].surfaces == ["Desk"]
+        assert spec.items == [] and spec.unstamped == [] and spec.problems == []
+
 
 @allure.tag("item-01-003")
 @allure.label("output", "rdm/specification/adopt.py")
@@ -95,6 +107,19 @@ def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> No
         for entry in ("allure-results/", "dhf/data/", ".rdm/", "__pycache__/"):
             assert entry in ignored, entry
         assert (repo / "dhf" / "config.yml").is_file()
+    with verification_step("a repository with no spec gets the spec skeleton the Löyly way, which RDM reads"):
+        from rdm.specification.spec import load
+
+        assert (repo / ".pi" / "plan" / "01-core").is_symlink()
+        assert (repo / ".pi" / "spec" / "core" / "spec.feature").is_file()
+        assert [n.id for n in load(repo / "dhf").needs] == ["core/desk"]
+    with verification_step("a repository that already has a spec keeps it: no skeleton is laid beside it"):
+        gherkin = tmp_path / "gherkin"
+        (gherkin / "spec" / "core").mkdir(parents=True)
+        (gherkin / "spec" / "core" / "need.feature").write_text("Feature: A need\n")
+        capsys.readouterr()
+        assert adopt_command(str(gherkin)) == 0
+        assert not (gherkin / ".pi").exists() and "+ .pi/" not in capsys.readouterr().out
     with verification_step("an existing .gitignore is kept, and the lines to add are named; a symbolic link, "
                            "dangling or not, is never written through"):
         other = tmp_path / "other"

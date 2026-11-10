@@ -9,25 +9,28 @@ record.
 ## Needs and requirements
 
 **Spec**:
-What the product must do, as Gherkin feature files: RDM's contract with a
-spec. Where they are, and what else a spec holds, the DHF's configuration
-says (`spec:`), or an adapter for one layout (Löyly's: a plan of slices with
-Allium, an event model and an event storm). RDM reads it and never writes
-it.
+What the product must do, written the Löyly way: a plan of slices
+(`.pi/plan/`), one per bounded context, each with its accepted Gherkin
+scenarios, its Allium model and its event model, and an event storm behind
+them. RDM's contract with a spec is only Gherkin and Allure, so plain feature
+files work too (`spec:` in the DHF's configuration). RDM reads it and never
+writes it.
 _Avoid_: design inputs, SDD, the record (for the spec alone)
 
 **User need**:
-What an actor needs, as the spec captures it: by default a Gherkin Feature,
-its description the need; through an adapter, a richer source (Löyly's: an
-event-model screen with its Allium surfaces and the event-storm events
-behind it). It is validated, not verified.
+What an actor needs, as the spec captures it: a screen of a context's event
+model, with the Allium surface it links (whom it faces, the rules it
+provides, what it guarantees) and the event-storm events behind it (in plain
+Gherkin, a Feature, its description the need). It is validated, not
+verified.
 _Avoid_: user story, feature, epic, UN-n
 
 **Requirement**:
-A Gherkin scenario of the spec tagged with an id (`@REQ-12`, `@item-02-001`;
-any id-shaped tag, or the pattern the spec's configuration names): one
-acceptance criterion, accepted or not as a whole. It addresses the user need
-its needs source links it to (by default, the Feature it sits under). A test
+An accepted scenario of the spec, a concrete Given/When/Then example
+stamped with an id (`@item-02-001`; in plain Gherkin, any id-shaped tag): one
+acceptance criterion, accepted or not as a whole. It addresses the user
+needs whose Allium rules or guarantees its `@allium-…` tags cover (in plain
+Gherkin, the Feature it sits under). A test
 run claims it with an Allure `tag` label of the same id.
 _Avoid_: design input, DI-n, spec item, story, ticket, the test, sub-criterion
 

@@ -30,6 +30,18 @@
     job runs the suites and RDM's gates.
   - `rdm adopt` and `rdm init` templates describe a Gherkin spec, not only a
     Löyly one.
+  - RDM's own spec is written the Löyly way in `.pi/` (was plain Gherkin under
+    `spec/`): seven slices, one per bounded context, each with its accepted
+    scenarios as concrete Given/When/Then examples stamped `@item-NN-SSS` and
+    tagged with the Allium rule or guarantee they cover, an Allium model, and
+    an event model whose screens are the user needs; an event storm behind
+    them. The 44 requirement ids are unchanged, and each addresses the same
+    need as before; needs are now named by screen (`release/release-blocked`).
+  - `rdm init` and `rdm adopt` lay down a spec skeleton the Löyly way
+    (`.pi/plan/01-core`, `.pi/spec/core/`, `.pi/spec/event-storm.edn`); adopt
+    only when the repository has no spec yet, so a plain-Gherkin spec is kept.
+  - Fixed: the adopt `.gitignore` template was missing from the package data,
+    so `rdm adopt` from an installed wheel laid no `.gitignore`.
   - Removed the Part 11 example (`examples/github-document-control`): Löyly's
     pi harness is the worked example, on the docs site and in CI.
   - The last design-input leftovers are gone: a requirement's user needs are

@@ -5,14 +5,8 @@ md_extensions:
 
 reviews_required: True
 
-# The spec RDM holds the record to: requirements are Gherkin scenarios tagged
-# with an id, user needs by default their Features. Leave it out when the spec
-# is at spec/ or features/ (or a Löyly plan at .pi/plan) in the repository;
-# otherwise name a directory, relative to this DHF:
-# spec: ../spec
-# or a mapping (globs, the id tag's pattern, the needs source):
-# spec:
-#   features: ["../spec/**/*.feature"]
-#   exclude: ["**/drafts.feature"]
-#   id: "REQ-\\d+"
-#   needs: feature          # feature | allium (a Löyly spec's event model)
+# The spec RDM holds the record to, relative to this directory: the plan of a
+# spec written the Löyly way (rdm init lays one down in .pi/). Requirements are
+# the stamped scenarios of each slice's spec.feature; user needs the screens of
+# its event model, with their Allium surfaces and the event storm.
+spec: .pi/plan

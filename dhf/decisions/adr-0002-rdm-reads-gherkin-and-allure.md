@@ -64,9 +64,12 @@ and Allure, and nothing else is fixed.**
 - With Features as needs, a scenario addresses exactly one need, the Feature
   it sits under; a spec that needs a scenario to serve several needs uses an
   adapter (Löyly's covers them by the Allium rules and guarantees it tags).
-- RDM's own record follows the same model: its spec is plain Gherkin under
-  `spec/`, its tests claim requirements with `@allure.tag("item-NN-SSS")`,
-  and its risk controls name requirement ids. Against Löyly's `spec-v2`, the
+- RDM's own record follows the same model: its spec is written the Löyly
+  way in `.pi/` (stamped Given/When/Then scenarios, Allium surfaces, event
+  model, event storm), which `rdm init` and `rdm adopt` also lay down for a
+  new spec; its tests claim requirements with `@allure.tag("item-NN-SSS")`,
+  and its risk controls name requirement ids. Plain Gherkin stays supported:
+  the contract is still only Gherkin and Allure. Against Löyly's `spec-v2`, the
   adapter reads 201 requirements, Löyly's own checklist.
 - Breaking for projects on the old model: their design inputs become tagged
   scenarios, their user needs Features, their story tags Allure `tag` labels.

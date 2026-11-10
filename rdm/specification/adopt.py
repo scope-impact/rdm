@@ -6,8 +6,11 @@ already has code: the DHF skeleton (V&V plan, traceability-matrix template,
 render config, README) and a CI workflow that runs RDM's gates. The
 requirements and user needs are the product's spec, which RDM reads.
 
-Existing files are skipped, never overwritten — adoption must not disturb the
-repository it is protecting, and re-running is safe (idempotent).
+When the repository holds no spec yet, it also lays down a spec skeleton the
+Löyly way (``.pi/plan`` and ``.pi/spec``, ``rdm.specification.spec_scaffold``);
+a repository that already has one keeps it. Existing files are skipped, never
+overwritten — adoption must not disturb the repository it is protecting, and
+re-running is safe (idempotent).
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ from importlib.resources import as_file, files
 from pathlib import Path
 
 from rdm.kernel.version import release_version
+from rdm.specification.spec_scaffold import has_spec, lay_spec
 
 # A template that names RDM's own version is pinned to the RDM that adopts:
 # the CI workflow calls RDM's reusable gates at this release (item-04-004).
@@ -24,8 +28,9 @@ _VERSION_TOKEN = "{rdm_version}"
 
 NEXT_STEPS = """\
 Next steps:
-  1. Point RDM at your spec: spec/ or features/ (Gherkin), a Löyly-shaped spec at .pi/plan,
-     or `spec:` in dhf/config.yml
+  1. Write your spec: the skeleton at .pi/spec/core (accepted scenarios in spec.feature,
+     each stamped @item-01-SSS; user needs as Allium surfaces and event-model screens), or keep
+     the spec you have (spec/ or features/ in Gherkin, or `spec:` in dhf/config.yml)
   2. Have each acceptance test claim its requirement with an Allure `tag` label of its id
      (a Gherkin runner writes a scenario's tags as such labels; in pytest, @allure.tag("<id>"))
   3. Set test-command, acceptance-tests and release-gate in
@@ -57,6 +62,10 @@ def adopt(target: Path) -> tuple[list[str], list[str]]:
     """Lay the control surface into ``target``; return (copied, skipped)."""
     copied: list[str] = []
     skipped: list[str] = []
+    if not has_spec(target):
+        laid, kept = lay_spec(target)
+        copied += laid
+        skipped += kept
 
     adopt_ref = files("rdm.specification") / "adopt_files"
     with as_file(adopt_ref) as adopt_root:

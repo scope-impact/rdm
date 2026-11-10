@@ -43,10 +43,13 @@ from `spec:` in `dhf/config.yml`, or an adapter (`rdm/specification/loyly.py`
 reads Löyly's layout and its Allium/event-model/event-storm needs; the
 `loyly/` submodule on `spec-v2` is a real spec to read).
 
-- **RDM's own spec** — plain Gherkin under `spec/<context>/<need>.feature`:
-  each Feature is a user need (its description the need's text), each
-  scenario tagged `@item-NN-SSS` a requirement. Read by
-  `rdm/specification/gherkin.py` and `spec.py`.
+- **RDM's own spec** — written the Löyly way in `.pi/`: `.pi/plan/NN-<context>`
+  links each slice to `.pi/spec/<context>/`, whose `spec.feature` holds the
+  accepted scenarios (concrete Given/When/Then, each stamped `@item-NN-SSS`: a
+  requirement, tagged with the Allium rule or guarantee it covers); the user
+  needs are the event-model screens (`event-model/area.edn`), each linked to an
+  Allium surface (`allium/`), with the event storm (`.pi/spec/event-storm.edn`)
+  behind them. Read by `rdm/specification/loyly.py` over `gherkin.py`.
 - **The rest of the record** — `dhf/`: the design documents (one per context,
   design output only), the risk policy and register (`controls:` name
   requirement ids), the V&V plan, validation records, document control.

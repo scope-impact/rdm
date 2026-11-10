@@ -11,7 +11,6 @@ Skips cleanly if allure-pytest is not installed.
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -123,43 +122,3 @@ def test_markdown_post_processing() -> None:
         assert render_from_string(nested, config=both) == nested
     with verification_step("a note still open at the paragraph's end is kept as text"):
         assert render_from_string("Stray [[ here\n\nNext.", config=both) == "Stray [[ here\n\nNext.\n"
-
-
-FAKE_VIEWS = ("C1", "C3_core")
-FAKE_STRUCTURIZR = """
-import json, sys
-from pathlib import Path
-args = sys.argv[1:]
-workspace, fmt, out = (args[args.index(flag) + 1] for flag in ("-w", "-f", "-o"))
-if "BROKEN" in Path(workspace).read_text():
-    sys.exit("Error: unexpected token at line 3")
-views = %r
-Path(out).mkdir(parents=True)
-if fmt == "json":
-    Path(out, "workspace.json").write_text(json.dumps({
-        "name": "Device", "properties": {"structurizr.dsl": "d29ya3NwYWNl"},
-        "model": {"people": [{"id": "1", "name": "Clinician"}]},
-        "views": {"systemContextViews": [{"key": views[0]}], "componentViews": [{"key": views[1]}]}}))
-else:
-    for key in views:
-        Path(out, "structurizr-" + key + ".dot").write_text('digraph { 1 [label=<<font>Design, V&V and risk</font>>] }')
-""" % (FAKE_VIEWS,)
-
-FAKE_DOT = """
-import re, sys
-source = sys.stdin.read()
-if re.search(r"&(?!(?:[a-zA-Z]+|#[0-9]+);)", source):
-    sys.exit("Error: not well-formed (invalid token)")
-label = source.split("<font>")[1].split("</font>")[0]
-print('<?xml version="1.0" encoding="UTF-8"?>')
-print("<svg xmlns='http://www.w3.org/2000/svg'><text>" + label + "</text></svg>")
-"""
-
-
-def _tool(tmp_path: Path, name: str, source: str) -> Path:
-    tool = tmp_path / name
-    tool.write_text(f"#!{sys.executable}" + source)
-    tool.chmod(0o755)
-    return tool
-
-

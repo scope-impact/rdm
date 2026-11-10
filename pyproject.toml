@@ -98,12 +98,14 @@ rdm = [
     "specification/init_files/images/uimockups/*",
     "specification/init_files/documents/*",
     "specification/init_files/documents/510k/*",
-    "specification/hook_files/*",
-    "specification/adopt_files/.claude/*",
+    "specification/adopt_files/gitignore",
     "specification/adopt_files/.github/workflows/*",
-    "specification/adopt_files/.githooks/*",
     "specification/adopt_files/dhf/*",
-    "specification/adopt_files/dhf/documents/*"
+    "specification/adopt_files/dhf/documents/*",
+    "specification/spec_files/spec/*",
+    "specification/spec_files/spec/core/*",
+    "specification/spec_files/spec/core/allium/*",
+    "specification/spec_files/spec/core/event-model/*"
 ]
 
 [tool.ruff]

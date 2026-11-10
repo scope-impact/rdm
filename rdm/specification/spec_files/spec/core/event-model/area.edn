@@ -1,0 +1,16 @@
+;; .pi/spec/core/event-model/area.edn: the screens of this context; each screen is a user
+;; need, linked to its Allium surface. Allium: ../allium/core.allium.
+{:core
+ {:description "TODO this context, in a sentence."
+  :screens
+  {:core/desk
+   {:description "TODO the user need: who can do what, in the user's words."
+    :grain/allium [{:spec ".pi/spec/core/allium/core.allium" :kind :surface :name "Desk"}]
+    :commands #{:core/do-something}}}
+  :commands
+  {:core/do-something
+   {:description "TODO what the command does. Issued by: user."
+    :grain/allium [{:spec ".pi/spec/core/allium/core.allium" :kind :rule :name "DoSomething"}]
+    :produces #{:core/something-done}}}
+  :events
+  {:core/something-done {:description "TODO what happened."}}}}

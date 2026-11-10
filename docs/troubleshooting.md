@@ -4,12 +4,12 @@
 
 | Message (abridged) | Cause | Fix |
 |---|---|---|
-| release-gate: *no spec found* | no feature files under `spec/` or `features/` at the repository root (nor a `.pi/plan`), and no `spec:` in `dhf/config.yml` | add the feature files, or name them as `spec:` |
-| release-gate: *scenario … carries no requirement id tag* | a scenario has no id tag | tag it (`@REQ-…`, or what your `id` pattern says); RDM never assigns ids |
+| release-gate: *no spec found* | no `.pi/plan` at the repository root (nor feature files under `spec/` or `features/`), and no `spec:` in `dhf/config.yml` | write the spec in `.pi/` (`rdm adopt` lays a skeleton), or name it as `spec:` |
+| release-gate: *scenario … carries no requirement id tag* | a scenario of a `spec.feature` has no id | stamp it (`@item-NN-SSS`), or move it to `drafts.feature` until it is accepted; RDM never assigns ids |
 | release-gate: *… tags more than one scenario* | one id on two scenarios | give one of them a new id |
 | release-gate: *requirement … not verified by any passing Allure test* | no passing run carries the tag | write or tag the test (`@allure.tag("<id>")`), and rerun the acceptance suite |
 | release-gate: *requirement … FAILED verification* | a run tagged with it failed | fix the implementation, or the test |
-| release-gate: *user need … is addressed by no requirement* | a Feature holds no tagged scenario (with the Löyly adapter: no scenario covers the need's rules or guarantees) | add or tag a scenario for it |
+| release-gate: *user need … is addressed by no requirement* | no scenario's `@allium-…` tags cover the need's rules or guarantees (in plain Gherkin: its Feature holds no tagged scenario) | tag the scenario that serves it, or add one |
 | release-gate: *no risk_policy is declared* | the register has no acceptability criteria | declare a `risk_policy` |
 | release-gate: *risk … residual not evaluated* | a control's tagged test has no passing run | make that test pass |
 | release-gate: *needs an acceptance* or *unacceptable residual* | the residual risk is above what the policy accepts | strengthen the control, or record who accepted the residual and why |

@@ -24,14 +24,15 @@ It prints the next steps.
 
 ### Your first passing release gate
 
-1. Have the spec: Gherkin feature files under `spec/` or `features/` at the
-   repository root (anywhere else, name them as `spec:` in
-   `dhf/config.yml`). Each scenario tagged with an id (`@REQ-1`) is a
-   requirement; each Feature is a user need. See
+1. Write the spec in the skeleton `rdm adopt` laid down in `.pi/` (the
+   Löyly way; a repository that already had plain Gherkin under `spec/` or
+   `features/` keeps it). Each accepted scenario in a context's
+   `spec.feature`, stamped `@item-01-001`, is a requirement; each screen of
+   its event model, linked to an Allium surface, is a user need. See
    [The spec and its tests](../use/spec-and-tests.md).
 2. Tag the acceptance test that verifies each requirement with
-   `@allure.tag("REQ-1")` (a Gherkin runner writes the scenario's tags for
-   you), and run the suite with Allure.
+   `@allure.tag("item-01-001")` (a Gherkin runner writes the scenario's tags
+   for you), and run the suite with Allure.
 3. Run `rdm story release-gate --dhf dhf --allure-results dhf/allure-results`.
    It passes once every requirement has a passing tagged run and every user
    need is addressed.

@@ -65,9 +65,9 @@ flowchart LR
 
 | Entity | Declared in | Id | Written there |
 | --- | --- | --- | --- |
-| **Bounded context** | a directory of feature files below the spec's root (`spec/alarms/`) | the directory name | its feature files |
-| **Requirement** | a scenario tagged with an id | the id tag (`REQ-12`, `item-02-001`) | its title, its `Rule:`, its other tags |
-| **User need** | a `Feature` (or what a needs adapter reads, see [adapters](../use/spec-and-tests.md#adapters-loylys-layout)) | the Feature's title | its description: the need's text |
+| **Bounded context** | a slice of the plan (`.pi/plan/01-alarms`, linking `.pi/spec/alarms/`) | the context's directory name | its `spec.feature`, Allium and event model |
+| **Requirement** | an accepted scenario of a context's `spec.feature`, stamped with an id | the id tag (`item-02-001`) | its Given/When/Then, its title, its `Rule:`, its `@allium-…` tags |
+| **User need** | a screen of a context's event model, linked to its Allium surface (in plain Gherkin, a `Feature`; see [user needs](../use/spec-and-tests.md#user-needs-screens-and-surfaces)) | the screen's key (`alarms/monitor`) | its description: the need's text; the surface's actor, rules and guarantees |
 | **Controlled document** | any Markdown file in the DHF with a frontmatter `id` | its `id` | `title`, `revision`, `references:` (documents it relies on), checklist references (`[[KEY]]`) |
 | **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (requirement ids), residual, acceptance |
 | **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
@@ -95,8 +95,8 @@ how the spec is laid out: [The spec and its tests](../use/spec-and-tests.md).
 ```mermaid
 flowchart TD
     subgraph repo["your product's repository"]
-        subgraph spec["the spec — Gherkin, by you or a factory"]
-            PLAN["spec/**/*.feature<br>tagged Gherkin scenarios"]
+        subgraph spec["the spec — the Löyly way, by you or a factory"]
+            PLAN[".pi/spec/&lt;context&gt;/<br>stamped scenarios · Allium · event model"]
         end
         subgraph record["the rest of the record — controlled"]
             RISKS["dhf/ risk policy, register"]
@@ -121,8 +121,9 @@ outside the record: [Plan vs. record](plan-vs-record.md).
 ## What RDM depends on
 
 1. a git repository;
-2. a spec as Gherkin feature files (`spec/` or `features/`, or `spec:` in
-   `dhf/config.yml`) and a design history file (`dhf/`);
+2. a spec in Gherkin, written the Löyly way in `.pi/` (or plain feature
+   files under `spec/` or `features/`, or `spec:` in `dhf/config.yml`) and a
+   design history file (`dhf/`);
 3. Allure results from running the acceptance tests.
 
 Nothing about how the work was planned, which tracker is used, or who (or

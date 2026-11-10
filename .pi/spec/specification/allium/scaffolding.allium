@@ -1,0 +1,136 @@
+-- allium: 3
+-- .pi/spec/specification/allium/scaffolding.allium
+--
+-- Scope: the specification context: how a project comes under RDM (rdm init for a new
+-- one, rdm adopt for an existing repository) and how validation by a person shows at
+-- release. Reading the spec itself is guaranteed on the surfaces of the contexts whose
+-- needs it serves (publishing: CompileDhf; release: TraceVerification). The surfaces
+-- here are the needs this context is home to: scaffold-project, adopt-repository,
+-- validation-visible (event-model/area.edn).
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- The person who keeps the record.
+external entity AuthorAccount {}
+
+-- The person who reviews a release and validates a user need.
+external entity ReviewerAccount {}
+
+-- A user need of the spec (read from the source the configuration names).
+external entity UserNeed {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+-- A new documentation project laid down by rdm init.
+-- A spec skeleton written the Löyly way: .pi/plan/01-core linking .pi/spec/core, with its
+-- spec.feature, drafts.feature, Allium, event model and the event storm.
+entity SpecSkeleton {
+    root: String
+}
+
+entity Project {
+    directory: String
+    templates: List<String>
+}
+
+-- An existing repository brought under RDM by rdm adopt.
+entity Adoption {
+    repository: String
+    laid_down: List<String>
+    skipped: List<String>
+}
+
+-- A person's validation of one user need: dhf/validation/<name>-validation.json.
+entity ValidationRecord {
+    user_need: UserNeed
+    disposition: String
+    reviewer: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Scaffold a new documentation project from the shipped templates.
+rule Init {
+    when: Init(author, directory)
+    -- 1. the directory does not yet exist: init never writes into an existing one
+    requires: not exists directory
+    ensures:
+        Project.created(directory: directory)
+        -- with a spec skeleton written the Löyly way: one slice, one context, one need
+        SpecSkeleton.created(root: directory)
+        ProjectScaffolded(directory: directory)
+}
+
+-- Bring an existing repository under RDM: the DHF skeleton, the CI gate workflow and a
+-- .gitignore of what RDM generates. A destination that exists, a symbolic link
+-- included, is skipped and reported, never overwritten or written through.
+rule Adopt {
+    when: Adopt(author, repository)
+    ensures:
+        Adoption.created(repository: repository)
+        -- a repository that keeps a spec keeps it; one with none gets the skeleton
+        if not has_spec(repository): SpecSkeleton.created(root: repository)
+        RepositoryAdopted(repository: repository)
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor RegulatoryAuthor {
+    identified_by: AuthorAccount where true
+}
+
+actor Reviewer {
+    identified_by: ReviewerAccount where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+-- A regulatory author can scaffold a new compliant documentation project from a single
+-- command.
+surface ScaffoldProject {
+    facing author: RegulatoryAuthor
+    context project: Project
+
+    provides:
+        Init(author, directory)
+}
+
+-- An existing repository can be brought under RDM from a single command, without
+-- disturbing its current contents.
+surface AdoptRepository {
+    facing author: RegulatoryAuthor
+    context adoption: Adoption
+
+    provides:
+        Adopt(author, repository)
+
+    @guarantee GatesReusableInCi
+        -- RDM's gates run in the adopted repository's CI from RDM's reusable workflow and
+        -- actions, installed from the one RDM revision the caller pins.
+}
+
+-- A reviewer can see, at release, which user needs have no approved validation by a
+-- person.
+surface ValidationAtRelease {
+    facing reviewer: Reviewer
+    context record: ValidationRecord
+
+    exposes:
+        record.user_need
+        record.disposition
+        record.reviewer
+
+    @guarantee UnvalidatedNeedsNamedAtRelease
+        -- The release gate names, as a warning that never blocks, each user need with no
+        -- approved validation record naming its reviewer.
+}

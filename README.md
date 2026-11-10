@@ -82,8 +82,10 @@ extra) or install them natively (`brew install pandoc typst`).
 rdm init                     # a new project: a DHF skeleton and document templates in dhf/
 rdm adopt .                  # or an existing repository: never overwrites a file
 
-# The spec: Gherkin under spec/ (or features/), each scenario tagged with an id;
-# tests claim requirements with @allure.tag("REQ-12") or a Gherkin runner's tags
+# The spec, the Löyly way, in .pi/ (both commands lay a skeleton): stamped scenarios in
+# .pi/spec/<context>/spec.feature, user needs as event-model screens and Allium surfaces
+# (plain Gherkin under spec/ or features/ works too); tests claim requirements with
+# @allure.tag("item-01-001") or a Gherkin runner's tags
 
 # The gates, as CI runs them (the tests need pytest and allure-pytest)
 pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results

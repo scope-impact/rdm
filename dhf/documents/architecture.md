@@ -32,7 +32,8 @@ regulatory documents, and builds it all into a read-only graph that people
 and agents query. It never authors the spec (ADR 0002).
 
 This document holds **design only**: RDM's own requirements and user needs
-are its spec, plain Gherkin under `spec/`, read like any project's.
+are its spec, written the Löyly way in `.pi/` (a slice of `.pi/plan/` per
+bounded context), read like any project's.
 
 ## The four parts
 
@@ -66,7 +67,7 @@ released) are not contexts. The code of each context is in the frontmatter
 
 | Part | Context | Design document | Its language | Package |
 |------|---------|-----------------|--------------|---------|
-| Record | `specification` (core) | `design/specification.md` | spec, Feature, scenario, requirement, user need | `rdm/specification/`: the Gherkin reader, the spec's configuration, the Löyly adapter, `init`, `adopt`, validation records |
+| Record | `specification` (core) | `design/specification.md` | spec, slice, scenario, requirement, user need, surface, screen | `rdm/specification/`: the Gherkin reader, the spec's configuration, the Löyly adapter, `init`, `adopt`, validation records |
 | Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/risk/` |
 | Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment, tag; Allure's words stop here | `rdm/evidence/`: Allure results; and `rdm/pytest_plugin.py` |
 | Gates | `release` | `design/release.md` | verified, release gate, finding | `rdm/release/`: the release gate, the verification data; and the reusable CI |

@@ -1,0 +1,15 @@
+;; .pi/spec/compliance/event-model/compliance.edn: the commands of the compliance context
+;; and the events they produce. Allium: ../allium/compliance.allium (rules Gap, Coverage).
+{:compliance
+ {:commands
+  {:compliance/gap
+   {:description "Report the checklist keys no document references (rdm gap). Issued by: regulatory author, or CI."
+    :grain/allium [{:spec ".pi/spec/compliance/allium/compliance.allium" :kind :rule :name "Gap"}]
+    :produces #{:compliance/gaps-reported}}
+   :compliance/coverage
+   {:description "Tabulate each checklist's coverage of the documents (rdm gap --coverage). Issued by: regulatory author."
+    :grain/allium [{:spec ".pi/spec/compliance/allium/compliance.allium" :kind :rule :name "Coverage"}]
+    :produces #{:compliance/coverage-reported}}}
+  :events
+  {:compliance/gaps-reported {:description "The checklist keys no document references were reported (none: the documents are complete)."}
+   :compliance/coverage-reported {:description "Each checklist's total, missing, covered and percent were reported."}}}}

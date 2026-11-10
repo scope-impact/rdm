@@ -3,6 +3,7 @@ from importlib.resources import files, as_file
 from pathlib import Path
 
 from rdm.kernel.version import release_version
+from rdm.specification.spec_scaffold import lay_spec
 
 NEXT_STEPS = """\
 Next steps:
@@ -11,8 +12,10 @@ Next steps:
   3. Render: cd {out} && make            (PDFs: make pdfs, needs Pandoc and Typst; Word: make docs)
   4. Check coverage: rdm gap 62304_2015_class_b {out}/documents/*.md {out}/documents/**/*.md
      (the templates already reference every clause, so a pass means referenced, not written)
-  5. Trace the requirements: point RDM at your spec (`spec:` in {out}/config.yml, or .pi/plan in the
-     repository) and run rdm story release-gate --dhf {out} --allure-results <results>\
+  5. Write the spec in {out}/.pi/spec/core (accepted scenarios in spec.feature, each stamped
+     @item-01-SSS; user needs as Allium surfaces and event-model screens), claim each requirement
+     in its test with an Allure tag label of its id, and run
+     rdm story release-gate --dhf {out} --allure-results <results>\
 """
 
 
@@ -27,6 +30,8 @@ def init(output_directory):
     # adopt pins the CI workflow to it.
     dockerfile = Path(output_directory) / 'Dockerfile'
     dockerfile.write_text(dockerfile.read_text().replace('{rdm_version}', release_version()))
+    # The spec, the Löyly way: config.yml names its plan (spec: .pi/plan).
+    lay_spec(Path(output_directory))
 
 
 def init_command(output_directory) -> int:

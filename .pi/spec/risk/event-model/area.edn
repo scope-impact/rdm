@@ -1,0 +1,11 @@
+;; .pi/spec/risk/event-model/area.edn
+;; Risk: the risk register kept in the record and scored against the declared risk
+;; policy. The release gate (release) reads it; the graph (graph) projects it.
+;; Allium: ../allium/risk.allium (surface RiskRegisterDesk).
+{:risk
+ {:description "Risk: the risk register in the record, scored against the declared risk policy, holding back a release while a risk is unscored, uncontrolled or residually unacceptable."
+  :screens
+  {:risk/risk-register
+   {:description "A team can keep its risk register in the record, each risk scored from its own matrix and each control a verified requirement, and cannot release while a risk is unscored, uncontrolled, or residually unacceptable without a named acceptance."
+    :grain/allium [{:spec ".pi/spec/risk/allium/risk.allium" :kind :surface :name "RiskRegisterDesk"}]
+    :queries #{:risk/risks}}}}}

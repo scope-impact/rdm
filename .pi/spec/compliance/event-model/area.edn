@@ -1,0 +1,10 @@
+;; .pi/spec/compliance/event-model/area.edn
+;; Compliance: gap analysis and coverage of a document set against the checklists of the
+;; applicable standards. Allium: ../allium/compliance.allium.
+{:compliance
+ {:description "Compliance: gap analysis and coverage of documents against built-in or own checklists."
+  :screens
+  {:compliance/gap-analysis
+   {:description "A regulatory author can check that documents contain the references a chosen standard's checklist requires (gap analysis)."
+    :grain/allium [{:spec ".pi/spec/compliance/allium/compliance.allium" :kind :surface :name "GapAnalysis"}]
+    :commands #{:compliance/gap :compliance/coverage}}}}}

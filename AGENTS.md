@@ -5,7 +5,8 @@ analysis against compliance checklists and a traceability graph built from
 Allure results, over a spec in Gherkin.
 
 - A behaviour change is covered by a **requirement**: a scenario of RDM's own
-  spec, `spec/<context>/<need>.feature`, tagged `@item-NN-SSS`, verified by a
+  spec, written the Löyly way (`.pi/spec/<context>/spec.feature`: a concrete
+  Given/When/Then example stamped `@item-NN-SSS`), verified by a
   test tagged `@allure.tag("item-NN-SSS")` in `tests/acceptance/`. A test
   checks only what its scenario states.
 - Run the tests and the gates as CI does (`CLAUDE.md`). A reviewer other than
