@@ -1,6 +1,6 @@
 """
-Project the design record into an RDF dataset (DI-35) and load, query and
-serve it (DI-36).
+Project the design record into an RDF dataset (item-06-001) and load, query and
+serve it (item-06-002).
 
 The Markdown record stays the only authored source: this module reads what
 the gates already read and states it as quads, one named graph per source, so
@@ -10,7 +10,7 @@ a query can always tell where a fact came from:
                    contexts) and the controlled documents
 - ``executions`` — Allure results, when given
 - ``git``        — each design document's latest commit
-- ``checklists`` — requested regulatory checklists, as data (DI-37)
+- ``checklists`` — requested regulatory checklists, as data (item-06-003)
 - ``references`` — documents' ``[[…]]`` tags linked to the clauses they name
 - ``ontology``   — RDM's vocabulary (``ontology.ttl``), so browsers can label things
 
@@ -93,7 +93,7 @@ def controlled_documents(dhf: Path, root: Path) -> list[dict]:
     """Every Markdown file under the DHF with a frontmatter ``id``: its id,
     title, revision, repository-relative path and frontmatter, sorted by id.
     The traceability-matrix template is left out: it is an output, rendered
-    from the record, not part of it (DI-58)."""
+    from the record, not part of it (item-06-015)."""
     matrix = find_dhf_doc(Path(dhf), MATRIX_DOC)
     entries = []
     for md in sorted(Path(dhf).rglob("*.md")):
@@ -181,7 +181,7 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
 
 
 def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> None:
-    """DI-58: the bounded contexts a document's ``contexts`` frontmatter
+    """item-06-015: the bounded contexts a document's ``contexts`` frontmatter
     declares (each with its part), and the controlled documents its
     ``references`` frontmatter names."""
     for item in front.get("contexts") or []:
@@ -207,7 +207,7 @@ def _executions(ds: _Dataset, results_dir: Path) -> None:
 def _record_findings(ds: _Dataset, dhf: Path, results: Path | None) -> None:
     """What the release gate blocks about the whole record (a design control
     not met, no requirement, a result file that cannot be read), on the
-    record's node as the gate words it, for the shapes to block (DI-38)."""
+    record's node as the gate words it, for the shapes to block (item-06-004)."""
     from rdm.release.gate import record_findings
 
     findings = record_findings(dhf, results)
@@ -253,7 +253,7 @@ def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, o
 
 
 def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str | None:
-    """The first-parent commit of ``branch`` that brought ``sha`` in (DI-51):
+    """The first-parent commit of ``branch`` that brought ``sha`` in (item-06-011):
     ``sha`` itself when it is on that line (a direct or squash commit), else
     the oldest first-parent commit descending from it (the merge). Descent is
     walked through every parent: walked through first parents only, a merge
@@ -282,12 +282,12 @@ def _latest_commits(root: Path, paths: list[str]) -> dict[str, str]:
 def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "git"
     head = git(root, "rev-parse", "HEAD")
-    if head:  # DI-60: the commit the record was built at
+    if head:  # item-06-016: the commit the record was built at
         record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], g)
         ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
     branch = default_branch(root)
     first_parent = set((git(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
-    documents = controlled_documents(dhf, root)  # DI-35, DI-51: every controlled document
+    documents = controlled_documents(dhf, root)  # item-06-001, item-06-011: every controlled document
     latest = _latest_commits(root, [entry["path"] for entry in documents])
     landings: dict[str, str | None] = {}  # documents often share a commit
     for entry in documents:
@@ -307,7 +307,7 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
 
 
 def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
-    """The risk register (DI-45): each risk's branch, chain, scores, evaluated
+    """The risk register (item-06-008): each risk's branch, chain, scores, evaluated
     levels, residual decision, status, controls and acceptance — and the
     release gate's own findings on it (``rdm:finding`` blocks,
     ``rdm:riskWarning`` warns), which the shapes report, so the two cannot
@@ -353,7 +353,7 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
         doc_id = doc_ids.get(_rel(dhf.parent / r.document, root))
         if doc_id:
             ds.add(node, rdm("declaredIn"), ds.node("doc", doc_id), g)
-        if policy_doc:  # DI-52: the policy the risk was evaluated against
+        if policy_doc:  # item-06-012: the policy the risk was evaluated against
             ds.add(node, rdm("evaluatedAgainst"), ds.node("doc", policy_doc), g)
         for finding in found:
             if finding.risk == index or (finding.risk is None and finding.blocking):

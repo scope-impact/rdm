@@ -1,5 +1,5 @@
 """
-Allure results as RDF (DI-53, DI-54).
+Allure results as RDF (item-06-013, item-06-014).
 
 Each ``*-result.json`` becomes an ``rdm:TestRun`` (a ``prov:Activity``) with
 what counts as evidence: uuid, full name, start and end times, status and its
@@ -48,7 +48,7 @@ def _times(ds: _Dataset, node: ox.NamedNode, raw: dict) -> None:
 
 
 def _evidence(ds: _Dataset, owner: ox.NamedNode, raw: dict, scope: str, key: str = "") -> None:
-    """Attachments and (recursively) steps of a run or step (DI-53)."""
+    """Attachments and (recursively) steps of a run or step (item-06-013)."""
     for item in raw.get("attachments") or []:
         if isinstance(item, dict) and item.get("source"):
             source = str(item["source"])
@@ -96,7 +96,7 @@ def _result(ds: _Dataset, path: Path, raw: dict) -> None:
             ds.add(node, rdm("name"), str(param["name"]), GRAPH)
             ds.add(node, rdm("value"), str(param.get("value", "")), GRAPH)
             ds.add(run, rdm("parameter"), node, GRAPH)
-    tested, dirty = run_version(raw)  # DI-60: the version tested
+    tested, dirty = run_version(raw)  # item-06-016: the version tested
     if tested:
         commit = ds.thing(ds.node("commit", tested), _term(_PROV + "Activity"), tested[:7], GRAPH)
         ds.add(run, rdm("testedAt"), commit, GRAPH)

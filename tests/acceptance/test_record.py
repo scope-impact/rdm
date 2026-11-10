@@ -1,4 +1,4 @@
-"""Acceptance test for the record context's DI-29 (see dhf/).
+"""Acceptance test for the record context's item-07-008 (see dhf/).
 
 The DMR index generator: device-master-record data derived from the controlled
 documents' own frontmatter. Skips cleanly if allure-pytest is not installed.
@@ -21,7 +21,7 @@ from tests.acceptance.evidence import verification_step  # noqa: E402
 @allure.tag("item-07-008")
 @allure.label("output", "rdm/publishing/dmr.py")
 def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) -> None:
-    """DI-29: one entry per controlled document (id, title, path, revision),
+    """item-07-008: one entry per controlled document (id, title, path, revision),
     generated from frontmatter; an un-identified document is not indexed."""
     docs = tmp_path / "documents"
     docs.mkdir()

@@ -1,5 +1,5 @@
 """
-Bring an existing repository under RDM's audit (DI-24).
+Bring an existing repository under RDM's audit (item-01-003).
 
 `rdm adopt [target]` lays down what RDM reads and runs into a repo that
 already has code: the DHF skeleton (V&V plan, traceability-matrix template,
@@ -19,7 +19,7 @@ from pathlib import Path
 from rdm.kernel.version import release_version
 
 # A template that names RDM's own version is pinned to the RDM that adopts:
-# the CI workflow calls RDM's reusable gates at this release (DI-63).
+# the CI workflow calls RDM's reusable gates at this release (item-04-004).
 _VERSION_TOKEN = "{rdm_version}"
 
 NEXT_STEPS = """\

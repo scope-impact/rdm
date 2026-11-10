@@ -1,6 +1,6 @@
-"""Acceptance tests for RDM's own manual, IFU-001 (DI-80, DI-81, DI-82), see dhf/.
+"""Acceptance tests for RDM's own manual, IFU-001 (item-07-005, item-07-007, item-07-006), see dhf/.
 
-Tagged `@allure.story`. Skips cleanly if allure-pytest or the `graph` extra is
+Tagged `@allure.tag`. Skips cleanly if allure-pytest or the `graph` extra is
 not installed.
 """
 
@@ -53,7 +53,7 @@ def _ifu() -> tuple[dict, list[tuple[str, str]]]:
 
 @allure.tag("item-07-005")
 def test_the_ifu_is_one_manual_in_reading_order() -> None:
-    """DI-80: IFU-001 lists RDM's manual in the reading order of instructions
+    """item-07-005: IFU-001 lists RDM's manual in the reading order of instructions
     for use, behind a cover naming the product, its release and the manual's
     id and revision."""
     front, titled = _ifu()
@@ -104,7 +104,7 @@ def _version_hook():
 
 @allure.tag("item-07-006")
 def test_the_docs_are_published_once_per_release() -> None:
-    """DI-82: the docs are published once per release tag and once for the
+    """item-07-006: the docs are published once per release tag and once for the
     development version, every release kept and selectable, the newest release
     the default."""
     import yaml
@@ -131,7 +131,7 @@ def test_the_docs_are_published_once_per_release() -> None:
 
 @allure.tag("item-07-007")
 def test_the_ifu_discloses_each_residual_risk() -> None:
-    """DI-81: the IFU's safety chapter names every risk of RDM's register, each
+    """item-07-007: the IFU's safety chapter names every risk of RDM's register, each
     with what the user must do about its residual risk."""
     from rdm.risk.register import risks
 

@@ -30,7 +30,7 @@ STATUSES = ("passed", "failed", "broken", "skipped", "unknown")
 RESULT_SUFFIX = "-result.json"  # one Allure result file per executed test
 
 # What rdm.pytest_plugin writes into a run's labels and results, and every
-# reader (the graph, the verification report) reads back (DI-57, DI-59, DI-65).
+# reader (the graph, the verification report) reads back (item-03-002, item-03-003).
 COMMIT_LABEL = "commit"            # the commit under test
 OUTPUT_LABEL = "output"            # a design output the test exercises
 WORKTREE_LABEL = "worktree"        # "dirty" when it had uncommitted changes
@@ -138,7 +138,7 @@ def test_of(full: str) -> str:
 
 
 def write_run_facts(results_dir: Path, executor: dict, environment: dict[str, str]) -> None:
-    """Write Allure's executor.json and environment.properties (DI-65)."""
+    """Write Allure's executor.json and environment.properties (item-03-003)."""
     results_dir.mkdir(parents=True, exist_ok=True)
     (results_dir / EXECUTOR_FILE).write_text(json.dumps(executor, indent=2), encoding="utf-8")
     lines = (f"{key}={' '.join(str(value).split())}\n" for key, value in environment.items())  # one line each

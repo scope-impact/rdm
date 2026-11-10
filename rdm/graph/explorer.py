@@ -1,5 +1,5 @@
 """
-The whole record as an AWS Graph Explorer graph file (DI-39).
+The whole record as an AWS Graph Explorer graph file (item-06-005).
 
 Graph Explorer's *Load graph from file* takes a small JSON envelope — node
 IRIs, edges written ``subject-[predicate]->object``, and the endpoint to fetch

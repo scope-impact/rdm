@@ -1,5 +1,5 @@
 """
-Checklists and reference tags in the graph (DI-37).
+Checklists and reference tags in the graph (item-06-003).
 
 Checklists are **data**: a standard is a ``skos:ConceptScheme``, an item a
 ``rdm:Clause`` (a ``skos:Concept``), a checklist a ``rdm:Checklist`` (a
@@ -171,7 +171,7 @@ def _iri_tail(iri: str) -> str:
 
 
 def _label_unlabelled(quads: list[ox.Quad], graph: ox.NamedNode) -> None:
-    """Give every typed checklist node an ``rdfs:label`` (DI-35's rule), so an
+    """Give every typed checklist node an ``rdfs:label`` (item-06-001's rule), so an
     RDF-authored checklist is as searchable as a text one: its key, preferred
     label or title, else the last segment of its IRI."""
     from rdm.graph.project import LABEL, TYPE

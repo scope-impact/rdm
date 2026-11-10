@@ -1,4 +1,4 @@
-"""The release gate (DI-3): over the requirements of the factory's spec (ADR 0002).
+"""The release gate (item-04-001): over the requirements of the factory's spec (ADR 0002).
 
 Whether a release may go ahead, laid out as a command: fetch the state once,
 derive every event by the rules, return them (``release.md``, "Commands and
@@ -99,8 +99,8 @@ def derive(state: State) -> list[Event]:
          file can be read;
       4. every user need is addressed by a requirement that covers one of its
          rules or guarantees;
-      5. no blocking finding of the risk rules (DI-44).
-    A user need with no approved validation record (DI-33), a proposed risk
+      5. no blocking finding of the risk rules (item-02-002).
+    A user need with no approved validation record (item-01-004), a proposed risk
     and an orphan tag only warn. Whether a passing test genuinely verifies
     its requirement is judged by the review of the pull request."""
     if not state.spec_found:
@@ -160,7 +160,7 @@ def run_release_gate(dhf_dir: Path, allure_results_dir: Path) -> ReleaseResult:
 
 
 # What the release gate blocks about the record as a whole, not about one
-# requirement, user need or risk: the graph puts these on the record (DI-38).
+# requirement, user need or risk: the graph puts these on the record (item-06-004).
 WHOLE_RECORD = (NO_SPEC, NO_REQUIREMENTS, UNSTAMPED, STAMPED_TWICE, UNREADABLE_SPEC, UNREADABLE_RESULT)
 
 

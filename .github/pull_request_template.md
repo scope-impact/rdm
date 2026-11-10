@@ -2,6 +2,6 @@
 
 <!-- The behaviour, in a sentence or two. -->
 
-## Design inputs
+## Requirements
 
-<!-- DI-n declared, amended or verified, if any. -->
+<!-- The requirements (spec/ scenarios, item-NN-SSS) added, changed or verified, if any. -->

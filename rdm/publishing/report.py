@@ -1,5 +1,5 @@
 """
-The verification report (DI-64): what was run to verify each requirement, as a PDF.
+The verification report (item-07-009): what was run to verify each requirement, as a PDF.
 
 Written for the person who judges the evidence without having run it: an
 auditor, a notified body, the pull-request reviewer, in the record's language
@@ -10,7 +10,7 @@ controlled until its residual is evaluated acceptable. It answers the reader's
 questions in their order:
 
 1. what is this, and can I rely on it — the repository, the record's commit,
-   the commits tested, the executor and environment (DI-65), one SHA-256 over
+   the commits tested, the executor and environment (item-03-003), one SHA-256 over
    the results, and an evidence status: release-grade, or each reason not;
    beside it, the risk register's state (proposals, residuals not evaluated);
 2. what went wrong — the anomalies;

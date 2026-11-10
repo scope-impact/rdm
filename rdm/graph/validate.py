@@ -1,5 +1,5 @@
 """
-Run the gate shapes over the projected graph (DI-38).
+Run the gate shapes over the projected graph (item-06-004).
 
 ``shapes.ttl`` states the gate rules as SHACL; teams add their own rules as
 more shape files. The coded gates (`rdm story release-gate`, `rdm gap`) stay

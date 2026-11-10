@@ -7,7 +7,7 @@ hide:
 # Worked example: Part 11 document control
 
 [`examples/github-document-control`](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
-is a complete record-first project laid out as `rdm init` and `rdm adopt` lay
+is a complete project laid out as `rdm init` and `rdm adopt` lay
 one out: git and GitHub as a 21 CFR Part 11 document control system, with
 GitHub rulesets as design outputs, the pull-request approval as the
 electronic signature, a risk register whose controls are requirements of its spec,

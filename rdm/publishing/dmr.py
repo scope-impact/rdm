@@ -1,5 +1,5 @@
 """
-Device-master-record index data, generated from the record (DI-29).
+Device-master-record index data, generated from the record (item-07-008).
 
 The DMR (§820.181 analog) is the current approved specification set. Its index
 must be derived from the controlled documents themselves — the same

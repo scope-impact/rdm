@@ -3,28 +3,34 @@
 <!-- --8<-- [start:history] -->
 ## Unreleased
 
-- **Breaking: RDM reads the factory's spec instead of design inputs** (ADR 0002).
-  A requirement is a stamped Gherkin scenario (`item-NN-SSS`) of a spec in
-  Löyly's layout (`.pi/plan`, or `spec:` in `dhf/config.yml`); a user need is
-  an event-model screen with its Allium surfaces and event-storm events. Runs
-  claim requirements with an Allure `tag` label `item-NN-SSS`. The release
-  gate blocks on no spec, an unstamped scenario, an item stamped twice, an
-  unverified requirement or an unaddressed need; risk `controls:` name item
-  ids; validation records name need ids. Removed: `design_inputs:`,
-  `user_needs:`, source-code tag scanning. RDM's own spec is under `.pi/`.
-- **Removed** `rdm translate`, `rdm story trace` (use the graph's `trace`),
-  `--infer` and the graph's rules, the user manual in the graph, and Backlog.md.
-- **Breaking: RDM audits the specification; it no longer authors it**
-  (Design Review 72, ADR 0002). Removed: `rdm story design-gate` and the
-  design gate's step in the reusable gates; `rdm hooks` and the git hooks;
-  `rdm story new-input`; `rdm c4 draw`, the C4 architecture context and its
-  graph classes and shapes, component labels on runs; `--unit-coverage` on
-  `verify`, `evidence-bundle` and `rdm graph`, and the gates' `unit-coverage`
-  input; `rdm story persona`, the usability-persona skill and the
-  `validation` extra; `rdm story mutation-probe`. The pytest plugin labels a
-  run with its commit, worktree, executor and environment only. `rdm adopt`
-  lays down the DHF skeleton and the CI workflow, no design template, hooks
-  or runbook. The release gate no longer blocks on design-control checks.
+- **Breaking: RDM reads the spec as Gherkin and audits it with Allure; it no
+  longer authors requirements** (ADR 0002).
+  - A requirement is a Gherkin scenario tagged with an id (any id-shaped tag,
+    or the pattern `spec:` in `dhf/config.yml` names), parsed with Cucumber's
+    parser (`gherkin-official`); a user need is, by default, a Feature. RDM
+    finds the feature files by `spec:` (globs, exclusions, id pattern, needs
+    source), else under `spec/` or `features/`.
+  - A test run claims a requirement with an Allure `tag` label of its id
+    (Gherkin runners write them from scenario tags; plain tests use
+    `@allure.tag("<id>")`).
+  - The release gate blocks on no spec, a scenario with no id, an id on two
+    scenarios, a spec file that does not parse, an unverified requirement or
+    an unaddressed need; risk `controls:` name requirement ids; validation
+    records name need ids. The graph, its MCP `trace`, the matrix and the
+    verification report work on requirements and needs.
+  - Löyly's layout, with user needs from its event model, Allium and event
+    storm, is an optional adapter (`layout: loyly`, `needs: allium`).
+  - RDM's own spec is plain Gherkin under `spec/`; `loyly/` is a submodule
+    (Löyly's `spec-v2`).
+  - Removed: design inputs (`design_inputs:`), the user-need registry
+    (`user_needs:`), `rdm story design-gate` and its CI step, `rdm hooks` and
+    the git hooks, `rdm story new-input`, source scanning of test tags, the
+    tests graph, `rdm c4 draw` and the C4 architecture context, `--unit-coverage`,
+    `rdm story persona` and the `validation` extra, `rdm story mutation-probe`,
+    `rdm translate`, `rdm story trace` (use the graph's `trace`), `--infer`
+    and the graph's rules, the user manual in the graph, the pytest plugin's
+    labels from the record, and Backlog.md. `rdm adopt` lays down the DHF
+    skeleton and the CI workflow only.
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

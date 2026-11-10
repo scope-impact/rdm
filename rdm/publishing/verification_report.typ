@@ -1,4 +1,4 @@
-// The verification report (DI-64). RDM writes report.json beside this file;
+// The verification report (item-07-009). RDM writes report.json beside this file;
 // every value from the record or a test reaches the page as text, never as
 // markup, so nothing a test printed can change the document.
 //

@@ -8,12 +8,12 @@ class GapError(ValueError):
     include or document that cannot be read. An error, never success (exit 2)."""
 
 
-# A placeholder marker, as the design gate reads one: a whole word.
+# A placeholder marker: a whole word.
 _PLACEHOLDER = re.compile(r"\b(ENDTODO|TODO)\b")
 
 
 # --- The public API: what `rdm gap` reads and matches, for other callers (the
-# graph's checklists and references, DI-37 and DI-48) to use instead of the
+# graph's checklists and references, item-06-003 and item-06-009) to use instead of the
 # private helpers below, so the two cannot drift apart.
 
 def builtin_checklists():

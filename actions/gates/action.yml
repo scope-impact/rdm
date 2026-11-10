@@ -1,7 +1,7 @@
 name: 'RDM gates'
 description: >-
   Run RDM's gates on a repository's record: verify, release gate, graph
-  validation and the release evidence bundle (DI-63).
+  validation and the release evidence bundle (item-04-004).
   RDM is installed from the revision this action is pinned to, never by name
   from a package index.
 
@@ -13,7 +13,7 @@ inputs:
     description: 'Allure results of the acceptance tests (run them before this action)'
     default: 'dhf/allure-results'
   release-gate:
-    description: 'Run the release gate (false while the record has no design input yet)'
+    description: 'Run the release gate (false while the spec has no requirement yet)'
     default: 'true'
   graph-validate:
     description: 'Run rdm graph validate (the gate rules as SHACL, with graph-only warnings)'

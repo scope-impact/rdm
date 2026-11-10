@@ -8,9 +8,9 @@ own: the trace from a run to what it verifies is the tag, read by RDM from
 the results. At run time it adds:
 
 - ``commit``: the commit under test, and ``worktree=dirty`` when the working
-  tree had uncommitted changes (DI-59);
+  tree had uncommitted changes (item-03-002);
 - once per run, Allure's ``executor.json`` and ``environment.properties`` in
-  the results directory: who or what ran the tests, and where (DI-65).
+  the results directory: who or what ran the tests, and where (item-03-003).
 
 Enable it for a run with ``-p rdm.pytest_plugin``, or in the repository's
 top-level ``conftest.py`` with ``pytest_plugins = ["rdm.pytest_plugin"]``; to
@@ -108,7 +108,7 @@ def environment(record: dict | None, env=os.environ) -> dict[str, str]:
 
 
 def _record_run(config, record: dict | None) -> None:
-    """Write executor.json and environment.properties once per session (DI-65)."""
+    """Write executor.json and environment.properties once per session (item-03-003)."""
     results = getattr(config.option, "allure_report_dir", None)
     if not results or config.stash.get(_RUN_RECORDED, False):
         return
@@ -125,7 +125,7 @@ def pytest_runtest_call(item):
 
 
 def _label(item) -> None:
-    """Label a tagged test's result with the commit under test (DI-59, DI-65)."""
+    """Label a tagged test's result with the commit under test (item-03-002, item-03-003)."""
     try:
         import allure
     except ImportError:
@@ -139,7 +139,7 @@ def _label(item) -> None:
     if record is None:
         return
     declared = [i for i in ids if i in record["requirements"]]
-    if declared and record["commit"]:  # DI-59: the version this run is evidence for
+    if declared and record["commit"]:  # item-03-002: the version this run is evidence for
         allure.dynamic.label(COMMIT_LABEL, record["commit"])
         if record["dirty"]:
             allure.dynamic.label(WORKTREE_LABEL, DIRTY)

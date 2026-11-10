@@ -1,15 +1,14 @@
 ---
 id: TM-001
-revision: 1
+revision: 2
 title: Traceability Matrix and Verification Status
 ---
 
 # Purpose
 
-The verification status of each **design input**, grouped under the **user
-need** it traces to, generated from the system of record: the design inputs
-declared in the per-context design documents (`kind: design`) reconciled against
-executed Allure results. Do not edit by hand. Regenerate with:
+The verification status of each **requirement** of the spec (a scenario
+tagged with an id), grouped under the **user need** it addresses, generated
+from the spec reconciled against executed Allure results. Do not edit by hand. Regenerate with:
 
 ```
 pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
@@ -26,7 +25,7 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 
 # Traceability matrix
 
-Each user need, with the requirements (stamped scenarios of the spec) that
+Each user need, with the requirements (tagged scenarios of the spec) that
 address it. Runs: passed / failed / skipped.
 
 {% for group in verification.groups %}

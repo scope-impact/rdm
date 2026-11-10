@@ -31,9 +31,9 @@ never edited.
 
 | Part | What it is | Commands |
 | --- | --- | --- |
-| **Record** | The spec it reads: Gherkin feature files, each scenario tagged with a requirement id (layouts and richer sources of needs, such as Löyly's, through adapters); the risk register; checklists; controlled documents; tests tagged `@allure.tag("item-NN-SSS")`. Markdown and git. | `rdm init`, `rdm adopt` |
+| **Record** | The spec it reads: Gherkin feature files, each scenario tagged with a requirement id (layouts and richer sources of needs, such as Löyly's, through adapters); the risk register; validation records; checklists; controlled documents; Allure results of tests that claim requirements by id. Markdown and git. | `rdm init`, `rdm adopt` |
 | **Gates** | No release until every requirement of the spec has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story release-gate`, `rdm gap` |
-| **Graph** | The record as RDF: needs, inputs, contexts, documents, tests, runs, commits, risks, clauses. Read-only; agents read it over MCP, people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
+| **Graph** | The record as RDF: user needs, requirements, contexts, documents, runs, commits, risks, clauses. Read-only; agents read it over MCP, people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents rendered from the record: templates and YAML data → Markdown → PDF/DOCX. | `rdm render`, `make pdfs` |
 
 Two choices shape it:
@@ -81,6 +81,9 @@ extra) or install them natively (`brew install pandoc typst`).
 ```sh
 rdm init                     # a new project: a DHF skeleton and document templates in dhf/
 rdm adopt .                  # or an existing repository: never overwrites a file
+
+# The spec: Gherkin under spec/ (or features/), each scenario tagged with an id;
+# tests claim requirements with @allure.tag("REQ-12") or a Gherkin runner's tags
 
 # The gates, as CI runs them (the tests need pytest and allure-pytest)
 pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
@@ -135,14 +138,16 @@ them, to run as CI does. The vocabulary is [CONTEXT.md](CONTEXT.md).
 
 ## Direction
 
-RDM audits a specification; it does not author one. Writing the spec and
-regenerating code from it belong to the factory that owns the spec (for
-example [Löyly](https://github.com/scope-impact/loyly)); RDM keeps gap
+RDM audits a specification; it does not author one. Writing the spec, and
+regenerating code from it, belong to whoever owns the spec (a team, or a
+factory such as [Löyly](https://github.com/scope-impact/loyly)); RDM keeps gap
 analysis, and traceability and audit from the executed results
 ([ADR 0002](dhf/decisions/adr-0002-rdm-reads-gherkin-and-allure.md)).
 
 Not built yet, in rough order:
 
+- Graded verdicts (such as Löyly's sealed graders') as a second kind of
+  evidence beside Allure runs.
 - Turning a regulation into a checklist mapped to its standard's clauses.
 - `rdm graph push` to an external graph database, with the vocabulary and gate
   shapes versioned so another store reads them the same way.

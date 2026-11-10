@@ -1,5 +1,5 @@
 """
-Summative validation records (DI-33): per-user-need, human-evidenced.
+Summative validation records (item-01-004): per-user-need, human-evidenced.
 
 Verification is machine-executed; validation is a human judgment that the
 product meets the user need. This module gives that judgment a place in the

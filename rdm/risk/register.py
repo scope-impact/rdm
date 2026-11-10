@@ -1,5 +1,5 @@
 """
-The risk register (DI-43) and its release rules (DI-44).
+The risk register (item-02-001) and its release rules (item-02-002).
 
 Risks are frontmatter in ``kind: risk`` documents: a safety or security
 (STRIDE) risk, hazard → situation → harm, severity × probability, controls
@@ -28,7 +28,7 @@ STRIDE = ("Spoofing", "Tampering", "Repudiation", "Information disclosure", "Den
           "Elevation of privilege")
 ACCEPTABILITY = ("acceptable", "justify", "unacceptable")
 STATUSES = ("proposed", "approved")
-# Residual decisions (DI-45); only the first two let a release through.
+# Residual decisions (item-06-008); only the first two let a release through.
 ACCEPTABLE, ACCEPTED, NEEDS_ACCEPTANCE, UNACCEPTABLE, NOT_EVALUATED = (
     "acceptable", "accepted", "needs acceptance", "unacceptable", "not evaluated")
 
@@ -246,9 +246,9 @@ class Finding(Event):
 
 
 def assess(dhf_dir: Path, requirement_ids: set[str], verified: set[str]) -> tuple[list[Risk], list[Finding]]:
-    """The register and every finding of the risk rules (DI-44, DI-50) — the one
+    """The register and every finding of the risk rules (item-02-002, item-02-003) — the one
     place the rules are written: the release gate reports these findings, and
-    the graph projects them for its shapes (DI-45)."""
+    the graph projects them for its shapes (item-06-008)."""
     try:
         policy = read_policy(dhf_dir)
     except ValueError as error:

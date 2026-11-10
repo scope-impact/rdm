@@ -1,8 +1,9 @@
 name: Design controls (dogfood)
 
 # RDM eats its own dog food: RDM's own record goes through the same reusable
-# workflow other repositories call (DI-63), pinned to the commit under test.
-# A PR that leaves a design input unverified fails here; whether the tests mean something is judged by the PR's human review.
+# workflow other repositories call (item-04-004), pinned to the commit under test.
+# A PR that leaves a requirement unverified fails here; whether the tests mean
+# something is judged by the PR's human review.
 on: [push, pull_request]
 
 permissions:

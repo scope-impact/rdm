@@ -1,5 +1,5 @@
 """
-The design record for agents, read-only (DI-41, DI-42).
+The design record for agents, read-only (item-06-006, item-06-007).
 
 Four tools — ``schema``, ``query``, ``trace``, ``validate`` — as plain
 functions, and ``rdm graph mcp`` serving them over MCP stdio. Every call
@@ -80,7 +80,7 @@ def _select(store: ox.Store, sparql: str) -> list[dict]:
 
 
 def _evidence(store: ox.Store, node: str) -> dict:
-    """A run's (or step's) steps, in order and nested, and its attachments (DI-53)."""
+    """A run's (or step's) steps, in order and nested, and its attachments (item-06-013)."""
     attachments = sorted(({"name": r["name"], "type": r["type"], "file": r["file"]} for r in _select(
         store, f"SELECT ?name ?type ?file WHERE {{ <{node}> rdm:attachment ?a . ?a rdfs:label ?name ; "
                f"rdm:path ?file . OPTIONAL {{ ?a dcterms:format ?type }} }}")), key=lambda a: a["file"])

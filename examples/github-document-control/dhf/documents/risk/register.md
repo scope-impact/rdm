@@ -42,7 +42,7 @@ risks:
     category: safety
     status: proposed
     hazard: "A release is published from a commit whose verification failed."
-    situation: "A release tag is pushed on a commit where a design input's test fails or never ran."
+    situation: "A release tag is pushed on a commit where a requirement's test fails or never ran."
     harm: "A document set whose controls are not verified is distributed as released, and staff rely on it."
     severity: Serious
     probability: Possible
@@ -83,9 +83,9 @@ approves each by reviewing it and setting `status: approved` (or changing it).
 
 The risks are the ways this document control system could let an unapproved,
 unverified or misidentified document reach the people who use it. Each risk
-control is a design input of this record, verified by its tagged test; the
-release gate holds the register to RDM's rules: every risk scored against the
-policy (RMP-001), every control a verified design input, and every residual
+control is a requirement of this record's spec, verified by the test that
+claims it; the release gate holds the register to RDM's rules: every risk
+scored against the policy (RMP-001), every control a verified requirement, and every residual
 acceptable or accepted with a reason.
 
 The two security threats that lead to the same harm as RISK-DC-001 are linked

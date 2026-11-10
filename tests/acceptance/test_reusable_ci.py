@@ -1,6 +1,6 @@
-"""Acceptance test for RDM's gates as reusable CI (DI-63, see dhf/).
+"""Acceptance test for RDM's gates as reusable CI (item-04-004, see dhf/).
 
-Tagged `@allure.story("DI-63")`. The composite gates action is run step by
+Tagged `@allure.tag("item-04-004")`. The composite gates action is run step by
 step against a small committed record, the way a runner would; the reusable
 workflow, the PDF action and the workflow `rdm adopt` lays down are read as
 the YAML GitHub reads. Skips cleanly if allure-pytest is not installed.
@@ -129,7 +129,7 @@ def _rdm_commands(text: str) -> list[list[str]]:
 @allure.label("output", "rdm/specification/adopt.py")
 @allure.label("output", "rdm/specification/adopt_files/.github/workflows/design-controls.yml")
 def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
-    """DI-63: a reusable workflow (tests, then the gates) and a composite gates
+    """item-04-004: a reusable workflow (tests, then the gates) and a composite gates
     action install RDM from the pinned revision; the PDF action renders with
     that revision's image; the workflow rdm adopt lays down calls the reusable
     workflow at the installed version, as RDM's own CI does."""

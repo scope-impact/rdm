@@ -1,6 +1,6 @@
-"""Acceptance test for evidence tied to the version it tested (DI-60, see dhf/).
+"""Acceptance test for evidence tied to the version it tested (item-06-016, see dhf/).
 
-Tagged `@allure.story("DI-60")`, over the real projection and gate shapes,
+Tagged `@allure.tag("item-06-016")`, over the real projection and gate shapes,
 from a committed record and crafted Allure results. Skips cleanly if
 allure-pytest or the `graph` extra is not installed.
 """
@@ -35,7 +35,7 @@ def _sha(repo: Path) -> str:
 def _run(results: Path, name: str, *labels: tuple[str, str]) -> None:
     (results / f"{name}-result.json").write_text(json.dumps({
         "name": name, "status": "passed",
-        "labels": [{"name": "story", "value": "DI-1"}] + [{"name": n, "value": v} for n, v in labels]}))
+        "labels": [{"name": "story", "value": "item-01-001"}] + [{"name": n, "value": v} for n, v in labels]}))
 
 
 @allure.tag("item-06-016")
@@ -43,7 +43,7 @@ def _run(results: Path, name: str, *labels: tuple[str, str]) -> None:
 @allure.label("output", "rdm/graph/project.py")
 @allure.label("output", "rdm/graph/shapes.ttl")
 def test_runs_are_tied_to_the_commit_they_tested(tmp_path: Path) -> None:
-    """DI-60: each run links to the commit its label names; the record carries the
+    """item-06-016: each run links to the commit its label names; the record carries the
     commit it was built at and a dirty run is marked; shapes warn on an
     unversioned run and on a run of another commit."""
     dhf, results = _record(tmp_path)

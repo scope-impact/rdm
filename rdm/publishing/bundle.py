@@ -1,10 +1,10 @@
 """
-Release evidence bundle (DI-30): the retained artifact set for a release.
+Release evidence bundle (item-04-003): the retained artifact set for a release.
 
 Writes, to an output directory: the verification data (the spec's requirements
 reconciled against executed Allure results), the rendered traceability matrix,
 the executed Allure results themselves with the attachments and containers
-they reference, the verification report as a PDF (DI-64), and a manifest
+they reference, the verification report as a PDF (item-07-009), and a manifest
 describing the bundle —
 the DHR-shaped set a team attaches to a release tag so the evidence outlives
 CI artifact retention.
@@ -71,7 +71,7 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     """Produce the bundle; returns the manifest that was written. Raises
     ``ValueError``, writing nothing, when the bundle's copy of the results
     would overlap the results directory (replacing it would delete them), when
-    the record has no traceability matrix template to render (DI-30)."""
+    the record has no traceability matrix template to render (item-04-003)."""
     results, kept = Path(allure_results_dir).resolve(), (Path(out_dir) / "allure-results").resolve()
     if results == kept or results.is_relative_to(kept) or kept.is_relative_to(results):
         raise ValueError(f"the bundle's copy of the results ({kept}) would overlap the results directory "
@@ -108,7 +108,7 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     # evidence behind each verdict, kept past CI artifact retention.
     copied, missing = copy_results(Path(allure_results_dir), out_dir / "allure-results")
 
-    # 4. The verification report: the runs behind each verdict, as a PDF (DI-64).
+    # 4. The verification report: the runs behind each verdict, as a PDF (item-07-009).
     try:
         write_report(dhf_dir, Path(allure_results_dir), out_dir / REPORT_PDF, verification=data)
         report = REPORT_PDF

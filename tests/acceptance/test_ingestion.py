@@ -1,8 +1,7 @@
-"""Acceptance tests for the ingestion context's design inputs (see dhf/).
+"""Acceptance tests for the ingestion context's requirements (see spec/).
 
-The tests ("live BDD") that verify DI-16 (code-snippet collection) and DI-17
-(foreign test-result translation), tagged `@allure.story`, over the real
-`rdm/publishing/collect.py` and `rdm/evidence/translate.py`.
+The test that verifies item-07-004 (code-snippet collection), tagged
+`@allure.tag`, over the real `rdm/publishing/collect.py`.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
 
@@ -29,7 +28,7 @@ _QTTEST_XML = _TEST_DATA / "integration.xml"
 @allure.tag("item-07-004")
 @allure.label("output", "rdm/publishing/collect.py")
 def test_collects_delimited_code_snippets(tmp_path: Path, capsys) -> None:
-    """DI-16: RDOC/ENDRDOC-delimited snippets are extracted, keyed by name."""
+    """item-07-004: RDOC/ENDRDOC-delimited snippets are extracted, keyed by name."""
     with verification_step("the lines between RDOC and ENDRDOC are extracted under the snippet's key"):
         assert collect_from_lines(["RDOC greeting", "hello", "world", "ENDRDOC"]) == {
             "greeting": "hello\nworld"

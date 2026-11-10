@@ -14,7 +14,7 @@ from pathlib import Path
 from rdm.specification.spec import Spec, find_spec, read_spec
 
 # The traceability-matrix template: an output, rendered from the record, never
-# part of it (DI-58) — the graph leaves it out, the evidence bundle renders it.
+# part of it (item-06-015) — the graph leaves it out, the evidence bundle renders it.
 MATRIX_DOC = "traceability_matrix.md"
 
 

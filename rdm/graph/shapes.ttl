@@ -5,7 +5,7 @@
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
 
-# The gate rules as SHACL (DI-38): closed-world checks over the open-world
+# The gate rules as SHACL (item-06-004): closed-world checks over the open-world
 # graph. sh:Violation = release-blocking (mirrors `rdm story release-gate` and
 # `rdm gap`); sh:Warning = worth a look, never blocking.
 # Teams add their own rules as more shape files: `rdm graph validate --shapes`.
@@ -84,13 +84,13 @@ rdm:RunClaimShape a sh:NodeShape ;
             BIND (REPLACE(STR(?r), "^.*/", "") AS ?claim) }""" ;
     ] .
 
-# The risk register's release rules (DI-44, DI-45): the same risks the
+# The risk register's release rules (item-02-002, item-06-008): the same risks the
 # release gate blocks. The residual decision is computed by the gate's own
 # function (rdm/risk/register.py), so the two cannot drift.
 rdm:RiskShape a sh:NodeShape ;
     # The risk rules are written once, in rdm/risk/register.py; the projection
-    # carries the release gate's findings on each risk (DI-45), and on the
-    # record those about the record as a whole (DI-38: no spec, no
+    # carries the release gate's findings on each risk (item-06-008), and on the
+    # record those about the record as a whole (item-06-004: no spec, no
     # requirement, an unstamped scenario, an unreadable result), so the shapes block
     # exactly what the gate blocks.
     sh:targetClass rdm:Risk, rdm:Record ;
@@ -106,7 +106,7 @@ rdm:UniqueRequirementShape a sh:NodeShape ;
     sh:property [ sh:path rdm:declarationCount ; sh:maxInclusive 1 ;
                   sh:message "requirement id tags more than one scenario of the spec" ] .
 
-# DI-51: a design document whose latest change is not on the default branch.
+# item-06-011: a design document whose latest change is not on the default branch.
 rdm:LandedShape a sh:NodeShape ;
     sh:targetClass rdm:Document ;
     sh:severity sh:Warning ;
@@ -149,7 +149,7 @@ rdm:DocumentReferenceShape a sh:NodeShape ;
             FILTER NOT EXISTS { ?value a rdm:Document } }""" ;
     ] .
 
-# --- Evidence tied to its version (DI-60) ------------------------------------
+# --- Evidence tied to its version (item-06-016) ------------------------------------
 
 rdm:RunVersionShape a sh:NodeShape ;
     sh:targetClass rdm:TestRun ;

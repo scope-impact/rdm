@@ -1,13 +1,13 @@
 name: Design controls
 
-# Record-first gates on every change (laid down by `rdm adopt`). The gates
+# RDM's gates on every change (laid down by `rdm adopt`). The gates
 # are RDM's reusable workflow, pinned to the RDM release that adopted this
 # repository: the workflow and the RDM it installs are that one revision.
 # Upgrade RDM by changing both refs below together.
 #
 # Phased adoption: set acceptance-tests and release-gate to true when your
-# first tagged acceptance test lands -- until then the release gate would
-# fail on "no design inputs declared".
+# first acceptance test claiming a requirement of your spec lands -- until
+# then the release gate would fail on "no requirements".
 on:
   push:
     branches: [main]   # your default branch, if it is another (git init may name it master)

@@ -1,4 +1,5 @@
-"""`rdm graph build | query | serve | explorer-file` (DI-35, DI-36, DI-39); `validate` and `mcp` live in
+"""`rdm graph build | query | serve | explorer-file` (item-06-001, item-06-002, item-06-005);
+`validate` and `mcp` live in
 ``validate.py`` and ``agent.py``."""
 
 from __future__ import annotations
@@ -140,7 +141,7 @@ def graph_explorer_file_command(
     endpoint: str | None = None,
     exclude: list[str] | None = None,
 ) -> int:
-    """Write the whole record as a Graph Explorer graph file (DI-39)."""
+    """Write the whole record as a Graph Explorer graph file (item-06-005)."""
     try:
         import pyoxigraph as ox
 

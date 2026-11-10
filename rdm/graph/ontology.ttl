@@ -8,7 +8,7 @@
 @prefix oslc_rm: <http://open-services.net/ns/rm#> .
 @prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
 
-# RDM's vocabulary for the design record as a graph (DI-35). Standard terms are
+# RDM's vocabulary for the design record as a graph (item-06-001). Standard terms are
 # reused where they exist -- OSLC Requirements Management for requirements,
 # Dublin Core for document metadata, PROV-O for commits and authors -- and an
 # rdm: term is minted only where none fits.
@@ -43,14 +43,14 @@ rdm:Document a owl:Class ;
 
 rdm:Record a owl:Class ;
     rdfs:label "Record" ;
-    rdfs:comment "The design record the graph was built from (DI-60)." .
+    rdfs:comment "The design record the graph was built from (item-06-016)." .
 
 rdm:TestRun a owl:Class ;
     rdfs:subClassOf prov:Activity ;
     rdfs:label "Test run" ;
     rdfs:comment "One executed test, as reported in an Allure result." .
 
-# Gap analysis (DI-37). Checklists are data, never classes: a new standard is
+# Gap analysis (item-06-003). Checklists are data, never classes: a new standard is
 # a new skos:ConceptScheme instance, a new checklist a new rdm:Checklist
 # instance -- loaded from a file, with no change to this vocabulary.
 
@@ -128,7 +128,7 @@ rdm:declaredIn a owl:ObjectProperty ;
 
 rdm:part a owl:DatatypeProperty ;
     rdfs:label "part" ; rdfs:domain rdm:BoundedContext ;
-    rdfs:comment "The part of the product (Record, Gates, Graph, Documents...) the architecture assigns a context to (DI-58)." .
+    rdfs:comment "The part of the product (Record, Gates, Graph, Documents...) the architecture assigns a context to (item-06-015)." .
 
 rdm:describes a owl:ObjectProperty ;
     rdfs:label "describes" ; rdfs:domain rdm:Document ; rdfs:range rdm:BoundedContext .
@@ -141,15 +141,15 @@ rdm:path a owl:DatatypeProperty ;
 
 rdm:testedAt a owl:ObjectProperty ;
     rdfs:label "tested at" ; rdfs:domain rdm:TestRun ; rdfs:range prov:Activity ;
-    rdfs:comment "The commit under test: the version the run is evidence for (DI-60)." .
+    rdfs:comment "The commit under test: the version the run is evidence for (item-06-016)." .
 
 rdm:uncommittedChanges a owl:DatatypeProperty ;
     rdfs:label "uncommitted changes" ; rdfs:domain rdm:TestRun ;
-    rdfs:comment "The run tested a working tree with changes not in its commit (DI-60)." .
+    rdfs:comment "The run tested a working tree with changes not in its commit (item-06-016)." .
 
 rdm:atCommit a owl:ObjectProperty ;
     rdfs:label "at commit" ; rdfs:domain rdm:Record ; rdfs:range prov:Activity ;
-    rdfs:comment "The commit the record was at when the graph was built (DI-60)." .
+    rdfs:comment "The commit the record was at when the graph was built (item-06-016)." .
 
 rdm:exercises a owl:ObjectProperty ;
     rdfs:label "exercises" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Requirement ;
@@ -164,10 +164,10 @@ rdm:evaluatedAgainst a owl:ObjectProperty ; rdfs:label "evaluated against" ; rdf
 
 rdm:Step a owl:Class ;
     rdfs:label "Test step" ;
-    rdfs:comment "One Allure step of a test run, in order, nested under its parent step (DI-53)." .
+    rdfs:comment "One Allure step of a test run, in order, nested under its parent step (item-06-013)." .
 rdm:Attachment a owl:Class ;
     rdfs:label "Attachment" ;
-    rdfs:comment "Evidence a test run or step attached: a file in the Allure results (DI-53)." .
+    rdfs:comment "Evidence a test run or step attached: a file in the Allure results (item-06-013)." .
 rdm:step a owl:ObjectProperty ; rdfs:label "step" ; rdfs:range rdm:Step ;
     rdfs:comment "From a test run or a step to a step it contains." .
 rdm:attachment a owl:ObjectProperty ; rdfs:label "attachment" ; rdfs:range rdm:Attachment ;
@@ -177,9 +177,9 @@ rdm:position a owl:DatatypeProperty ; rdfs:label "position" ; rdfs:domain rdm:St
 
 rdm:SourceFile a owl:Class ;
     rdfs:label "Source file" ;
-    rdfs:comment "A file a test run exercises, named by its output label (DI-56)." .
+    rdfs:comment "A file a test run exercises, named by its output label." .
 rdm:Parameter a owl:Class ; rdfs:label "Parameter" ;
-    rdfs:comment "One parameter of a parametrised run: a name and a value (DI-54)." .
+    rdfs:comment "One parameter of a parametrised run: a name and a value (item-06-014)." .
 rdm:parameter a owl:ObjectProperty ; rdfs:label "parameter" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Parameter .
 rdm:name a owl:DatatypeProperty ; rdfs:label "name" .
 rdm:value a owl:DatatypeProperty ; rdfs:label "value" .
@@ -190,13 +190,13 @@ rdm:exercisesOutput a owl:ObjectProperty ; rdfs:label "exercises output" ; rdfs:
     rdfs:range rdm:SourceFile ; rdfs:comment "The code a run exercises: requirement -> run -> code." .
 
 rdm:finding a owl:DatatypeProperty ; rdfs:label "finding" ;
-    rdfs:comment "A release-blocking finding, as the release gate reports it: of the risk rules on a risk (DI-45), or about the whole record on the record (DI-38)." .
+    rdfs:comment "A release-blocking finding, as the release gate reports it: of the risk rules on a risk (item-06-008), or about the whole record on the record (item-06-004)." .
 rdm:riskWarning a owl:DatatypeProperty ; rdfs:label "risk warning" ; rdfs:domain rdm:Risk ;
-    rdfs:comment "A warning of the risk rules on this risk, as the release gate reports it (DI-45)." .
+    rdfs:comment "A warning of the risk rules on this risk, as the release gate reports it (item-06-008)." .
 
 rdm:Risk a owl:Class ;
     rdfs:label "Risk" ;
-    rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (DI-45)." .
+    rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (item-06-008)." .
 
 rdm:controlledBy a owl:ObjectProperty ;
     rdfs:label "controlled by" ; rdfs:domain rdm:Risk ; rdfs:range rdm:Requirement ;
@@ -245,7 +245,7 @@ rdm:edition a owl:DatatypeProperty ;
     rdfs:comment "The edition a clause key is qualified with (62304:5.2.2.j@2015 -> 2015)." .
 
 dcterms:references rdfs:label "references" ;
-    rdfs:comment "A controlled document claims a clause with a [[KEY]] reference tag, or names a controlled document it relies on in its references frontmatter (DI-58)." .
+    rdfs:comment "A controlled document claims a clause with a [[KEY]] reference tag, or names a controlled document it relies on in its references frontmatter (item-06-015)." .
 skos:notation rdfs:label "key" .
 skos:definition rdfs:label "description" .
 skos:inScheme rdfs:label "standard" .

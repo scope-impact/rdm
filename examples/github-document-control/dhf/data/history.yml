@@ -15,3 +15,7 @@ entries:
     date: "2026-10-02"
     author: "Example Author"
     change: "Scope is the DHF's documents; the daily drift audit; the DHR attaches the evidence bundle; definitions."
+  - revision: 4
+    date: "2026-11-10"
+    author: "Example Author"
+    change: "The DHF record names the spec: requirements as tagged Gherkin scenarios and user needs."

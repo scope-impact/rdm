@@ -1,6 +1,6 @@
 name: RDM gates
 
-# Reusable: RDM's gates for any repository's record (DI-63).
+# Reusable: RDM's gates for any repository's record (item-04-004).
 #
 #   jobs:
 #     design-controls:
@@ -50,7 +50,7 @@ on:
         type: string
         default: 'dhf/allure-results'
       release-gate:
-        description: 'false until the first design input and its tagged test land'
+        description: 'false until the spec has its first requirement and a test that claims it'
         type: boolean
         default: true
       graph-validate:

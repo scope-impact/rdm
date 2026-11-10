@@ -1,4 +1,4 @@
-"""RDM's acceptance suite labels every run from RDM's own record (DI-57):
+"""RDM's acceptance suite labels every run from RDM's own record:
 epic, feature, link to the design document, severity, and the requirement
 text. Acceptance tests only: unit tests carry no Allure
 (``tests/allure_scope_test.py``).

@@ -1,7 +1,7 @@
-"""Acceptance tests for the scaffolding context's design inputs (see dhf/).
+"""Acceptance tests for the scaffolding context's requirements (see spec/).
 
-The tests ("live BDD") that verify DI-15 (`rdm init`) and DI-24
-(`rdm adopt`), tagged `@allure.story`, exercising the real scaffolders.
+The tests ("live BDD") that verify item-01-002 (`rdm init`) and item-01-003
+(`rdm adopt`), tagged `@allure.tag`, exercising the real scaffolders.
 Lightweight on purpose: the end-to-end "the scaffold builds a release" check
 lives in `fresh_release_test.py` (it needs Pandoc/make), not here.
 

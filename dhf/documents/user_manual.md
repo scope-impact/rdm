@@ -1,7 +1,7 @@
 ---
 id: IFU-001
 kind: manual
-revision: 5
+revision: 6
 title: "Instructions for use (IFU) — RDM's user manual"
 # The pages of the manual in reading order, from the project root (item-07-005). The "RDM on RDM" pages are not here: they publish this DHF.
 pages:

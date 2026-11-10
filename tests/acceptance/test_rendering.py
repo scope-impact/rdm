@@ -1,7 +1,7 @@
-"""Acceptance tests for the rendering context's design inputs (see dhf/).
+"""Acceptance tests for the rendering context's requirements (see spec/).
 
-Each test ("live BDD") verifies a rendering design input,
-tagged with `@allure.story` and its DI id. They exercise the real render engine / filters /
+Each test ("live BDD") verifies a rendering requirement,
+tagged with `@allure.tag` and its requirement id. They exercise the real render engine / filters /
 markdown extensions, so a passing tag is evidence the requirement is met.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
@@ -28,7 +28,7 @@ ROOT = Path(__file__).parents[2]
 @allure.tag("item-07-001")
 @allure.label("output", "rdm/publishing/render.py")
 def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypatch) -> None:
-    """DI-7: a Markdown template file rendered with Jinja2 against the data
+    """item-07-001: a Markdown template file rendered with Jinja2 against the data
     files supplied, each under its file name; a value the data does not supply
     is refused, naming it."""
     from rdm.main import cli
@@ -57,7 +57,7 @@ def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypat
 @allure.tag("item-07-002")
 @allure.label("output", "rdm/publishing/render.py")
 def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
-    """DI-8: the invert_dependencies, join_to and md_indent filters, used from
+    """item-07-002: the invert_dependencies, join_to and md_indent filters, used from
     a template."""
     with verification_step("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
         out = render_from_string("{% for b, a in items | invert_dependencies('id', 'deps') %}{{ b }}<-{{ a | sort }}"
@@ -88,7 +88,7 @@ def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
 @allure.tag("item-07-003")
 @allure.label("output", "rdm/md_extensions/")
 def test_markdown_post_processing() -> None:
-    """DI-9: section numbering, a second pass that gives a template the words
+    """item-07-003: section numbering, a second pass that gives a template the words
     its first render produced, and auditor-note exclusion."""
     with verification_step("sections are numbered"):
         numbered = render_from_string(
