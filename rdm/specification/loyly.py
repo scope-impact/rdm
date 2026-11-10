@@ -6,7 +6,9 @@ sources of user needs:
 
 - **Layout.** A plan directory whose ``NN-<context>`` entries (links, in
   Löyly) each hold one context's ``spec.feature``; a slice whose ``plan.md``
-  says ``status: planned`` or ``status: backlog`` is skipped and recorded;
+  says ``status: planned`` or ``status: backlog`` is skipped and recorded,
+  and any other slice without one (a link to a folder git never received) is
+  a problem, never skipped quietly;
   ``drafts.feature`` is never read. Requirement ids are ``@item-NN-SSS``.
 - **User needs.** Each screen of a context's Grain event model
   (``event-model/*.edn``) with the Allium surfaces it links
@@ -80,7 +82,9 @@ def read_layout(plan: Path, root: Path, id_pattern: str | None = None):
             skipped.append((entry.name, status))
             continue
         feature = entry / "spec.feature"
-        if not feature.is_file():
+        if not feature.is_file():  # a slice the plan accepts has a spec: never drop it quietly
+            reading.problems.append(f"{_rel(entry.absolute(), root.absolute())}: no spec.feature "
+                                    "(a slice not planned or backlog holds its accepted scenarios)")
             continue
         contexts.append((entry.name, context))
         dirs[context] = entry

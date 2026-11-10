@@ -59,6 +59,39 @@ risks:
     probability: Unlikely
     controls: [item-06-007, item-06-002]
     residual: {probability: Rare}
+  - id: RISK-TOOL-008
+    category: safety
+    status: proposed
+    hazard: "The spec is read short: requirements are left out and no one notices."
+    situation: "A context's spec is missing from the repository (ignored by git, or a plan link to a folder never committed), and the gate counts only what it found."
+    harm: "A release passes with requirements that were never checked, reported as complete."
+    severity: Serious
+    probability: Possible
+    controls: [item-04-001, item-01-001]
+    residual: {probability: Rare}
+  - id: RISK-TOOL-009
+    category: safety
+    status: proposed
+    hazard: "The evidence that a release was verified cannot be retrieved later."
+    situation: "The CI artifact holding the evidence bundle expires, or the repository is lost."
+    harm: "An auditor cannot confirm what was verified for a release, and the team cannot show it."
+    severity: Serious
+    probability: Unlikely
+    controls: [item-04-003]
+    residual: {probability: Unlikely}
+    acceptance:
+      by: "RDM maintainers, by approving the pull request that records this register"
+      rationale: "RDM writes the complete, checksummed bundle; keeping it for the retention period is document control's job (DC-001, 11.10(c)), not the tool's. Monitored through DC-001's retention commitment."
+  - id: RISK-TOOL-010
+    category: safety
+    status: proposed
+    hazard: "The gate decides on results that are not the evidence of the commit being released."
+    situation: "Results are altered or swapped on their way from the test job to the gate, or an earlier run's results are used."
+    harm: "A release is approved on evidence of something else."
+    severity: Serious
+    probability: Unlikely
+    controls: [item-06-016, item-07-009, item-04-003]
+    residual: {probability: Rare}
 ---
 
 # Risk register — RDM as a tool
@@ -69,7 +102,7 @@ setting `status: approved` (or changing it).
 
 RDM is not a medical device. Teams use it to keep and check the evidence for
 one, so its risks are the ways it could misreport that evidence. Each control
-is a requirement of RDM's own spec (`spec/`), verified by the tests that
+is a requirement of RDM's own spec (`.pi/spec/`), verified by the tests that
 claim it; the
 release gate holds this register to the rules in `design/risk.md` (item-02-002).
 

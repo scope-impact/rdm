@@ -57,6 +57,13 @@
     example on every change), record and change control; DC-001's §11.10(a)
     validation points to it. RDM's CI holds its record to
     `part11_document_control` and `csv_tool_validation` (100% each).
+  - Risk analysis by CSA factor: RDM's register gains RISK-TOOL-008 (the spec
+    read short), -009 (evidence not retrievable) and -010 (a decision on other
+    results); the example's, RISK-HAR-005 and -006; each CSV document maps
+    the guidance's six factors to its risks.
+  - A slice of a Löyly plan with no spec.feature now blocks release (it was
+    skipped quietly: a link to a folder git never received dropped its
+    requirements). item-04-001 states it.
   - Checklists cite their sources: each item of `part11_document_control`
     and of the example's CSV checklist names the source PDF (with its link),
     the section and the printed and PDF page.

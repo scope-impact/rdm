@@ -116,6 +116,15 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
         gate = run_release_gate(dhf, results)
         assert _blocking(gate) == [UNREADABLE_SPEC] and "broken.feature" in gate.blocking[0], gate.blocking
         broken.unlink()
+    with verification_step("a slice of a Löyly plan whose spec.feature is missing blocks, naming the slice: a "
+                           "spec is never read short"):
+        plan_dhf = spec_project(tmp_path / "plan", (("item-01-001", "Release", ["Release"]),),
+                                {"Release": ("core", "Operator", "a need")}, {"01": "core", "02": "missing"},
+                                layout="loyly")
+        (plan_dhf.parent / ".pi" / "spec" / "missing" / "spec.feature").unlink()
+        gate = run_release_gate(plan_dhf, results)
+        attach("release gate blocking", gate.blocking)
+        assert _blocking(gate) == [UNREADABLE_SPEC] and "02-missing" in gate.blocking[0], gate.blocking
     with verification_step("a spec with no stamped scenario blocks: nothing to verify"):
         feature.write_text("Feature: Release\n")
         gate = run_release_gate(dhf, results)

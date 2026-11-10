@@ -34,7 +34,16 @@ one across cycles, a golden moved to hide a failure. Where its output enters
 a regulated product without independent verification, that compromises
 product quality: **high process risk** ([[CSA:risk]]). The hazards, their
 evaluation and their controls are RMF-HAR-001, each control a requirement of
-the harness's own spec.
+the harness's own spec where one exists. The analysis covers every factor the
+guidance names (its §V.A(2)), for failures that are reasonably foreseeable:
+
+| Factor | Risks |
+|---|---|
+| Configuration and management | RISK-HAR-001 (a leaky clean room), RISK-HAR-005 (a claim lost by the bridge) |
+| Security | RISK-HAR-004 (a golden moved to hide a failure) |
+| Data integrity | RISK-HAR-002 (an unapproved grader), RISK-HAR-003 (a reused item identity) |
+| Data storage, data transfer | as for RDM, the record system (DC-HAR-001; RDM's RISK-TOOL-009, RISK-TOOL-010) |
+| Operation error | RISK-HAR-006 (a commit other than the one validated) |
 
 ## Assurance activities
 

@@ -36,7 +36,17 @@ additional human review where a team relies on its gate alone. That is a
 quality problem that could foreseeably compromise safety: **high process
 risk** ([[CSA:risk]], [[13485:4.1.6-proportionate]]). The ways it could fail,
 their evaluation and their controls are RMF-001, RDM's tool-risk register,
-each control a requirement of RDM's own spec.
+each control a requirement of RDM's own spec. The analysis covers every
+factor the guidance names (its §V.A(2)), for failures that are reasonably
+foreseeable, not only likely:
+
+| Factor | Risks |
+|---|---|
+| Configuration and management | RISK-TOOL-008 (the spec read short) |
+| Security | RISK-TOOL-004, RISK-TOOL-006, RISK-TOOL-007 |
+| Data integrity | RISK-TOOL-002, RISK-TOOL-005 |
+| Data storage | RISK-TOOL-009 (evidence not retrievable) |
+| Data transfer, operation error | RISK-TOOL-010 (a decision on other results) |
 
 ## Assurance activities
 

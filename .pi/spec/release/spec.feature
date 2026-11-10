@@ -30,6 +30,7 @@ Feature: Release
       Then release is blocked: item-01-001 is stamped twice
       When a feature file "broken.feature" that Gherkin cannot parse is added instead
       Then release is blocked, naming broken.feature
+      And a slice of a Löyly plan whose spec.feature is missing (a link to a folder git never received) blocks release, naming the slice
       When the feature file holds no stamped scenario
       Then release is blocked: there is nothing to verify
       And a repository with no spec at all is blocked: no spec was found
