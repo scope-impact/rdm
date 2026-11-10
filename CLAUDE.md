@@ -16,9 +16,9 @@ uv run --extra docs mkdocs serve   # Live-preview the docs at localhost:8000
 
 Ruff config: line-length 120, rules E/W/F (see `[tool.ruff]` in pyproject.toml).
 
-Note: the docs build runs the acceptance suites of RDM and of the Part 11
-example (`docs/_hooks/traceability.py`) and draws each one's traceability from
-its graph, so expect `mkdocs build` to take about a minute and to need the full
+Note: the docs build runs RDM's acceptance suite (`docs/_hooks/traceability.py`)
+and draws its traceability, and that of the Löyly pi harness example (from the
+results its `run-acceptance.sh` left, else from its spec alone), from their graphs, so expect `mkdocs build` to take about a minute and to need the full
 dev environment (`graph` extra) for real evidence; a map says why otherwise. The published design history file
 (`docs/_hooks/dhf.py`) links each document's PDF. CI renders them once, in
 the RDM image (the Docs workflow's `pdfs` job, which also renders a scaffolded

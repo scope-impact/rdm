@@ -16,6 +16,8 @@
 
 // Pandoc compatibility
 #let horizontalrule = line(length: 100%, stroke: 0.5pt + rule-color)
+// Pandoc before 3.1.12 writes a block quote as #blockquote; later ones as #quote(block: true).
+#let blockquote(body) = quote(block: true, body)
 
 // Fonts: Nunito Sans for text, JetBrains Mono for headings and code (both in
 // the RDM image); the fallbacks keep a document readable without them.
