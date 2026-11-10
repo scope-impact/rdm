@@ -122,7 +122,7 @@ def evidence_bundle(dhf_dir: Path, allure_results_dir: Path, out_dir: Path) -> d
     manifest = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "dhf": str(dhf_dir),
-        "design_inputs": summary["total"],
+        "requirements": summary["total"],
         "verified": summary["verified"],
         "failed": summary["failed"],
         "untested": summary["untested"],
@@ -158,7 +158,7 @@ def evidence_bundle_command(
         print(f"Error: {error}")
         return 2
     print(f"Wrote release evidence bundle to {out}:")
-    print(f"  design inputs : {manifest['verified']}/{manifest['design_inputs']} verified "
+    print(f"  requirements  : {manifest['verified']}/{manifest['requirements']} verified "
           f"({manifest['failed']} failed, {manifest['untested']} untested)")
     print(f"  report        : {manifest['verification_report']}")
     print(f"  files         : {len(manifest['files'])} + manifest.json")

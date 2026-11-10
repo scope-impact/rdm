@@ -31,7 +31,7 @@ allure = pytest.importorskip("allure")
 from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
-@allure.story("DI-10")
+@allure.tag("item-05-001")
 @allure.label("output", "rdm/compliance/gaps.py")
 def test_reports_missing_checklist_references(tmp_path: Path) -> None:
     """DI-10: a missing required reference makes the audit exit non-zero; a fully
@@ -128,7 +128,7 @@ def test_reports_missing_checklist_references(tmp_path: Path) -> None:
         assert "Traceback" not in piped.stderr and "BrokenPipe" not in piped.stderr, piped.stderr
 
 
-@allure.story("DI-11")
+@allure.tag("item-05-002")
 @allure.label("output", "rdm/compliance/checklists/")
 def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
     """DI-11: the standard checklists ship, and a built-in name resolves its
@@ -183,7 +183,7 @@ def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
         assert "| A.TXT | 2 | 1 | 1 | 50% |" in capsys.readouterr().out
 
 
-@allure.story("DI-12")
+@allure.tag("item-05-003")
 @allure.label("output", "rdm/compliance/gaps.py")
 def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> None:
     """DI-12: coverage is tabulated per checklist; verbose names the missing items."""
@@ -213,7 +213,7 @@ def test_coverage_report_tabulates_and_lists_missing(tmp_path: Path, capsys) -> 
         assert "Missing Items" not in capsys.readouterr().out
 
 
-@allure.story("DI-25")
+@allure.tag("item-05-004")
 @allure.label("output", "rdm/compliance/checklists/part11_document_control.txt")
 def test_rdm_claims_git_as_its_own_document_control(tmp_path: Path, capsys) -> None:
     """DI-25: the Part 11 document-control checklist ships as a built-in, and

@@ -2,9 +2,9 @@ name: Release controlled documents
 
 # 21 CFR 11.10(b): accurate and complete copies in human-readable (PDF) and
 # electronic (git archive at the tag) form, attached to the GitHub Release
-# (DI-3). Published only if the release gate passes at the tag, with the
-# evidence bundle and its verification report attached (DI-10), and the device
-# history record listing all of it (DI-8).
+# (item-03-001). Published only if the release gate passes at the tag, with the
+# evidence bundle and its verification report attached (item-03-003), and the device
+# history record listing all of it (item-03-002).
 on:
   push:
     tags:
@@ -26,7 +26,7 @@ jobs:
           python-version: "3.x"
       - name: Install rdm
         run: pip install "rdm[graph,report] @ git+https://github.com/scope-impact/rdm@v2.0.0-alpha" pytest allure-pytest   # not PyPI's rdm, another project
-      # DI-10: no release unless the released commit is verified.
+      # item-03-003: no release unless the released commit is verified.
       - name: Verify the released commit
         run: |
           pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results

@@ -32,7 +32,7 @@ def _decision(quads, risk_id: str) -> str:
                 and q.predicate.value == RDM + "residualDecision")
 
 
-@allure.story("DI-45")
+@allure.tag("item-06-008")
 @allure.label("output", "rdm/graph/project.py")
 def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
     """DI-45: each risk with its branch, links, chain, scores, levels,

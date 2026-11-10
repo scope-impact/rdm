@@ -1,4 +1,4 @@
-"""Acceptance test for the verification context's DI-30 (see dhf/).
+"""Acceptance test for item-04-003 (.pi/spec/release/spec.feature).
 
 The release evidence bundle: the retained artifact set (verification data,
 rendered matrix, manifest) produced from the record. Skips cleanly
@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from rdm.publishing.bundle import evidence_bundle, evidence_bundle_command
+from tests.util import write_spec
 
 allure = pytest.importorskip("allure")
 
@@ -20,24 +21,18 @@ from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
-    """A minimal DHF with one verified design input, a matrix template, and a
-    passing Allure result."""
+    """A minimal DHF and spec with one verified requirement, a matrix
+    template, and a passing Allure result."""
     dhf = tmp_path / "dhf"
-    (dhf / "documents" / "design").mkdir(parents=True)
-    (dhf / "documents" / "design" / "core.md").write_text(
-        "---\nid: SDS-C-001\nkind: design\ncontext: core\n"
-        "design_inputs:\n  - id: DI-1\n"
-        '    text: "a requirement"\n    traces_to: [UN-001]\n---\n\n# Core\n'
-    )
-    (dhf / "documents" / "vv_plan.md").write_text(
-        "---\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n---\n"
-    )
+    (dhf / "documents").mkdir(parents=True)
+    write_spec(tmp_path, (("item-01-001", "a requirement", ["Need"]),), {"Need": ("core", "User", "a need")},
+               {"01": "core"})
     (dhf / "documents" / "traceability_matrix.md").write_text(
         "---\nid: TM-001\n---\n# Matrix\n"
         "{% if verification is defined %}"
         "total={{ verification.summary.total }} verified={{ verification.summary.verified }}\n"
-        "{% for group in verification.groups %}{% for di in group.design_inputs %}"
-        "row:{{ di.design_input }}:{{ di.status }}\n"
+        "{% for group in verification.groups %}{% for r in group.requirements %}"
+        "row:{{ r.requirement }}:{{ r.status }}\n"
         "{% endfor %}{% endfor %}{% endif %}"
     )
     (dhf / "config.yml").write_text("md_extensions: []\n")
@@ -45,7 +40,7 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
     results.mkdir()
     (results / "t1-result.json").write_text(json.dumps(
         {"name": "t1", "status": "passed",
-         "labels": [{"name": "story", "value": "DI-1"}],
+         "labels": [{"name": "tag", "value": "item-01-001"}],
          "attachments": [{"name": "gate output", "source": "a1-attachment.txt", "type": "text/plain"},
                          {"name": "linked", "source": "linked-attachment.txt", "type": "text/plain"},
                          {"name": "lost", "source": "gone-attachment.txt", "type": "text/plain"}],
@@ -60,15 +55,15 @@ def _mini_release(tmp_path: Path) -> tuple[Path, Path]:
     (results / "a3-attachment.txt").write_text("set up\n")
     (results / "stray-attachment.txt").write_text("not referenced by any result\n")
     (results / "linked-attachment.txt").symlink_to(tmp_path / "dhf" / "config.yml")  # a file outside the results
-    (results / "executor.json").write_text('{"name": "local", "type": "local"}')  # the plugin's (DI-65)
+    (results / "executor.json").write_text('{"name": "local", "type": "local"}')  # the plugin's (item-03-003)
     (results / "environment.properties").write_text("python=CPython 3.13\n")
     return dhf, results
 
 
-@allure.story("DI-30")
+@allure.tag("item-04-003")
 @allure.label("output", "rdm/publishing/bundle.py")
 def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None:
-    """DI-30: the bundle contains the verification data, the rendered matrix,
+    """item-04-003: the bundle contains the verification data, the rendered matrix,
     the executed results with their attachments and containers, and a manifest
     that agrees with them."""
     dhf, results = _mini_release(tmp_path)
@@ -82,13 +77,13 @@ def test_evidence_bundle_writes_the_retained_release_set(tmp_path: Path) -> None
     with verification_step("The matrix is RENDERED (data in, template markers out)"):
         matrix = (out / "traceability_matrix.md").read_text()
         assert "total=1 verified=1" in matrix
-        assert "row:DI-1:verified" in matrix
+        assert "row:item-01-001:verified" in matrix
         assert "{%" not in matrix
 
     with verification_step("The manifest describes exactly what was bundled"):
         on_disk = json.loads((out / "manifest.json").read_text())
         assert on_disk == manifest
-        assert manifest["design_inputs"] == 1 and manifest["verified"] == 1
+        assert manifest["requirements"] == 1 and manifest["verified"] == 1
         assert "faithfulness_verdicts" not in manifest
     with verification_step("the executed results, with every attachment and container they reference"):
         # every plain file of the results directory (results, containers,

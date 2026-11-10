@@ -24,10 +24,10 @@ def _rules() -> dict:
     return {rule["type"]: rule for rule in read_json(RULESET)["rules"]}
 
 
-@allure.story("DI-1")
+@allure.tag("item-01-001")
 @allure.label("output", ".github/rulesets/controlled-documents.json")
 def test_ruleset_gates_the_default_branch() -> None:
-    """DI-1: PR + code-owner approval, verified signatures, status checks, and
+    """item-01-001: PR + code-owner approval, verified signatures, status checks, and
     immutable history are enforced by the ruleset configuration."""
     ruleset = read_json(RULESET)
     attach("controlled-documents.json", ruleset)
@@ -57,10 +57,10 @@ def test_ruleset_gates_the_default_branch() -> None:
             assert re.search(rf"^{re.escape(controlled)}\s+@", codeowners, re.M), controlled
 
 
-@allure.story("DI-6")
+@allure.tag("item-01-002")
 @allure.label("output", ".github/settings.json")
 def test_merge_behavior_is_configuration_code() -> None:
-    """DI-6: merge-commit-only settings are declared as code, and setup.sh
+    """item-01-002: merge-commit-only settings are declared as code, and setup.sh
     applies and drift-checks them against the live repository."""
     settings = read_json(SETTINGS)
     attach("settings.json", settings)
@@ -91,10 +91,10 @@ def _reported_checks(flow: dict) -> set[str]:
             for job_id, job in flow["jobs"].items()}
 
 
-@allure.story("DI-9")
+@allure.tag("item-01-003")
 @allure.label("output", ".github/workflows/design-controls.yml")
 def test_every_pull_request_runs_the_checks_the_ruleset_requires() -> None:
-    """DI-9: the design controls (RDM's reusable gates, pinned) and the Part 11
+    """item-01-003: the design controls (RDM's reusable gates, pinned) and the Part 11
     gap analysis run on every pull request, and the ruleset requires exactly
     the checks that workflow reports."""
     flow = workflow("design-controls.yml")
@@ -147,10 +147,10 @@ def _check(env: dict[str, str]) -> subprocess.CompletedProcess:
     return subprocess.run(["bash", str(SETUP), "--check", "acme/docs"], env=env, capture_output=True, text=True)
 
 
-@allure.story("DI-11")
+@allure.tag("item-01-004")
 @allure.label("output", ".github/workflows/drift-audit.yml")
 def test_a_daily_audit_fails_on_any_drift(tmp_path: Path) -> None:
-    """DI-11: a scheduled audit compares the live ruleset and repository
+    """item-01-004: a scheduled audit compares the live ruleset and repository
     settings with the checked-in configuration at least daily, and fails on
     any difference."""
     flow = workflow("drift-audit.yml")

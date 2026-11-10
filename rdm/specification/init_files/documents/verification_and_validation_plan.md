@@ -2,13 +2,6 @@
 id: VVP-001
 revision: 1
 title: Verification and Validation Plan
-# User-need registry: this product's validated journeys, defined ONCE here.
-# Design inputs refine them via `traces_to`; the release gate blocks any
-# need nothing traces to.
-user_needs: []
-# e.g.:
-#   - id: UN-001
-#     text: "A clinician is promptly alerted to dangerous changes in a patient's vitals."
 ---
 
 # Purpose
@@ -19,10 +12,13 @@ This document describes the plan regarding how {{device.name}} will be verified 
 
 # User Needs
 
-The user needs {{device.name}} validates against are registered in this
-document's frontmatter (`user_needs`) — they are the validation anchors and
-the coverage denominator for the traceability gates (`rdm story
-release-gate`). Design inputs refine them via `traces_to`.
+The user needs {{device.name}} validates against are read from its spec:
+the screens of the spec's event model, with the Allium surfaces they link
+(who they face, the rules they provide, what they guarantee). The
+requirements are the spec's stamped Gherkin scenarios (`item-NN-SSS`), each
+verified by the tests that claim it. RDM finds the spec at `.pi/plan` in the
+repository, or wherever `spec` in the render configuration names, and the
+traceability gates (`rdm story release-gate`) hold the record to it.
 
 # Scope
 

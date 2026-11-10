@@ -51,7 +51,7 @@ def _ifu() -> tuple[dict, list[tuple[str, str]]]:
     return front, titled
 
 
-@allure.story("DI-80")
+@allure.tag("item-07-005")
 def test_the_ifu_is_one_manual_in_reading_order() -> None:
     """DI-80: IFU-001 lists RDM's manual in the reading order of instructions
     for use, behind a cover naming the product, its release and the manual's
@@ -102,7 +102,7 @@ def _version_hook():
     return module
 
 
-@allure.story("DI-82")
+@allure.tag("item-07-006")
 def test_the_docs_are_published_once_per_release() -> None:
     """DI-82: the docs are published once per release tag and once for the
     development version, every release kept and selectable, the newest release
@@ -129,7 +129,7 @@ def test_the_docs_are_published_once_per_release() -> None:
         assert "mike set-default --push latest" in script
 
 
-@allure.story("DI-81")
+@allure.tag("item-07-007")
 def test_the_ifu_discloses_each_residual_risk() -> None:
     """DI-81: the IFU's safety chapter names every risk of RDM's register, each
     with what the user must do about its residual risk."""

@@ -40,7 +40,7 @@ def _session(dhf: Path, results: Path, steps):
     return asyncio.run(asyncio.wait_for(run(), 60))
 
 
-@allure.story("DI-41")
+@allure.tag("item-06-006")
 @allure.label("output", "rdm/graph/agent.py")
 def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
     """DI-41: an MCP stdio server with schema, query, trace and validate, each
@@ -103,7 +103,7 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
         assert error and "DI-99 is not declared in the record" in message
 
 
-@allure.story("DI-42")
+@allure.tag("item-06-007")
 @allure.label("output", "rdm/graph/agent.py")
 def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
     """DI-42: no write tool; query takes SELECT/ASK/CONSTRUCT/DESCRIBE, rejects

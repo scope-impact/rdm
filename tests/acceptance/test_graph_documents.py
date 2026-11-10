@@ -1,6 +1,6 @@
-"""Acceptance test for documents linked from the record (DI-58, see dhf/).
+"""Acceptance test for documents linked from the record (item-06-015).
 
-Tagged `@allure.story("DI-58")`, over the real projection and the real gate
+Tagged `@allure.tag`, over the real projection and the real gate
 shapes. Skips cleanly if allure-pytest or the `graph` extra is not installed.
 """
 
@@ -16,25 +16,24 @@ ox = pytest.importorskip("pyoxigraph")
 from rdm.graph.project import project  # noqa: E402
 from rdm.graph.validate import validate  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
+from tests.util import write_spec  # noqa: E402
 
 PREFIXES = """PREFIX rdm: <https://github.com/scope-impact/rdm/ns#>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX prov: <http://www.w3.org/ns/prov#>
 """
-UNDECLARED = "bounded context has a design document but no document declares it (contexts frontmatter)"
+UNDECLARED = "bounded context of the spec is declared by no document (contexts frontmatter)"
 DANGLING = "references a document the record does not hold"
 
 
 def _dhf(tmp_path: Path, architecture: str | None) -> Path:
-    """Needs in a V&V plan, two contexts with design documents, a document
-    control procedure, the matrix template, and (optionally) an architecture."""
-    docs = tmp_path / "acme" / "dhf" / "documents"
-    (docs / "design").mkdir(parents=True)
-    (docs / "vv.md").write_text("---\nid: VVP-1\nuser_needs:\n  - {id: UN-001, text: a need}\n---\n")
-    for context in ("alarms", "ui"):
-        (docs / "design" / f"{context}.md").write_text(
-            f"---\nid: SDS-{context.upper()}\nkind: design\ncontext: {context}\n"
-            "design_inputs: []\n---\n")
+    """A spec of two contexts (alarms, ui), a V&V plan, a document control
+    procedure, the matrix template, and (optionally) an architecture."""
+    repo = tmp_path / "acme"
+    docs = repo / "dhf" / "documents"
+    docs.mkdir(parents=True)
+    write_spec(repo, (("item-01-001", "The device shall alarm.", []),), {}, {"01": "alarms", "02": "ui"})
+    (docs / "vv.md").write_text("---\nid: VVP-1\n---\n")
     (docs / "control.md").write_text("---\nid: DC-1\ntitle: Document control\n---\nCovers [[STD:1]].\n")
     (docs / "traceability_matrix.md").write_text("---\nid: TM-1\n---\n{{ verification }}\n")
     if architecture is not None:
@@ -46,11 +45,11 @@ def _ask(store, body: str) -> bool:
     return bool(store.query(PREFIXES + "ASK { " + body + " }", use_default_graph_as_union=True))
 
 
-@allure.story("DI-58")
+@allure.tag("item-06-015")
 @allure.label("output", "rdm/graph/project.py")
 @allure.label("output", "rdm/graph/shapes.ttl")
 def test_documents_link_from_the_record(tmp_path: Path) -> None:
-    """DI-58: contexts link to the document declaring them (with their part),
+    """item-06-015: contexts link to the document declaring them (with their part),
     documents to the documents they reference, not the matrix template; a
     warning for an undeclared context once any is declared; a violation for a
     reference to a document the record does not hold."""

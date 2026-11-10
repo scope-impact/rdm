@@ -4,3 +4,8 @@
 #   rdm.md_extensions.VocabularyExtension        a glossary of the words a document uses
 #   rdm.md_extensions.AuditNoteExclusionExtension  removes [[…]] notes (the release copy)
 md_extensions: []
+
+# The spec RDM holds the record to (requirements and user needs), as the plan
+# directory of a Löyly-shaped spec, relative to this DHF. Leave it out when the
+# spec is at .pi/plan in the repository.
+# spec: ../.pi/plan

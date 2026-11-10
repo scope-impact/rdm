@@ -8,7 +8,7 @@ title: Design Review
 
 This document records the **design review(s)** for {{ device.name }} software. A design review is a documented, comprehensive, and systematic examination of the design to evaluate the adequacy of the design inputs and the design's ability to meet them, and to identify problems.
 
-A design review of the design inputs (declared in the per-context design documents, `kind: design`) must be conducted and approved *before* design work transitions into backlog/implementation tasks.
+A design review of the design inputs (the requirements of the product's spec, stamped scenarios `item-NN-SSS`) must be conducted and approved *before* design work transitions into backlog/implementation tasks.
 
 [[Design reviews satisfy ISO 13485:2016 7.3.5 and 21 CFR 820.30(e). Each review must include participants who do not have direct responsibility for the design stage being reviewed, plus any needed specialists. Results, participants, and dates must be documented.]]
 
@@ -26,7 +26,7 @@ ENDTODO
 
 **Date:** TODO
 
-**Design stage reviewed:** Design Inputs (declared in the per-context design documents, `kind: design`)
+**Design stage reviewed:** Design Inputs (the requirements of the product's spec)
 
 **Disposition:** TODO (Approved / Approved with actions / Rejected)
 

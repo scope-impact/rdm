@@ -25,7 +25,7 @@ from rdm.specification.adopt import adopt  # noqa: E402
 from rdm.main import parse_arguments  # noqa: E402
 from rdm.kernel.version import release_version  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
-from tests.util import git_run, write_allure_result  # noqa: E402
+from tests.util import git_run, write_allure_result, write_spec  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "gates.yml"
@@ -36,18 +36,14 @@ EXPR = re.compile(r"\$\{\{\s*(.*?)\s*\}\}")
 
 
 def _releasable(repo: Path) -> Path:
-    """A committed record that passes every gate: one need, one design input,
-    a review, and a passing run of the input's tagged test."""
+    """A committed record that passes every gate: a spec with one need and one
+    requirement, and a passing run of the test that claims it."""
     docs = repo / "dhf" / "documents"
-    (docs / "design").mkdir(parents=True)
-    (docs / "verification_and_validation_plan.md").write_text(
-        "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n---\n# Plan\n")
-    (docs / "design" / "alarms.md").write_text(
-        "---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n"
-        "  - {id: DI-1, text: 'The device shall alarm.', traces_to: [UN-001]}\n---\n# Alarms\n")
-    (docs / "design_review.md").write_text("---\nid: DR-001\n---\n# Review\nApproved.\n")
+    docs.mkdir(parents=True)
+    write_spec(repo, (("item-01-001", "The device alarms.", ["Alarm"]),),
+               {"Alarm": ("alarms", "Nurse", "A nurse is alerted.")}, {"01": "alarms"})
     (docs / "traceability_matrix.md").write_text("---\nid: TM-001\n---\n# Matrix\n")  # the bundle renders it
-    write_allure_result(repo / "dhf" / "allure-results", "r1", "passed", "DI-1")
+    write_allure_result(repo / "dhf" / "allure-results", "r1", "passed", "item-01-001")
     for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "r"]):
         git_run(repo, *args)
     return repo / "dhf"
@@ -126,7 +122,7 @@ def _rdm_commands(text: str) -> list[list[str]]:
     return commands
 
 
-@allure.story("DI-63")
+@allure.tag("item-04-004")
 @allure.label("output", ".github/workflows/gates.yml")
 @allure.label("output", "actions/gates/action.yml")
 @allure.label("output", "action.yml")
@@ -155,7 +151,7 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
             _run_action(action, {"install-rdm": "false", "checklists": "part11_document_control"},
                         repo, tmp_path / "runner")
     with verification_step("a gate that fails fails the action"):
-        write_allure_result(dhf / "allure-results", "r2", "failed", "DI-1")
+        write_allure_result(dhf / "allure-results", "r2", "failed", "item-01-001")
         with pytest.raises(AssertionError, match="Release gate"):
             _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
     with verification_step("with the release gate off and no results yet, no gate runs"):

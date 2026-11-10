@@ -11,7 +11,7 @@ documents, and the source that realises them — are
 controlled. RDM keeps its record **in git, with GitHub as the service
 provider**; this statement maps each applicable 21 CFR Part 11 control to the
 mechanism that meets it, and it must pass gap analysis against RDM's own
-shipped `part11_document_control` checklist (DI-25 — the same checklist any
+shipped `part11_document_control` checklist (item-05-004 — the same checklist any
 downstream project audits with is the one this record is held to).
 
 # The system
@@ -87,5 +87,5 @@ are tags; the revision history is the git history itself. Planning artifacts
 # Verification
 
 `rdm gap part11_document_control dhf/documents/document_control.md` must exit
-zero; the DI-25 acceptance test executes exactly that, so this statement can
+zero; the item-05-004 acceptance test executes exactly that, so this statement can
 never silently drop a control.

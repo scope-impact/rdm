@@ -1,10 +1,15 @@
 # ADR 0002: The spec lives with the factory; RDM audits it
 
-> Status: Proposed. The product owner had the removals done first, ahead of
-> the migration below: spec authoring was removed (the design gate,
-> its hooks, `new-input`), the C4 architecture context, persona runs, the mutation
-> probe and the pytest plugin's labels from the record. Reading the factory's
-> spec (steps 1 to 4) waits on the open questions at the end.
+> Status: Accepted and implemented (2026-11-10). RDM reads a Löyly-shaped spec
+> (`rdm/specification/spec.py`); design inputs are gone from RDM and from its
+> own record, whose spec is now in Löyly's layout under `.pi/`. Against
+> Löyly's `spec-v2` the reading gives 201 stamped items, Löyly's own golden.
+> Decided along the way, superseding the sections below where they differ:
+> a run claims a requirement with an Allure `tag` label `item-NN-SSS`; a user
+> need is an event-model screen with the Allium surfaces it links (a surface,
+> where a context has no screens), captured with the event storm, not the
+> Gherkin Feature; RDM's own record was converted in one go. Open: whether
+> Löyly's graded verdicts become a second kind of evidence.
 
 ## Context
 
@@ -99,26 +104,21 @@ worktree facts), rendering and Pandoc/Typst, the graph's document, commit and ch
 parts, C4 component labels, the mutation probe, unit coverage, validation and persona
 records, and the pull-request review as independent verification.
 
-### User needs: the Gherkin story
+### User needs: the event model, Allium and the event storm
 
-**Decided (product owner, 2026-11-10): the user need is the Gherkin story.** Each slice's
-`spec.feature` holds one `Feature:` with its narrative, which is the user need. Its stamped
-scenarios are the requirements that verify it. RDM keeps no user-need registry of its own.
+**Decided (product owner, 2026-11-10), superseding "the Feature is the user
+need":** a user need is captured by the event storm, the event model and
+Allium together. RDM takes each **screen** of a context's event model as a
+user need, with the Allium **surfaces** it links (the actor each faces, the
+rules whose triggers it provides, what it guarantees) and the **event-storm
+events** an actor causes that the screen's commands produce. A context with no
+screens offers each surface as a need, its doc comment as its text.
 
-- **Identity.** The user need is identified by its slice (`NN`, from the slice directory,
-  read as the stamper reads it). Its text is the `Feature:` title and description. A
-  scenario's need is the Feature it sits in. No `traces_to` is written, because the file
-  states the link.
-- **The V&V plan's `user_needs:` goes.** The release gate's NEED_UNADDRESSED becomes "an
-  accepted slice's Feature has no stamped scenario", and NO_DESIGN_INPUTS becomes "no
-  accepted slice holds a stamped scenario".
-- **Validation stays against the user need** (21 CFR 820.30(g)), keyed by slice.
-  Validation records (`<dhf>/validation/<slice>-validation.json`) and persona runs name the
-  slice. The release gate still warns, and never blocks, on a Feature with no approved
-  validation record.
-- **Provenance is audited, never required.** Where a slice's `plan.md` cites wiki pages and
-  those pages cite `raw/` (Löyly's minimum reference rule), the graph carries that chain.
-  A slice whose `plan.md` cites nothing is a finding.
+- A requirement **addresses** a need when its `@allium-*` tags cover one of the
+  need's rules or guarantees; one that covers none (a system-facing seam, an
+  invariant) traces to the needs of its own context.
+- The release gate blocks a need that no requirement addresses directly.
+- Validation records name the need's id (`measurement/instrument-desk`).
 
 ## Consequences
 

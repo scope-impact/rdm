@@ -7,7 +7,7 @@
 
 dc:ProcedureShape a sh:NodeShape ;
     sh:targetClass rdm:Document ;
-    # DI-2: a procedure without a revision cannot be identified as the
+    # item-02-001: a procedure without a revision cannot be identified as the
     # approved one.
     sh:sparql [
         a sh:SPARQLConstraint ;
@@ -21,7 +21,7 @@ dc:ProcedureShape a sh:NodeShape ;
                 FILTER NOT EXISTS { $this rdm:revision ?revision }
             }""" ;
     ] ;
-    # DI-5: a standard operating procedure cites the regulation it implements.
+    # item-02-003: a standard operating procedure cites the regulation it implements.
     sh:sparql [
         a sh:SPARQLConstraint ;
         sh:severity sh:Violation ;

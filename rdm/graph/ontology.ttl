@@ -21,31 +21,25 @@ rdm: a owl:Ontology ;
 
 rdm:UserNeed a owl:Class ;
     rdfs:label "User need" ;
-    rdfs:comment "A validated journey the product exists to serve (registered in the V&V plan)." .
+    rdfs:comment "What an actor needs, as the spec captures it: a screen of the event model with the Allium surfaces it links (who it faces, the rules it provides, what it guarantees), and the event-storm events behind it; a surface, in a context with no screens." .
 
-rdm:DesignInput a owl:Class ;
+rdm:Requirement a owl:Class ;
     rdfs:subClassOf oslc_rm:Requirement ;
-    rdfs:label "Design input" ;
-    rdfs:comment "A verifiable requirement (§820.30(c)), declared once by its owning bounded context." .
+    rdfs:label "Requirement" ;
+    rdfs:comment "A stamped scenario of the spec (item-NN-SSS): one acceptance criterion, verified by the test runs that claim it." .
+
+rdm:AlliumRule a owl:Class ;
+    rdfs:label "Allium rule" ;
+    rdfs:comment "A rule of the spec's Allium: the behaviour a trigger has, with its refusals." .
 
 rdm:BoundedContext a owl:Class ;
     rdfs:label "Bounded context" ;
-    rdfs:comment "A unit of design, captured in one kind: design document." .
+    rdfs:comment "A unit of design: one context of the spec (a slice of its plan)." .
 
 rdm:Document a owl:Class ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Controlled document" ;
     rdfs:comment "A document with a frontmatter id, under version control." .
-
-rdm:TestFile a owl:Class ;
-    rdfs:subClassOf prov:Entity ;
-    rdfs:label "Test file" ;
-    rdfs:comment "A test source file that defines tagged tests." .
-
-rdm:Test a owl:Class ;
-    rdfs:subClassOf prov:Entity ;
-    rdfs:label "Test" ;
-    rdfs:comment "One tagged test: a Python test function or method, or the whole file where tags are read by pattern (DI-61)." .
 
 rdm:Record a owl:Class ;
     rdfs:label "Record" ;
@@ -79,18 +73,51 @@ prov:Agent rdfs:label "Agent" .
 # --- Properties -------------------------------------------------------------
 
 rdm:text a owl:DatatypeProperty ;
-    rdfs:label "text" ; rdfs:comment "What a user need or design input says." ; rdfs:range xsd:string .
+    rdfs:label "text" ; rdfs:comment "What a user need or requirement says: a screen's description, a scenario's title." ; rdfs:range xsd:string .
 
 rdm:tracesTo a owl:ObjectProperty ;
-    rdfs:label "traces to" ; rdfs:domain rdm:DesignInput ; rdfs:range rdm:UserNeed ;
-    rdfs:comment "The user need a design input refines. The needs a context serves follow from it: ?i rdm:tracesTo ?need ; rdm:ownedBy ?context." .
+    rdfs:label "traces to" ; rdfs:domain rdm:Requirement ; rdfs:range rdm:UserNeed ;
+    rdfs:comment "A user need a requirement addresses: one whose rules or guarantees it covers, else each need of its own context." .
 
 rdm:ownedBy a owl:ObjectProperty ;
-    rdfs:label "owned by" ; rdfs:domain rdm:DesignInput ; rdfs:range rdm:BoundedContext .
+    rdfs:label "owned by" ; rdfs:range rdm:BoundedContext ;
+    rdfs:comment "The context of the spec a requirement, user need or rule belongs to." .
 
-rdm:realises a owl:ObjectProperty ;
-    rdfs:label "realises" ; rdfs:domain rdm:BoundedContext ; rdfs:range rdm:DesignInput ;
-    rdfs:comment "A context that contributes to a design input another context owns." .
+rdm:source a owl:DatatypeProperty ;
+    rdfs:label "source" ; rdfs:comment "The spec file (and line) a fact is read from, from the repository root." .
+
+rdm:inRule a owl:DatatypeProperty ;
+    rdfs:label "in rule" ; rdfs:domain rdm:Requirement ; rdfs:comment "The Gherkin Rule the scenario sits under." .
+
+rdm:covers a owl:DatatypeProperty ;
+    rdfs:label "covers" ; rdfs:domain rdm:Requirement ;
+    rdfs:comment "An Allium obligation the scenario is tagged with, as kind.Name (rule-success.DeriveChecklist)." .
+
+rdm:coversRule a owl:ObjectProperty ;
+    rdfs:label "covers rule" ; rdfs:domain rdm:Requirement ; rdfs:range rdm:AlliumRule .
+
+rdm:facing a owl:DatatypeProperty ;
+    rdfs:label "facing" ; rdfs:domain rdm:UserNeed ; rdfs:comment "An actor the need's surfaces face." .
+
+rdm:surface a owl:DatatypeProperty ;
+    rdfs:label "surface" ; rdfs:domain rdm:UserNeed ; rdfs:comment "An Allium surface of the need." .
+
+rdm:providesRule a owl:ObjectProperty ;
+    rdfs:label "provides rule" ; rdfs:domain rdm:UserNeed ; rdfs:range rdm:AlliumRule ;
+    rdfs:comment "A rule whose trigger a surface of the need provides." .
+
+rdm:guarantee a owl:DatatypeProperty ;
+    rdfs:label "guarantee" ; rdfs:domain rdm:UserNeed ; rdfs:comment "A guarantee a surface of the need makes." .
+
+rdm:command a owl:DatatypeProperty ;
+    rdfs:label "command" ; rdfs:domain rdm:UserNeed ; rdfs:comment "A command the need's screen issues (event model)." .
+
+rdm:stormEvent a owl:DatatypeProperty ;
+    rdfs:label "storm event" ; rdfs:domain rdm:UserNeed ;
+    rdfs:comment "An event-storm event an actor causes that a command of the screen produces, with its actor." .
+
+rdm:trigger a owl:DatatypeProperty ;
+    rdfs:label "trigger" ; rdfs:domain rdm:AlliumRule ; rdfs:comment "The trigger the rule answers (its when:)." .
 
 rdm:declaredIn a owl:ObjectProperty ;
     rdfs:label "declared in" ; rdfs:range rdm:Document .
@@ -108,17 +135,6 @@ rdm:revision a owl:DatatypeProperty ;
 rdm:path a owl:DatatypeProperty ;
     rdfs:label "path" ; rdfs:comment "Repository-relative path." .
 
-rdm:undeclaredTag a owl:DatatypeProperty ;
-    rdfs:label "undeclared tag" ; rdfs:domain rdm:Test ;
-    rdfs:comment "A tag on the test naming no declared design input, though sharing a declared input's prefix — what the design gate warns about." .
-
-rdm:definedIn a owl:ObjectProperty ;
-    rdfs:label "defined in" ; rdfs:domain rdm:Test ; rdfs:range rdm:TestFile .
-
-rdm:runOf a owl:ObjectProperty ;
-    rdfs:label "run of" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Test ;
-    rdfs:comment "The test a run ran, matched by Allure's full name (DI-61)." .
-
 rdm:testedAt a owl:ObjectProperty ;
     rdfs:label "tested at" ; rdfs:domain rdm:TestRun ; rdfs:range prov:Activity ;
     rdfs:comment "The commit under test: the version the run is evidence for (DI-60)." .
@@ -131,12 +147,9 @@ rdm:atCommit a owl:ObjectProperty ;
     rdfs:label "at commit" ; rdfs:domain rdm:Record ; rdfs:range prov:Activity ;
     rdfs:comment "The commit the record was at when the graph was built (DI-60)." .
 
-rdm:verifies a owl:ObjectProperty ;
-    rdfs:label "verifies" ; rdfs:domain rdm:Test ; rdfs:range rdm:DesignInput ;
-    rdfs:comment "The test carries a verification tag for the design input. A tag, not a verdict." .
-
 rdm:exercises a owl:ObjectProperty ;
-    rdfs:label "exercises" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:DesignInput .
+    rdfs:label "exercises" ; rdfs:domain rdm:TestRun ; rdfs:range rdm:Requirement ;
+    rdfs:comment "A requirement the run claims with an Allure tag item-NN-SSS. A claim, not a verdict." .
 
 rdm:landedIn a owl:ObjectProperty ; rdfs:label "landed in" ; rdfs:domain rdm:Document ; rdfs:range prov:Activity ;
     rdfs:comment "The first-parent commit of the default branch that brought the document's latest change in (a merge, squash or direct commit). Git records who landed a change, not who reviewed it." .
@@ -170,7 +183,7 @@ rdm:fullName a owl:DatatypeProperty ; rdfs:label "full name" ; rdfs:domain rdm:T
 rdm:statusMessage a owl:DatatypeProperty ; rdfs:label "status message" .
 rdm:statusTrace a owl:DatatypeProperty ; rdfs:label "status trace" .
 rdm:exercisesOutput a owl:ObjectProperty ; rdfs:label "exercises output" ; rdfs:domain rdm:TestRun ;
-    rdfs:range rdm:SourceFile ; rdfs:comment "The code a run exercises: design input -> test -> run -> code." .
+    rdfs:range rdm:SourceFile ; rdfs:comment "The code a run exercises: requirement -> run -> code." .
 
 rdm:finding a owl:DatatypeProperty ; rdfs:label "finding" ;
     rdfs:comment "A release-blocking finding, as the release gate reports it: of the risk rules on a risk (DI-45), or about the whole record on the record (DI-38)." .
@@ -182,8 +195,8 @@ rdm:Risk a owl:Class ;
     rdfs:comment "One risk of the register: hazard, situation, harm, scored severity × probability, its controls and residual (DI-45)." .
 
 rdm:controlledBy a owl:ObjectProperty ;
-    rdfs:label "controlled by" ; rdfs:domain rdm:Risk ; rdfs:range rdm:DesignInput ;
-    rdfs:comment "A design input that implements a control of this risk." .
+    rdfs:label "controlled by" ; rdfs:domain rdm:Risk ; rdfs:range rdm:Requirement ;
+    rdfs:comment "A requirement that implements a control of this risk." .
 
 rdm:hazard a owl:DatatypeProperty ; rdfs:label "hazard" ; rdfs:domain rdm:Risk .
 rdm:situation a owl:DatatypeProperty ; rdfs:label "situation" ; rdfs:domain rdm:Risk .
@@ -210,7 +223,7 @@ rdm:residualDecision a owl:DatatypeProperty ; rdfs:label "residual decision" ; r
 rdm:riskStatus a owl:DatatypeProperty ; rdfs:label "status" ; rdfs:domain rdm:Risk ;
     rdfs:comment "proposed (no person has approved the rating yet) or approved." .
 rdm:declarationCount a owl:DatatypeProperty ; rdfs:label "declaration count" ;
-    rdfs:comment "How many times the record declares this id (a user need, design input or risk); more than one is a conflict." .
+    rdfs:comment "How many times the spec stamps this id (a requirement), or the record declares it (a risk); more than one is a conflict." .
 
 rdm:status a owl:DatatypeProperty ;
     rdfs:label "status" ; rdfs:domain rdm:TestRun ;

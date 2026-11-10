@@ -1,8 +1,9 @@
 """What the acceptance tests share: the example's paths, its files read as data,
 rendering, and attaching what a verification step checked.
 
-A test verifies one design input, tagged `@allure.story("DI-n")`. The design
-input is the acceptance criterion, accepted as a whole; the test's
+A test verifies one requirement of the spec (`.pi/spec/`), claimed with
+`@allure.tag("item-NN-SSS")`. The requirement is the acceptance criterion,
+accepted as a whole; the test's
 verification steps are its own checks, and each attaches what it looked at.
 The tests read the REAL configuration code and the REAL controlled documents,
 not fixtures, so a drift in the ruleset, a workflow, CODEOWNERS or a procedure

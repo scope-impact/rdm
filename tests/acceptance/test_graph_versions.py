@@ -38,7 +38,7 @@ def _run(results: Path, name: str, *labels: tuple[str, str]) -> None:
         "labels": [{"name": "story", "value": "DI-1"}] + [{"name": n, "value": v} for n, v in labels]}))
 
 
-@allure.story("DI-60")
+@allure.tag("item-06-016")
 @allure.label("output", "rdm/graph/allure.py")
 @allure.label("output", "rdm/graph/project.py")
 @allure.label("output", "rdm/graph/shapes.ttl")

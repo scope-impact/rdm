@@ -35,25 +35,28 @@ broken link or missing nav entry — run it the way CI does.
 
 ## RDM's own record (dogfood)
 
-RDM checks its own record with its own gates; it lives in `dhf/` (see
-`dhf/README.md`). RDM audits a specification rather than authoring one
-(ADR 0002): writing the spec, deciding and recording why it changed, and the
-build loop belong to the factory, Löyly (`loyly/`, submodule on `spec-v2`).
+RDM audits a spec rather than authoring one (ADR 0002): writing the spec and
+regenerating code from it belong to the factory, Löyly (`loyly/`, submodule
+on `spec-v2`). RDM reads a spec in Löyly's layout and checks it with its own
+gates; RDM's own spec is in that layout too.
 
-- **The record** — one `kind: design` document per bounded context under
-  `dhf/documents/design/` (`architecture.md` lists them), each owning its
-  `design_inputs`; the risk policy and register in `dhf/documents/risk/`; user
-  needs in the V&V plan. Never hand-edit the traceability matrix — it is
-  generated.
-- **Design inputs and tests** — a design input DI-n is a `shall` requirement,
-  declared by hand in its context's frontmatter and verified by a test tagged
-  `@allure.story("DI-n")` in `tests/acceptance/`. A test checks only what its
-  input's text states.
+- **The spec** — `.pi/plan/NN-<context>` → `.pi/spec/<context>/`:
+  `spec.feature` holds the requirements, stamped scenarios `@item-NN-SSS`;
+  `allium/*.allium` the user needs as surfaces (`facing`, `@guarantee`). A
+  scenario addresses a need through its `@allium-guarantee.<Need>` tag. RDM
+  reads it with `rdm/specification/spec.py`; `rdm/kernel/edn.py` reads event
+  models and event-storm boards.
+- **The rest of the record** — `dhf/`: the design documents (one per context,
+  design output only), the risk policy and register (`controls:` name item
+  ids), the V&V plan, validation records, document control. Never hand-edit
+  the traceability matrix — it is generated.
+- **Tests** — an acceptance test claims the requirement it verifies with
+  `@allure.tag("item-NN-SSS")` and checks only what that scenario states.
 - **Vocabulary** — `CONTEXT.md` is the glossary; use its terms.
 - **CI** — `.github/workflows/design-controls.yml` runs acceptance tests
   (Allure) → verify → release gate → graph validation → evidence bundle. A
-  change that leaves a DI unverified fails CI. A reviewer other than the author
-  approves each pull request.
+  change that leaves a requirement unverified fails CI. A reviewer other than
+  the author approves each pull request.
 
 Run the gates locally exactly as CI does:
 
@@ -66,7 +69,7 @@ uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 ## Architecture
 
 RDM keeps the design record of regulated software (IEC 62304 first) as Markdown and tests in git, in four parts:
-**Record** (needs, design inputs, checklists, tagged tests; changed only by a reviewed PR), **Gates** (release
+**Record** (the spec it reads, checklists, risks, documents, test results; changed only by a reviewed PR), **Gates** (release
 gate, gap analysis), **Graph** (the record as a read-only RDF graph for people and agents; never edited), and
 **Documents** (YAML data + Jinja2 templates → Markdown → PDF/DOCX via Pandoc/Typst). `dhf/documents/architecture.md`
 assigns each bounded context to a part. Agent skills live in scope-impact/agent-skills, not here.
@@ -77,8 +80,8 @@ One package per bounded context (`dhf/documents/architecture.md` gives each its
 layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 
 - `rdm/main.py` — the composition root: the `rdm` command; argparse subcommands dispatch to the contexts.
-- `rdm/kernel/` — the shared kernel: YAML and files (`util.py`), ids, git, frontmatter, the reconcile helpers.
-- `rdm/specification/` — the core: the record reader (`sdd.py`), test tags (`tags.py`), `init`/`adopt` and their templates, validation records.
+- `rdm/kernel/` — the shared kernel: YAML and files (`util.py`), EDN (`edn.py`), ids, git, frontmatter, the reconcile helpers.
+- `rdm/specification/` — the core: the spec reader (`spec.py`, `sdd.py`), `init`/`adopt` and their templates, validation records.
 - `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`); the plugin labels each run with the commit under test.
 - `rdm/risk/`, `rdm/compliance/` — the leaves: the risk register; gap analysis and the built-in checklists.
 - `rdm/release/` — the release gate (`gate.py`), the verification data (`verify.py`).

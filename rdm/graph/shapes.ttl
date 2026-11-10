@@ -7,29 +7,31 @@
 
 # The gate rules as SHACL (DI-38): closed-world checks over the open-world
 # graph. sh:Violation = release-blocking (mirrors `rdm story release-gate` and
-# `rdm gap`); sh:Warning = what the design gate reports as a warning.
+# `rdm gap`); sh:Warning = worth a look, never blocking.
 # Teams add their own rules as more shape files: `rdm graph validate --shapes`.
 
 # --- Release gate -----------------------------------------------------------
 
 rdm:UserNeedAddressedShape a sh:NodeShape ;
     sh:targetClass rdm:UserNeed ;
-    sh:property [
-        sh:path [ sh:inversePath rdm:tracesTo ] ;
-        sh:minCount 1 ;
-        sh:severity sh:Violation ;
-        sh:message "user need is addressed by no design input" ;
+    sh:sparql [
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "user need is addressed by no requirement covering its rules or guarantees" ;
+        sh:select """SELECT $this WHERE {
+            FILTER NOT EXISTS { ?r a rdm:Requirement ; rdm:coversRule ?rule . $this rdm:providesRule ?rule }
+            FILTER NOT EXISTS { ?r a rdm:Requirement ; rdm:covers ?c . $this rdm:guarantee ?g
+                                FILTER (?c = CONCAT("guarantee.", ?g)) } }""" ;
     ] .
 
-rdm:DesignInputVerifiedShape a sh:NodeShape ;
-    sh:targetClass rdm:DesignInput ;
+rdm:RequirementVerifiedShape a sh:NodeShape ;
+    sh:targetClass rdm:Requirement ;
     # At least one passing run...
     sh:property [
         sh:path [ sh:inversePath rdm:exercises ] ;
         sh:qualifiedValueShape [ sh:property [ sh:path rdm:status ; sh:hasValue "passed" ] ] ;
         sh:qualifiedMinCount 1 ;
         sh:severity sh:Violation ;
-        sh:message "design input is not verified by any passing test run" ;
+        sh:message "requirement is not verified by any passing test run" ;
     ] ;
     # ...and no failed or broken one.
     sh:property [
@@ -37,7 +39,7 @@ rdm:DesignInputVerifiedShape a sh:NodeShape ;
         sh:qualifiedValueShape [ sh:property [ sh:path rdm:status ; sh:in ( "failed" "broken" ) ] ] ;
         sh:qualifiedMaxCount 0 ;
         sh:severity sh:Violation ;
-        sh:message "design input has a failed or broken test run" ;
+        sh:message "requirement has a failed or broken test run" ;
     ] .
 
 # --- Gap analysis (rdm gap) -------------------------------------------------
@@ -66,38 +68,22 @@ rdm:ChecklistDataShape a sh:NodeShape ;
     sh:property [ sh:path rdm:includes ; sh:class rdm:Checklist ;
                   sh:severity sh:Violation ; sh:message "checklist includes something that is not a checklist" ] .
 
-# --- Design gate warnings ---------------------------------------------------
+# --- The spec and its runs: warnings ---------------------------------------
 
-rdm:DesignInputTaggedShape a sh:NodeShape ;
-    sh:targetClass rdm:DesignInput ;
-    sh:property [
-        sh:path [ sh:inversePath rdm:verifies ] ;
-        sh:minCount 1 ;
-        sh:severity sh:Warning ;
-        sh:message "design input has no tagged test file" ;
-    ] ;
-    sh:property [
-        sh:path rdm:tracesTo ; sh:class rdm:UserNeed ;
-        sh:severity sh:Warning ; sh:message "design input traces to an undeclared user need" ;
-    ] .
+rdm:RequirementNeedShape a sh:NodeShape ;
+    sh:targetClass rdm:Requirement ;
+    sh:property [ sh:path rdm:tracesTo ; sh:minCount 1 ; sh:severity sh:Warning ;
+                  sh:message "requirement addresses no user need" ] .
 
-rdm:ContextReferencesShape a sh:NodeShape ;
-    sh:targetClass rdm:BoundedContext ;
-    sh:property [ sh:path rdm:realises ; sh:class rdm:DesignInput ;
-                  sh:severity sh:Warning ; sh:message "context realises an undeclared design input" ] .
-
-# The projection marks the tags the design gate warns about (rdm.record.ids.
-# relevant_orphans): only those sharing a declared input's id prefix.
-rdm:TestTagShape a sh:NodeShape ;
-    sh:targetClass rdm:Test ;
-    # A SPARQL constraint takes its severity from the shape (pySHACL ignores
-    # it on the constraint node).
+rdm:RunClaimShape a sh:NodeShape ;
+    sh:targetClass rdm:TestRun ;
     sh:severity sh:Warning ;
     sh:sparql [
-        a sh:SPARQLConstraint ;
-        sh:message "test tag {?tag} names no declared design input" ;
-        sh:prefixes rdm: ;
-        sh:select """SELECT $this ?tag WHERE { $this rdm:undeclaredTag ?tag }""" ;
+        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
+        sh:message "test run claims {?claim}, which is not a requirement of the spec" ;
+        sh:select """SELECT $this ?claim WHERE {
+            $this rdm:exercises ?r . FILTER NOT EXISTS { ?r a rdm:Requirement }
+            BIND (REPLACE(STR(?r), "^.*/", "") AS ?claim) }""" ;
     ] .
 
 # The risk register's release rules (DI-44, DI-45): the same risks the
@@ -106,8 +92,8 @@ rdm:TestTagShape a sh:NodeShape ;
 rdm:RiskShape a sh:NodeShape ;
     # The risk rules are written once, in rdm/risk/register.py; the projection
     # carries the release gate's findings on each risk (DI-45), and on the
-    # record those about the record as a whole (DI-38: a design control not
-    # met, no design input, an unreadable result), so the shapes block
+    # record those about the record as a whole (DI-38: no spec, no
+    # requirement, an unstamped scenario, an unreadable result), so the shapes block
     # exactly what the gate blocks.
     sh:targetClass rdm:Risk, rdm:Record ;
     sh:sparql [
@@ -116,11 +102,11 @@ rdm:RiskShape a sh:NodeShape ;
         sh:select """SELECT $this ?finding WHERE { $this rdm:finding ?finding }""" ;
     ] .
 
-# DI-46: an id the record declares more than once.
+# An item id stamped on more than one scenario.
 rdm:UniqueRequirementShape a sh:NodeShape ;
-    sh:targetClass rdm:UserNeed, rdm:DesignInput ;
+    sh:targetClass rdm:Requirement ;
     sh:property [ sh:path rdm:declarationCount ; sh:maxInclusive 1 ;
-                  sh:message "id is declared more than once in the record" ] .
+                  sh:message "item id is stamped on more than one scenario of the spec" ] .
 
 # DI-51: a design document whose latest change is not on the default branch.
 rdm:LandedShape a sh:NodeShape ;
@@ -148,9 +134,8 @@ rdm:ContextDeclaredShape a sh:NodeShape ;
     sh:severity sh:Warning ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "bounded context has a design document but no document declares it (contexts frontmatter)" ;
+        sh:message "bounded context of the spec is declared by no document (contexts frontmatter)" ;
         sh:select """SELECT $this WHERE {
-            ?doc rdm:describes $this .
             FILTER NOT EXISTS { $this rdm:declaredIn ?d }
             FILTER EXISTS { ?other a rdm:BoundedContext ; rdm:declaredIn ?any } }""" ;
     ] .
@@ -166,7 +151,7 @@ rdm:DocumentReferenceShape a sh:NodeShape ;
             FILTER NOT EXISTS { ?value a rdm:Document } }""" ;
     ] .
 
-# --- Evidence tied to its version and to its test (DI-60, DI-61) -------------
+# --- Evidence tied to its version (DI-60) ------------------------------------
 
 rdm:RunVersionShape a sh:NodeShape ;
     sh:targetClass rdm:TestRun ;
@@ -181,24 +166,6 @@ rdm:RunVersionShape a sh:NodeShape ;
         sh:select """SELECT $this WHERE {
             $this rdm:testedAt ?tested . ?record rdm:atCommit ?head .
             FILTER (?tested != ?head) }""" ;
-    ] , [
-        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "test run exercises a design input its test does not claim" ;
-        sh:select """SELECT $this WHERE {
-            $this rdm:runOf ?test ; rdm:exercises ?input .
-            FILTER NOT EXISTS { ?test rdm:verifies ?input } }""" ;
-    ] .
-
-rdm:TestRanShape a sh:NodeShape ;
-    sh:targetClass rdm:Test ;
-    sh:severity sh:Warning ;
-    sh:sparql [
-        a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "tagged test has no run, while other tests in its file ran: its claim was never executed" ;
-        sh:select """SELECT $this WHERE {
-            $this rdm:definedIn ?file .
-            FILTER NOT EXISTS { ?run rdm:runOf $this }
-            FILTER EXISTS { ?other rdm:definedIn ?file . ?any rdm:runOf ?other } }""" ;
     ] .
 
 rdm: sh:declare

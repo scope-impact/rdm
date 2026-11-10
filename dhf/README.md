@@ -6,7 +6,7 @@ is the docs' *How RDM works* (`docs/about/how-rdm-works.md`); the direction,
 the spec moving to the factory (Löyly), is ADR 0002 (`decisions/`).
 
 Scope note: RDM is not a medical device, so this DHF deliberately implements
-the **design-controls slice** (design inputs, verification, validation,
+the **design-controls slice** (requirements, verification, validation,
 traceability — the §820.30-shaped record) plus a register of RDM's own tool
 risks, and not the full IEC 62304 lifecycle document set (a complete risk
 management file, SOUP register, maintenance and problem-resolution plans, …).
@@ -17,23 +17,25 @@ report those items as missing.
 
 ```
 documents/
-  verification_and_validation_plan.md user-need registry (UN-…) + V&V approach
+  verification_and_validation_plan.md the V&V approach
   document_control.md                git/GitHub as this record's document control (Part 11-mapped)
   architecture.md                    system design / bounded contexts (design only, no needs)
   traceability_matrix.md             matrix TEMPLATE (rendered from generated data; never hand-edited)
   design/                            one `kind: design` doc per bounded context:
-    <context>.md                       the design inputs it owns (what) + design output (how)
+    <context>.md                       the design output (how) of one context
   risk/
     policy.md                          risk acceptability policy (RMP-001, proposed)
     tool_risks.md                      `kind: risk` register of RDM's tool risks (RMF-001, proposed)
 decisions/                           ADR 0002: the spec lives with the factory; RDM audits it
 ```
 
-The live inventory — which contexts exist, which design inputs each owns, and
-which user needs they trace to — is generated, not maintained here:
+RDM's requirements and user needs are its spec, outside this directory, in
+Löyly's layout: `.pi/plan/NN-<context>` → `.pi/spec/<context>/` with a
+`spec.feature` of stamped scenarios (`item-NN-SSS`) and the Allium surfaces
+of its user needs. Trace any of them through the graph:
 
 ```bash
-rdm graph query --dhf dhf '…'           # anything else, as SPARQL
+rdm graph query --dhf dhf '…'           # SPARQL; or the `trace` tool of `rdm graph mcp`
 ```
 
 The gates, as CI runs them, are in `CLAUDE.md`.
@@ -49,7 +51,7 @@ itself is designed and verified. One explains, the other decides.
 |---|---|---|
 | **What it is** | RDM's user documentation, plus an API reference generated from the docstrings | RDM's own design history file: the regulated record RDM develops itself under |
 | **Who it's for** | People and agents using RDM on their own product | Whoever governs RDM's development: authors, reviewers, an auditor, and RDM's gates |
-| **Controlled?** | No: ordinary docs, changed by a normal reviewed pull request | Yes: every change is a reviewed pull request; the release gate requires every design input in it verified |
+| **Controlled?** | No: ordinary docs, changed by a normal reviewed pull request | Yes: every change is a reviewed pull request; the release gate requires every requirement in it verified |
 | **Checked by** | `mkdocs build --strict` (links, navigation) | The release gate, `rdm graph validate`, and the tests tagged with its ids |
 | **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the verification report and the evidence bundle |
 | **Published** | As the docs site | On the same site, each document as a page and a PDF, with the traceability matrix and map generated from a live test run at each build |

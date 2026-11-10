@@ -1,0 +1,17 @@
+-- RDM's user needs in this context: one surface per need.
+
+-- A regulatory author can query and visually explore the record as a linked graph, without changing how the record is written.
+surface ExploreGraph {
+    facing user: RegulatoryAuthor
+
+    @guarantee ExploreGraph
+        -- A regulatory author can query and visually explore the record as a linked graph, without changing how the record is written.
+}
+
+-- An agent, in any harness, can read the record (query it, trace a requirement or need to its tests and results, check it against the gate rules) and cannot change it.
+surface AgentReadsRecord {
+    facing user: Agent
+
+    @guarantee AgentReadsRecord
+        -- An agent, in any harness, can read the record (query it, trace a requirement or need to its tests and results, check it against the gate rules) and cannot change it.
+}

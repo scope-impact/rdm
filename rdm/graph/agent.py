@@ -91,21 +91,18 @@ def _evidence(store: ox.Store, node: str) -> dict:
             "attachments": attachments}
 
 
-def _input(store: ox.Store, node: str) -> dict:
-    one = _select(store, f"""SELECT ?id ?text ?context ?doc ?path ?commit WHERE {{
+def _requirement(store: ox.Store, node: str) -> dict:
+    one = _select(store, f"""SELECT ?id ?text ?rule ?context ?source WHERE {{
         <{node}> dcterms:identifier ?id ; rdm:text ?text .
+        OPTIONAL {{ <{node}> rdm:inRule ?rule }}
         OPTIONAL {{ <{node}> rdm:ownedBy/rdfs:label ?context }}
-        OPTIONAL {{ <{node}> rdm:declaredIn ?d . ?d rdfs:label ?doc ; rdm:path ?path .
-                   OPTIONAL {{ ?d prov:wasGeneratedBy/rdfs:label ?commit }} }} }}""")[0]
+        OPTIONAL {{ <{node}> rdm:source ?source }} }}""")[0]
     return {
-        "id": one["id"], "text": one["text"], "context": one["context"],
-        "document": one["doc"] and {"id": one["doc"], "path": one["path"], "last_commit": one["commit"]},
+        "id": one["id"], "text": one["text"], "rule": one["rule"], "context": one["context"],
+        "source": one["source"],
         "needs": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ <{node}> rdm:tracesTo/rdfs:label ?id }}")),
-        "realised_by": sorted(r["c"] for r in _select(
-            store, f"SELECT ?c WHERE {{ ?x rdm:realises <{node}> ; rdfs:label ?c }}")),
-        "tests": sorted(r["path"] for r in _select(
-            store, f"SELECT ?path WHERE {{ ?t rdm:verifies <{node}> ; rdfs:label ?path }}")),
+        "covers": sorted(r["c"] for r in _select(store, f"SELECT ?c WHERE {{ <{node}> rdm:covers ?c }}")),
         "code": sorted(r["p"] for r in _select(
             store, f"SELECT DISTINCT ?p WHERE {{ ?r rdm:exercises <{node}> ; rdm:exercisesOutput/rdm:path ?p }}")),
         "risks": sorted(r["id"] for r in _select(
@@ -121,49 +118,54 @@ def _risk(store: ox.Store, node: str) -> dict:
         store, f"SELECT ?p ?v WHERE {{ <{node}> ?prop ?v . BIND(REPLACE(STR(?prop), '^.*[#/]', '') AS ?p) }}")}
     controls = [r["i"] for r in _select(store, f"SELECT ?i WHERE {{ <{node}> rdm:controlledBy ?i }}")]
     declared = [i for i in controls if bool(store.query(
-        with_prefixes(f"ASK {{ <{i}> a rdm:DesignInput }}"), use_default_graph_as_union=True))]
+        with_prefixes(f"ASK {{ <{i}> a rdm:Requirement }}"), use_default_graph_as_union=True))]
     return {
         "id": values.get("identifier"), **{name: values.get(name) for name in _RISK_FIELDS},
         "linked": sorted(r["id"] for r in _select(
             store, f"SELECT ?id WHERE {{ <{node}> rdm:linkedTo/rdfs:label ?id }}")),
-        "controls": sorted((_input(store, i) for i in declared), key=lambda d: sort_key(d["id"])),
+        "controls": sorted((_requirement(store, i) for i in declared), key=lambda d: sort_key(d["id"])),
         "undeclared_controls": sorted(i.rsplit("/", 1)[-1] for i in controls if i not in declared),
     }
 
 
+def _values(store: ox.Store, node: str, prop: str) -> list[str]:
+    return sorted(r["v"] for r in _select(store, f"SELECT ?v WHERE {{ <{node}> rdm:{prop} ?v }}"))
+
+
 def trace(record: Record, ident: str) -> dict:
-    """One user need (with its contexts and every input refining it), one
-    design input (with its document, tests, runs and the risks it controls),
-    or one risk (with its scores and each controlling input)."""
-    ident = ident.strip().upper()
+    """One requirement (``item-NN-SSS``: its scenario, rule, needs, runs and
+    the risks it controls), one user need (a screen id such as
+    ``measurement/instrument-desk``, or a surface: its actors, surfaces,
+    rules, guarantees, storm events and every requirement addressing it), or
+    one risk (its scores and each controlling requirement)."""
+    ident = ident.strip()
     store = record.store()
-    if not is_id(ident):  # an id of another shape the record declares (DI-2a) is answered too
-        declared = {r["id"].upper(): r["id"] for r in _select(
-            store, "SELECT ?id WHERE { VALUES ?k { rdm:UserNeed rdm:DesignInput } ?n a ?k ; dcterms:identifier ?id }")}
-        if ident not in declared:
-            raise ValueError(f"{ident!r} is not an id (a UN-n, DI-n or risk id)")
-        ident = declared[ident]
-    if not ident.upper().startswith(("UN-", "DI-")):
-        found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:Risk ; dcterms:identifier "{ident}" }}')
-        if not found:
-            raise ValueError(f"{ident} is not a declared user need (UN-n), design input (DI-n) or risk")
-        return {"risk": _risk(store, found[0]["n"])}
-    kind = "UserNeed" if ident.upper().startswith("UN") else "DesignInput"
-    found = _select(store, f'SELECT ?n WHERE {{ ?n a rdm:{kind} ; dcterms:identifier "{ident}" }}')
-    if not found:
-        raise ValueError(f"{ident} is not declared in the record")
-    node = found[0]["n"]
-    if kind == "DesignInput":
-        return {"design_input": _input(store, node)}
+    declared = {}  # every id the record declares, matched in Python: input never reaches the query text
+    for row in _select(store, "SELECT ?n ?k ?id WHERE { VALUES ?k { rdm:Requirement rdm:UserNeed rdm:Risk } "
+                              "?n a ?k ; dcterms:identifier ?id }"):
+        declared.setdefault(row["id"], (row["n"], row["k"].rsplit("#", 1)[-1]))
+    if ident not in declared:
+        if not is_id(ident):
+            raise ValueError(f"{ident!r} is not an id: a requirement (item-NN-SSS), user need or risk of the record")
+        raise ValueError(f"{ident} is not a requirement, user need or risk of the record")
+    node, kind = declared[ident]
+    if kind == "Requirement":
+        return {"requirement": _requirement(store, node)}
+    if kind == "Risk":
+        return {"risk": _risk(store, node)}
     text = _select(store, f"SELECT ?text WHERE {{ OPTIONAL {{ <{node}> rdm:text ?text }} }}")[0]["text"]
-    inputs = [r["i"] for r in _select(store, f"SELECT ?i WHERE {{ ?i rdm:tracesTo <{node}> }} ORDER BY ?i")]
+    reqs = [r["i"] for r in _select(store, f"SELECT ?i WHERE {{ ?i rdm:tracesTo <{node}> }} ORDER BY ?i")]
     return {"user_need": {
         "id": ident, "text": text,
-        "contexts": sorted(r["c"] for r in _select(
-            store, f"SELECT DISTINCT ?c WHERE {{ ?i rdm:tracesTo <{node}> . "
-                   f"{{ ?i rdm:ownedBy ?x }} UNION {{ ?x rdm:realises ?i }} ?x rdfs:label ?c }}")),
-        "design_inputs": sorted((_input(store, i) for i in inputs),
-                                key=lambda d: sort_key(d["id"])),
+        "context": (_select(store, f"SELECT ?c WHERE {{ OPTIONAL {{ <{node}> rdm:ownedBy/rdfs:label ?c }} }}")
+                    or [{"c": None}])[0]["c"],
+        "facing": _values(store, node, "facing"),
+        "surfaces": _values(store, node, "surface"),
+        "rules": sorted(r["r"] for r in _select(
+            store, f"SELECT ?r WHERE {{ <{node}> rdm:providesRule/rdfs:label ?r }}")),
+        "guarantees": _values(store, node, "guarantee"),
+        "storm_events": _values(store, node, "stormEvent"),
+        "requirements": sorted((_requirement(store, i) for i in reqs), key=lambda d: sort_key(d["id"])),
     }}
 
 
@@ -178,11 +180,12 @@ def validate(record: Record) -> dict:
 
 
 INSTRUCTIONS = (
-    "The design record of this project (user needs, design inputs, bounded contexts, documents, "
-    "tagged tests, test runs, commits, risks, checklist clauses) as a read-only RDF graph, rebuilt from the "
-    "record on every call. Start with `trace` for a UN-n, DI-n or risk id; call `schema` before writing SPARQL "
-    "for `query`; `validate` runs the gate rules. Nothing here changes the record: to change it, edit "
-    "the Markdown and tests and open a pull request."
+    "The record of this project as a read-only RDF graph, rebuilt on every call: the spec it is held to "
+    "(user needs = event-model screens and Allium surfaces; requirements = stamped Gherkin scenarios, "
+    "item-NN-SSS; Allium rules), test runs, commits, risks, documents and checklist clauses. Start with "
+    "`trace` for a requirement, user need or risk id; call `schema` before writing SPARQL for `query`; "
+    "`validate` runs the gate rules. Nothing here changes the record: change the spec in its own "
+    "repository, and the documents and tests by a pull request."
 )
 
 
@@ -212,10 +215,11 @@ def server(record: Record):
             raise ToolError(str(error)) from error
 
     @app.tool(name="trace", annotations=read_only,
-              description="Trace a user need (UN-n), design input (DI-n) or risk id: text, contexts, owning document "
-                          "and last commit, needs refined, tagged tests, runs (with steps and attachments), the source "
-                          "files they exercise, risks controlled; for a risk, its chain, scores, levels, "
-                          "acceptance and each controlling design input.")
+              description="Trace a requirement (item-NN-SSS: its scenario, rule, user needs, the Allium "
+                          "obligations it covers, runs with steps and attachments, the files they exercise, risks "
+                          "controlled), a user need (a screen id such as measurement/instrument-desk: actors, "
+                          "surfaces, rules, guarantees, storm events, requirements) or a risk (its chain, scores, "
+                          "levels, acceptance and each controlling requirement).")
     def _trace(id: str) -> dict:
         try:
             return trace(record, id)

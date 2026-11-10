@@ -1,5 +1,5 @@
 """
-Generate a verification data file from the SDD user needs and Allure results.
+Generate a verification data file from the spec's requirements and Allure results.
 
 This turns executed-test evidence into a render-ready data file. `rdm render`
 keys context by data-file basename, so writing ``verification.yml`` makes a
@@ -15,60 +15,60 @@ import yaml
 
 from rdm.evidence import allure
 from rdm.kernel.ids import relevant_orphans
-from rdm.specification.sdd import design_inputs, registry_user_needs
+from rdm.specification.sdd import load_spec, requirements, user_needs
 
 
 def build_verification(dhf_dir: Path, allure_results_dir: Path) -> dict:
-    """Reconcile design inputs against Allure results into a render-ready dict.
+    """Reconcile the spec's requirements against Allure results into a
+    render-ready dict: each requirement's row, grouped under the user needs
+    it addresses, in spec order."""
+    spec = load_spec(dhf_dir)
+    reqs = requirements(dhf_dir, spec)
+    needs = user_needs(dhf_dir, spec)
+    ids = {r["id"] for r in reqs}
+    report = allure.reconcile(ids, allure_results_dir)
 
-    Verification is anchored on design inputs (the `@allure.story("DI-…")` tag);
-    each design-input row is grouped under the user need(s) it traces to.
-    """
-    inputs = design_inputs(dhf_dir)
-    di_ids = {di["id"] for di in inputs}
-    user_needs = registry_user_needs(dhf_dir)
-    report = allure.reconcile(di_ids, allure_results_dir)
-
-    def _row(di: dict) -> dict:
-        verification = report.by_id[di["id"]]
+    def _row(req: dict) -> dict:
+        verification = report.by_id[req["id"]]
         return {
-            "design_input": di["id"],
-            "text": di["text"],
+            "requirement": req["id"],
+            "text": req["text"],
+            "rule": req["rule"],
+            "source": req["source"],
+            "context": req["context"],
             "status": verification.status,
             "passed": verification.passed,
             "failed": verification.failed,
             "skipped": verification.skipped,
-            "tests": sorted(verification.tests),
+            "tests": sorted(set(verification.tests)),
             "outputs": sorted(verification.outputs),
-            "traces_to": di["traces_to"],
+            "traces_to": req["traces_to"],
         }
 
-    rows = {di["id"]: _row(di) for di in inputs}
-
+    rows = {r["id"]: _row(r) for r in reqs}
     groups = []
-    for un in sorted(user_needs):
-        members = [rows[di["id"]] for di in inputs if un in di["traces_to"]]
+    for need in needs:
+        members = [rows[r["id"]] for r in reqs if need.id in r["traces_to"]]
         if members:
-            groups.append({"user_need": un, "design_inputs": members})
-    unassigned = [
-        rows[di["id"]] for di in inputs if not (set(di["traces_to"]) & user_needs)
-    ]
+            groups.append({"user_need": need.id, "text": need.text, "actors": need.actors,
+                           "surfaces": need.surfaces, "requirements": members})
+    unassigned = [rows[r["id"]] for r in reqs if not r["traces_to"]]
     if unassigned:
-        groups.append({"user_need": "(unassigned / constraint)", "design_inputs": unassigned})
+        groups.append({"user_need": "(no user need)", "text": "", "actors": [], "surfaces": [],
+                       "requirements": unassigned})
 
-    data = {
+    return {
         "summary": {
             "verified": len(report.verified),
             "failed": len(report.failed),
             "untested": len(report.untested),
-            "total": len(di_ids),
+            "total": len(ids),
             "results_found": report.results_found,
         },
         "groups": groups,
-        "orphans": relevant_orphans(report.orphan_ids, di_ids),  # as the gates report them
+        "orphans": relevant_orphans(report.orphan_ids, ids),  # as the gates report them
         "unreadable": report.unreadable,  # each could hold a failed run: the release gate blocks on them
     }
-    return data
 
 
 def write_verification_file(dhf_dir: Path, allure_results_dir: Path, output_path: Path) -> dict:
@@ -103,7 +103,7 @@ def verify_command(
     summary = data["summary"]
     print(
         f"Wrote {out}: {summary['verified']} verified, {summary['failed']} failed, "
-        f"{summary['untested']} untested of {summary['total']} design input(s) "
+        f"{summary['untested']} untested of {summary['total']} requirement(s) "
         f"({summary['results_found']} Allure result(s))"
     )
     if data["unreadable"]:

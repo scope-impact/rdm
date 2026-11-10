@@ -1,0 +1,8 @@
+-- The user needs of this context: one surface per need.
+
+-- No change reaches the controlled document set without review and approval by an independent, authorized signer.
+surface IndependentApproval {
+    facing user: QualityOwner
+
+    @guarantee IndependentApproval
+}

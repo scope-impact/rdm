@@ -10,7 +10,9 @@ Next steps:
   2. Replace the placeholders in {out}/documents/ (lines starting TODO, and TODO ... ENDTODO blocks)
   3. Render: cd {out} && make            (PDFs: make pdfs, needs Pandoc and Typst; Word: make docs)
   4. Check coverage: rdm gap 62304_2015_class_b {out}/documents/*.md {out}/documents/**/*.md
-     (the templates already reference every clause, so a pass means referenced, not written)\
+     (the templates already reference every clause, so a pass means referenced, not written)
+  5. Trace the requirements: point RDM at your spec (`spec:` in {out}/config.yml, or .pi/plan in the
+     repository) and run rdm story release-gate --dhf {out} --allure-results <results>\
 """
 
 

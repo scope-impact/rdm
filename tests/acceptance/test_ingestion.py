@@ -26,7 +26,7 @@ _GTEST_XML = _TEST_DATA / "test_detail.xml"
 _QTTEST_XML = _TEST_DATA / "integration.xml"
 
 
-@allure.story("DI-16")
+@allure.tag("item-07-004")
 @allure.label("output", "rdm/publishing/collect.py")
 def test_collects_delimited_code_snippets(tmp_path: Path, capsys) -> None:
     """DI-16: RDOC/ENDRDOC-delimited snippets are extracted, keyed by name."""

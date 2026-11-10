@@ -22,12 +22,10 @@ allure = pytest.importorskip("allure")
 from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
-@allure.story("DI-15")
+@allure.tag("item-01-002")
 @allure.label("output", "rdm/specification/init.py")
 def test_init_scaffolds_a_project(tmp_path: Path, capsys) -> None:
-    """DI-15: `rdm init` lays down the templates, Makefile, and render config."""
-    import yaml
-
+    """`rdm init` lays down the templates, Makefile, and render config."""
     from rdm.main import cli
 
     project = tmp_path / "regulatory"  # must not pre-exist (copytree)
@@ -56,57 +54,11 @@ def test_init_scaffolds_a_project(tmp_path: Path, capsys) -> None:
         assert (docs / "design_review.md").is_file()
         assert (docs / "traceability_matrix.md").is_file()
 
-    # the V&V plan carries a machine-readable `user_needs` registry (the
-    # coverage denominator the gates read), as the adopt scaffold's does.
-    with verification_step("the V&V plan carries the user-need registry the gates read, as adopt's does"):
-        vv_plan = (docs / "verification_and_validation_plan.md").read_text()
-        frontmatter = yaml.safe_load(vv_plan.split("---")[1])
-        assert frontmatter["user_needs"] == []              # present, empty, parseable
 
-
-def _mini_dhf(tmp_path: Path) -> Path:
-    """A minimal DHF: two design contexts (so context *choice* is observable),
-    design inputs DI-1/DI-3 taken, one registered user need."""
-    dhf = tmp_path / "dhf"
-    (dhf / "documents" / "design").mkdir(parents=True)
-    (dhf / "documents" / "vv_plan.md").write_text(
-        "---\nuser_needs:\n"
-        "  - {id: UN-001, text: 'a need'}\n"
-        "  - {id: UN-002, text: 'another need'}\n"
-        "---\n"
-    )
-    (dhf / "documents" / "design" / "alarms.md").write_text(
-        "---\n"
-        "id: SDS-A-001\n"
-        "kind: design\n"
-        "context: alarms\n"
-        "design_inputs:\n"
-        "  - id: DI-1\n"
-        '    text: "existing input"\n'
-        "    traces_to: [UN-001]\n"
-        "---\n\n# Alarms\n"
-    )
-    (dhf / "documents" / "design" / "trends.md").write_text(
-        "---\n"
-        "id: SDS-T-001\n"
-        "kind: design\n"
-        "context: trends\n"
-        "satisfies:\n"          # a legacy key from before needs were derived: left alone
-        "  - UN-001\n"
-        "design_inputs:\n"
-        "  - id: DI-3\n"
-        '    text: "another input"\n'
-        "    traces_to: [UN-001]\n"
-        "---\n\n# Trends\n"
-    )
-    (tmp_path / "tests").mkdir()
-    return dhf
-
-
-@allure.story("DI-24")
+@allure.tag("item-01-003")
 @allure.label("output", "rdm/specification/adopt.py")
 def test_adopt_brings_existing_repo_under_controls(tmp_path: Path, capsys) -> None:
-    """DI-24: one command lays down the DHF skeleton and the CI workflow into
+    """One command lays down the DHF skeleton and the CI workflow into
     an existing repo, skipping (never overwriting) anything that already
     exists."""
     from rdm.specification.adopt import adopt_command

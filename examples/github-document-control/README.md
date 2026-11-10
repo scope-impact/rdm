@@ -15,7 +15,7 @@ RDM's gates, graph and documents: see [RDM in this example](#rdm-in-this-example
 flowchart LR
     subgraph record["the record: dhf/"]
         ARCH["architecture.md<br>contexts approval · records · release"]
-        DI["design/*.md<br>DI-1..11"]
+        DI["design/*.md<br>item-01-001..11"]
         RISK["risk/<br>policy + register (proposed)"]
         SOP["documents/procedures/<br>SOP-DC-001 · DMR-001"]
     end
@@ -24,7 +24,7 @@ flowchart LR
         CI[".github/workflows/<br>design-controls · drift-audit · release-documents"]
     end
     subgraph proof["proof"]
-        TESTS["tests/acceptance/<br>@allure.story(DI-1..11)"]
+        TESTS["tests/acceptance/<br>@allure.story(item-01-001..11)"]
         GATES["RDM's gates · rdm gap · graph shapes"]
     end
     ARCH --> DI
@@ -40,9 +40,9 @@ flowchart LR
 | Path | Role |
 |---|---|
 | `dhf/documents/architecture.md` | the system and its three bounded contexts: `approval`, `records`, `release` |
-| `dhf/documents/design/<context>.md` | each context's design inputs (DI-1..11), with `realises` where it implements part of another's |
+| `dhf/documents/design/<context>.md` | each context's design inputs (item-01-001..11), with `realises` where it implements part of another's |
 | `dhf/documents/risk/` | the risk acceptability policy and the risk register: six risks, three of them STRIDE threats linked to the safety risk; each risk control a design input. Both **proposed** |
-| `dhf/documents/verification_and_validation_plan.md` | the user needs UN-001..005 and how each is verified and validated |
+| `dhf/documents/verification_and_validation_plan.md` | the user needs CurrentRevision..005 and how each is verified and validated |
 | `dhf/documents/design_review.md` | Design Reviews 1–3 |
 | `dhf/documents/traceability_matrix.md` | generated from a test run: never edited |
 | `dhf/documents/procedures/` | the controlled documents: the SOP (SOP-DC-001), with each Part 11 control cited inline (`[[P11:…]]`), and the device master record index (DMR-001) |
@@ -78,16 +78,16 @@ Repository rulesets require a public repository or a paid plan on private ones.
 
 | Part 11 control | git/GitHub mechanism | Verified by |
 |---|---|---|
-| 11.10(a) validation | controls are code; this test suite is the executed validation, on every change | DI-1..11, DI-9 |
-| 11.10(b) accurate copies | rendered PDFs + `git archive` at the release tag, from a verified commit | DI-3, DI-10 |
-| 11.10(c) retention/retrieval | protected tags, full-history clones, mirror | DI-3, SOP |
-| 11.10(d)/(g) access/authority | org membership, 2FA, CODEOWNERS-gated approval | DI-1 |
-| 11.10(e) audit trail | SHA-chained, time-stamped commits; non-fast-forward + no deletion; daily drift audit | DI-1, DI-11 |
-| 11.10(f) sequencing | ruleset: PR required, the required checks green, stale reviews dismissed | DI-1, DI-9 |
+| 11.10(a) validation | controls are code; this test suite is the executed validation, on every change | item-01-001..11, item-01-003 |
+| 11.10(b) accurate copies | rendered PDFs + `git archive` at the release tag, from a verified commit | item-03-001, item-03-003 |
+| 11.10(c) retention/retrieval | protected tags, full-history clones, mirror | item-03-001, SOP |
+| 11.10(d)/(g) access/authority | org membership, 2FA, CODEOWNERS-gated approval | item-01-001 |
+| 11.10(e) audit trail | SHA-chained, time-stamped commits; non-fast-forward + no deletion; daily drift audit | item-01-001, item-01-004 |
+| 11.10(f) sequencing | ruleset: PR required, the required checks green, stale reviews dismissed | item-01-001, item-01-003 |
 | 11.50 signature manifestation | PR review records name, UTC time, meaning (APPROVED) | SOP + gap |
-| 11.70 signature–record linking | review bound to the content-addressed commit SHA; merge commits only | DI-1, DI-6 |
+| 11.70 signature–record linking | review bound to the content-addressed commit SHA; merge commits only | item-01-001, item-01-002 |
 | 11.100 signature uniqueness | one account per person, SSO + 2FA, never reassigned | SOP + gap; RISK-DC-006 |
-| *coverage of all of the above in the SOP* | `rdm gap` reports zero missing items; the graph rule finds an SOP citing no clause | **DI-5** |
+| *coverage of all of the above in the SOP* | `rdm gap` reports zero missing items; the graph rule finds an SOP citing no clause | **item-02-003** |
 
 ## RDM in this example
 
@@ -99,10 +99,10 @@ Repository rulesets require a public repository or a paid plan on private ones.
 | tests tagged `@allure.story`, `output` labels, verification steps, `rdm.pytest_plugin` | `tests/acceptance/` |
 | verify, the release gate | `design-controls.yml`, `release-documents.yml` |
 | RDM's reusable gates, pinned | `design-controls.yml` |
-| `rdm gap` with a checklist file | `record-checks`, DI-5 |
+| `rdm gap` with a checklist file | `record-checks`, item-02-003 |
 | `rdm render`, the vocabulary and audit-note extensions, `make pdfs`, the PDF action | `dhf/Makefile`, `dhf/config.yml`, `release-documents.yml` |
-| `rdm story dmr` | `dhf/data/dmr.yml`, DI-7 |
-| the evidence bundle and the verification report | `release-documents.yml`, DI-10 |
+| `rdm story dmr` | `dhf/data/dmr.yml`, item-02-004 |
+| the evidence bundle and the verification report | `release-documents.yml`, item-03-003 |
 | the graph: `validate` with a checklist and your own shapes, `query`, `trace`, the MCP server, Graph Explorer | `record-checks`, `dhf/shapes/`, `.mcp.json`, below |
 | `rdm adopt` (the DHF skeleton and the CI workflow) | `dhf/`, `design-controls.yml` |
 

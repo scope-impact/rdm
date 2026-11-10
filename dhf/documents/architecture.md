@@ -2,7 +2,7 @@
 id: SDS-SYS-001
 title: RDM System Architecture
 context: system
-# The bounded contexts, each with the part it belongs to (DI-58), its
+# The bounded contexts, each with the part it belongs to (item-06-015), its
 # layer in the dependency rule (a context imports only contexts of a lower
 # layer, and the shared kernel), and the code that implements it. Each has
 # one design document, design/<context>.md; the table below describes them.
@@ -27,8 +27,8 @@ references: [DC-001]
 RDM keeps the design record of regulated software as Markdown and tests in
 git, checks it, renders regulatory documents from it, and builds it into a
 read-only graph that people and agents query. This document holds **design
-only** — user needs live in the V&V plan; a context serves the needs its
-design inputs trace to (`traces_to`), so that is never declared twice.
+only** — RDM's requirements and user needs are its spec (`.pi/`, in Löyly's
+layout), read like any project's.
 
 RDM audits a specification; it does not author one. Writing the
 specification and regenerating code from it belong to the factory that owns
@@ -41,7 +41,7 @@ architecture context, persona runs and the mutation probe.
 
 | Part | Responsibility | Writes to the record? |
 |------|----------------|-----------------------|
-| **Record** | read the record: needs, design inputs, checklists, tagged tests, results, git | scaffolding only (`init`, `adopt`); every other change is a reviewed commit |
+| **Record** | read the record: the spec (needs, requirements), checklists, results, git | scaffolding only (`init`, `adopt`); every other change is a reviewed commit |
 | **Gates** | pass/block decisions on the record | no |
 | **Graph** | the knowledge graph: the record as RDF, queried and validated; agents read it over MCP (`rdm graph mcp`) | no — rebuilt from the record, never edited |
 | **Documents** | regulatory documents rendered from the record | no |
@@ -63,13 +63,13 @@ project's test runner, and, to render PDFs, on Pandoc and Typst.
 ## Bounded contexts (one design document each), by part
 
 A bounded context is drawn where the language changes, not where the workflow
-does (`CONTEXT.md`): the stages of a design input's life (declared, approved,
+does (`CONTEXT.md`): the stages of a requirement's life (declared, approved,
 verified, released) are not contexts. The code
 of each context is in the frontmatter (`code`).
 
 | Part | Context | Design document | Its language | Package |
 |------|---------|-----------------|--------------|---------|
-| Record | `specification` (core) | `design/specification.md` | user need, design input, tagged test | `rdm/specification/`: the record reader, test tags, `init`, `adopt`, validation records |
+| Record | `specification` (core) | `design/specification.md` | spec, user need, requirement | `rdm/specification/`: the spec reader, `init`, `adopt`, validation records |
 | Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/risk/` |
 | Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's words stop here | `rdm/evidence/`: Allure results; and `rdm/pytest_plugin.py` |
 | Gates | `release` | `design/release.md` | verified, release gate | `rdm/release/`: the release gate, the verification data; and the reusable CI |
@@ -97,31 +97,30 @@ rule, and on any module no context's code holds
  5  publishing · graph              read models: read every context, feed none back
  4  release                         decides: verified status, risk and validation → release
  3  test_evidence                   translates test results into runs of the record's tests
- 2  specification                   the core: needs, inputs, tagged tests
+ 2  specification                   the core: the spec read, needs, requirements
  1  risk · compliance               leaves: their own languages, nothing but the kernel
  0  shared kernel                   util · ids · git · frontmatter · reconcile
 ```
 
 The leaves sit below the core because the core uses them and they use
 nothing: the release gate applies the risk rules, and neither leaf reads a
-design input. The evidence bundle renders the matrix and the verification
-report, so it is publishing's, and realises release's DI-30.
+requirement. The evidence bundle renders the matrix and the verification
+report, so it is publishing's, and realises release's item-04-003.
 
 ## Flow
 
 Specification → its evidence and risks → Release decides (the release gate
 before release; gap analysis against checklists) → the knowledge graph and
 the documents are derived from the same record. Agent skills (how to author
-design inputs, test-first, risk analysis) are maintained outside RDM, in
+requirements, test-first, risk analysis) are maintained outside RDM, in
 `scope-impact/agent-skills`. RDM ships no planning tooling: tasks and issues
 live in their own tools, outside the record (see
 `docs/about/plan-vs-record.md`).
 
 ## Not yet in scope
 
-In rough order: reading the factory's stamped Gherkin scenarios in place of
-design inputs (ADR 0002); turning a regulation into a checklist mapped to its
+In rough order: turning a regulation into a checklist mapped to its
 standard's clauses; pushing the graph to an external RDF store, with the
 vocabulary and gate shapes versioned; and several projects in one graph
 (clause identifiers are already project-independent). Each enters through a
-user need and design inputs in this record before any code.
+user need and requirements in the spec before any code.

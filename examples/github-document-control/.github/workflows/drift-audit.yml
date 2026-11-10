@@ -1,6 +1,6 @@
 name: Drift audit
 
-# DI-11: the ruleset and the merge settings are enforced by GitHub, where an
+# item-01-004: the ruleset and the merge settings are enforced by GitHub, where an
 # administrator can change them without a pull request. Every day, compare the
 # live configuration with the checked-in JSON; a difference fails the run, and
 # the failed run is the record. The token needs read access to the

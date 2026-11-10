@@ -75,7 +75,7 @@ def _ask(store, body: str) -> bool:
     return bool(store.query(PREFIXES + "ASK { " + body + " }", use_default_graph_as_union=True))
 
 
-@allure.story("DI-37")
+@allure.tag("item-06-003")
 @allure.label("output", "rdm/graph/checklists.py")
 def test_checklists_are_data(tmp_path: Path) -> None:
     """DI-37: checklists (text or RDF, includes resolved, built-ins by name)
@@ -121,7 +121,7 @@ def test_checklists_are_data(tmp_path: Path) -> None:
                        f'<urn:rdm:checklist:native> rdfs:label "native" }}')
 
 
-@allure.story("DI-48")
+@allure.tag("item-06-009")
 @allure.label("output", "rdm/graph/checklists.py")
 def test_reference_tags_become_links_matched_as_rdm_gap_matches(tmp_path: Path) -> None:
     """DI-48: documents' [[…]] tags become dcterms:references in a references

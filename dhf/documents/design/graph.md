@@ -2,58 +2,6 @@
 id: SDS-GRAPH-001
 kind: design
 context: graph
-design_inputs:
-  - id: DI-35
-    text: "RDM shall project the design record into an RDF dataset with one named graph per source: user needs (id, text), bounded contexts, design inputs (text, traced user needs, owning and realising contexts) and controlled documents (id, title, revision) in a record graph; verifying-test tags in a tests graph; executed Allure results, when given, in an executions graph; and each controlled document's latest git commit in a git graph; with an rdfs:label on every node and RDM's vocabulary in an ontology graph; written as sorted N-Quads, byte-identical across runs over an unchanged record."
-    traces_to: [UN-014]
-  - id: DI-36
-    text: "RDM shall load the projected dataset into a persistent Oxigraph store that each run replaces rather than merges, answer SPARQL queries over that store (or over an in-memory projection when no store is given), and serve the store as a read-only SPARQL 1.1 HTTP endpoint whose default graph is the union of the named graphs, for graph browsers such as AWS Graph Explorer; the endpoint and the query command shall refuse SPARQL Update and federated SERVICE calls, so neither changes the store or reaches the network; the query command shall refuse FROM, which the union default graph would ignore, and neither command shall create a store that does not exist."
-    traces_to: [UN-014]
-  - id: DI-37
-    text: "RDM shall add regulatory checklists to the graph on request, as data: each checklist — in rdm gap's text format, resolving includes and built-in names as rdm gap does, or an RDF file — becomes a SKOS collection of its own items that links the checklists it includes, and each item a clause with its key, description, standard (named by the key prefix), edition when the key names one, and nearest listed parent clause."
-    traces_to: [UN-014, UN-006]
-  - id: DI-38
-    text: "RDM shall ship SHACL shapes expressing the gate rules over the graph — unaddressed user needs, design inputs without a passing run or with a failing one, and unreferenced checklist clauses as violations; untagged design inputs, references to undeclared ids and stray test tags as warnings — that block exactly the design inputs, user needs and whole-record findings the release gate blocks, and flag a checklist clause without a key or a standard as a violation."
-    traces_to: [UN-014, UN-003]
-  - id: DI-39
-    text: "RDM shall write the projected graph as an AWS Graph Explorer graph file: every node of the record and every link between two such nodes, leaving out the vocabulary and type statements, optionally leaving out the nodes of chosen classes together with their links and with the nodes that hang only from them (left with no path to a node outside the test-run results), refusing a class to leave out that the graph does not have, and naming the served SPARQL endpoint as the file's connection, so that the whole traceability graph opens in Graph Explorer in one step."
-    traces_to: [UN-014]
-  - id: DI-41
-    text: "RDM shall serve the design record to agents as an MCP server over stdio (rdm graph mcp) with four tools: schema (the vocabulary and the predeclared prefixes), query (SPARQL), trace (a user need or design input with its contexts, documents, tests and runs) and validate (the gate shapes' results), each answering from a projection rebuilt from the record on that call."
-    traces_to: [UN-015]
-  - id: DI-42
-    text: "RDM's agent server shall offer no way to change the record or the graph, or to reach the network: query shall accept SELECT, ASK, CONSTRUCT and DESCRIBE and reject SPARQL Update and federated SERVICE calls, trace shall accept only id-shaped input or an id the record declares, and results shall be capped at a row limit, saying when they were cut."
-    traces_to: [UN-015]
-  - id: DI-45
-    text: "RDM shall project the risk register into a risks graph — each risk with its category, STRIDE category, linked risks, hazard, situation, harm, scores, initial and residual level, residual decision (acceptable, accepted, needs acceptance, unacceptable, or not evaluated while a control lacks a passing test), status, controlling design inputs and acceptance — with SHACL shapes that block exactly the risks, and the register findings, the release gate blocks and warn on a risk still proposed, and the agent server's trace shall accept a risk id and list, for a design input, the risks it controls."
-    traces_to: [UN-016, UN-015]
-  - id: DI-48
-    text: "RDM shall link each controlled document to the checklist clauses its [[...]] tags reference, using rdm gap's own key matching, so that a clause no document references is exactly a clause rdm gap reports missing."
-    traces_to: [UN-014, UN-006]
-  - id: DI-49
-    text: "rdm graph validate shall run the shipped shapes and any user-supplied shape files over the projected graph, report each result with its severity, focus node and message, and exit non-zero on any violation; a shapes or checklist file that is missing or not RDF shall be reported as an error, never a traceback."
-    traces_to: [UN-014, UN-003]
-  - id: DI-51
-    text: "For each controlled document, the graph shall record the commit on the default branch's first-parent history that landed its latest change — a merge, squash or direct commit — with that commit's author, and a shape shall warn when the change has not landed on the default branch."
-    traces_to: [UN-014, UN-015]
-  - id: DI-52
-    text: "The graph shall link each user need to the document that declares it, and each risk to the document holding the risk policy it was evaluated against, and shall not link a design document to a design review, which the record does not say covered it."
-    traces_to: [UN-014, UN-015]
-  - id: DI-53
-    text: "The graph shall carry each test run's steps — name, status and order, nested under their parent step — and its attachments, on the run or on a step — name, media type and file — and the agent server's trace shall list them with each run."
-    traces_to: [UN-014, UN-015, UN-004]
-  - id: DI-54
-    text: "RDM shall project each executed Allure result's uuid, full name, start and end times, status message and trace, and parameters, and shall not project what the record already holds or what claims nothing about design controls: its labels as nodes, its links, a test case per history id, and container fixtures."
-    traces_to: [UN-014, UN-004]
-  - id: DI-58
-    text: "The graph shall link each bounded context to the controlled document whose contexts frontmatter declares it, with its part, each controlled document to the controlled documents its references frontmatter names, and shall not project the traceability matrix template, an output generated from the record; a shape shall warn on a bounded context no document declares once any document declares contexts, and validation shall fail on a reference to a document the record does not hold."
-    traces_to: [UN-014, UN-015]
-  - id: DI-60
-    text: "The graph shall link each test run to the commit its commit label names, record the commit the record was built at and whether the run tested uncommitted changes, and a shape shall warn on a run tied to no commit and on a run that tested a commit other than the record's."
-    traces_to: [UN-014, UN-003]
-  - id: DI-61
-    text: "The graph shall record each tagged test — a Python test function or method, including those a module-level mark tags, or the whole file where tags are read by pattern — defined in its test file and verifying the design inputs its tags name, link each test run to the test it ran through the result's full name, and, when runs are linked to tests, a shape shall warn on a tagged test with no run while other tests in its file ran, and on a run that exercises a design input its test does not claim."
-    traces_to: [UN-014, UN-004]
 ---
 
 # Knowledge graph — Software Design
@@ -78,16 +26,16 @@ names it in commands and code.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists on request | DI-35, DI-36, DI-37, DI-45, DI-48, DI-51, DI-52, DI-53, DI-54, DI-58, DI-60, DI-61 |
-| Vocabulary | The classes and properties of the graph; projected as the ontology graph | DI-35 |
-| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | DI-38, DI-45, DI-51, DI-58, DI-60, DI-61 |
-| SHACL validation | `rdm graph validate`: runs the shipped and any user-supplied shapes over the union of the named graphs, reports each result most severe first, and fails on any violation | DI-49, DI-58 |
-| Explorer file | Writes the record as an AWS Graph Explorer file, every record node whatever its IRI, optionally leaving out chosen classes and what hangs only from them | DI-39 |
-| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | DI-41, DI-42, DI-45, DI-53 |
+| Projection | Turns each source of the record into its own named graph, de-duplicated and in a stable order; writes sorted N-Quads; replaces the store on each build; answers SPARQL over the store or an in-memory projection; starts the read-only endpoint; adds checklists on request | item-06-001, item-06-002, item-06-003, item-06-008, item-06-009, item-06-011, item-06-012, item-06-013, item-06-014, item-06-015, item-06-016 |
+| Vocabulary | The classes and properties of the graph; projected as the ontology graph | item-06-001 |
+| Gate shapes | The gate rules as SHACL shapes: violations block exactly what the release gate blocks, warnings inform; plus the checklist data's own shapes | item-06-004, item-06-008, item-06-011, item-06-015, item-06-016 |
+| SHACL validation | `rdm graph validate`: runs the shipped and any user-supplied shapes over the union of the named graphs, reports each result most severe first, and fails on any violation | item-06-010, item-06-015 |
+| Explorer file | Writes the record as an AWS Graph Explorer file, every record node whatever its IRI, optionally leaving out chosen classes and what hangs only from them | item-06-005 |
+| Agent server | `rdm graph mcp`: the schema, query, trace and validate tools for agents, read-only, each answering from a projection rebuilt on that call | item-06-006, item-06-007, item-06-008, item-06-013 |
 
 All of them run in the `rdm` command, and need the optional extra `graph`;
 without it every `rdm graph` command exits 2 and names the extra. The
-Projection reads other contexts' components (see Dependencies). Each design input is verified by a test tagged with it in
+Projection reads other contexts' components (see Dependencies). Each requirement is verified by a test tagged with it in
 the acceptance suite.
 
 How the components relate, in the direction of the arrows:
@@ -111,10 +59,11 @@ How the components relate, in the direction of the arrows:
 
 The behaviour a reviewer needs to judge the design:
 
-- **Named graphs.** The record graph holds user needs, bounded contexts,
-  design inputs and controlled documents, each user need's declaring
-  document, each context's declaring document and part, and the documents'
-  references; the tests graph holds the tagged tests; the executions graph
+- **Named graphs.** The record graph holds the spec (user needs with their
+  actors, surfaces, rules, guarantees and storm events; requirements with
+  their rule, source and the obligations they cover; Allium rules; bounded
+  contexts) and the controlled documents, each context's declaring document
+  and part, and the documents' references; the executions graph
   the Allure results, when given; the git graph each document's latest
   landed commit and the commit the record was built at; the risks graph the
   register, with a finding about the register as a whole on each risk, or on
@@ -122,7 +71,7 @@ The behaviour a reviewer needs to judge the design:
   graph the Vocabulary. The traceability matrix template is not projected: it
   is output, not record.
 - **Whole-record findings.** What the release gate blocks about the record
-  as a whole (no design input declared, a result file that cannot be
+  as a whole (no requirement, a result file that cannot be
   read) goes on the record's node as the gate words it,
   and a shape blocks each one, so validation never passes what the gate
   blocks. The executions graph is read with the Allure reader the gates use.
@@ -138,7 +87,7 @@ The behaviour a reviewer needs to judge the design:
   references, PROV-O for commits, authors and run times, SKOS for
   checklists. RDM terms (`rdm:UserNeed`, `rdm:BoundedContext`, `rdm:Test`,
   `rdm:TestRun`, `rdm:Risk`, `rdm:tracesTo`, `rdm:ownedBy`,
-  `rdm:realises`, `rdm:verifies`, `rdm:exercises`, …) are minted only where
+  `rdm:coversRule`, `rdm:exercises`, …) are minted only where
   none fits.
 - **What is refused.** The Agent server's `query`, the SPARQL endpoint and
   `rdm graph query` refuse SPARQL Update, any `SERVICE` call outside
@@ -167,8 +116,8 @@ contexts below it, and nothing but the composition root depends on it in
 code; the release context's gates action runs `rdm graph validate` as a CI
 step, not as an import. It projects:
 
-- **specification**, through the Record reader and the Test tags: needs,
-  inputs, contexts, documents, declarations, tagged tests;
+- **specification**, through the Spec reader and the Need reader: needs,
+  requirements, Allium rules, contexts;
 - **test evidence**, through the Allure reader: results and labels, and the
   verified set;
 - **risk**, through the Risk register: the register, the policy, the

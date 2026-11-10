@@ -25,7 +25,7 @@ from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 ROOT = Path(__file__).parents[2]
 
 
-@allure.story("DI-7")
+@allure.tag("item-07-001")
 @allure.label("output", "rdm/publishing/render.py")
 def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypatch) -> None:
     """DI-7: a Markdown template file rendered with Jinja2 against the data
@@ -54,7 +54,7 @@ def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypat
         assert "nope.md" in capsys.readouterr().err
 
 
-@allure.story("DI-8")
+@allure.tag("item-07-002")
 @allure.label("output", "rdm/publishing/render.py")
 def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
     """DI-8: the invert_dependencies, join_to and md_indent filters, used from
@@ -85,7 +85,7 @@ def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
         assert "r9" in err, err
 
 
-@allure.story("DI-9")
+@allure.tag("item-07-003")
 @allure.label("output", "rdm/md_extensions/")
 def test_markdown_post_processing() -> None:
     """DI-9: section numbering, a second pass that gives a template the words

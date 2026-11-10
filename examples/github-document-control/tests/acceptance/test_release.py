@@ -27,10 +27,10 @@ def _publish(steps: list[dict]) -> int:
     return _index(steps, lambda s: "action-gh-release" in s.get("uses", ""))
 
 
-@allure.story("DI-3")
+@allure.tag("item-03-001")
 @allure.label("output", ".github/workflows/release-documents.yml")
 def test_release_is_tag_triggered_with_both_copy_forms() -> None:
-    """DI-3: a doc-* tag triggers the release; rendered human-readable copies
+    """item-03-001: a doc-* tag triggers the release; rendered human-readable copies
     AND a complete electronic archive are attached."""
     flow, steps = workflow(RELEASE), _steps()
     attach("release steps", [step.get("name", step.get("uses")) for step in steps])
@@ -50,10 +50,10 @@ def test_release_is_tag_triggered_with_both_copy_forms() -> None:
         assert steps[_publish(steps)]["with"]["files"] == "release/**/*"
 
 
-@allure.story("DI-8")
+@allure.tag("item-03-002")
 @allure.label("output", ".github/workflows/release-documents.yml")
 def test_release_writes_a_device_history_record() -> None:
-    """DI-8: the release workflow writes a manifest (tag, commit SHA, actor,
+    """item-03-002: the release workflow writes a manifest (tag, commit SHA, actor,
     timestamp, artifacts) and attaches it with the copies."""
     steps = _steps()
     at = _index(steps, lambda s: "device-history-record.json" in s.get("run", ""))
@@ -77,10 +77,10 @@ def test_release_writes_a_device_history_record() -> None:
         assert at < _publish(steps)
 
 
-@allure.story("DI-10")
+@allure.tag("item-03-003")
 @allure.label("output", ".github/workflows/release-documents.yml")
 def test_a_release_is_published_only_when_verified_with_its_evidence() -> None:
-    """DI-10: the release runs the acceptance tests and the release gate at
+    """item-03-003: the release runs the acceptance tests and the release gate at
     the tag before anything is published, and attaches the evidence bundle
     with its verification report."""
     steps = _steps()

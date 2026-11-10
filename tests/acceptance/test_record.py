@@ -18,7 +18,7 @@ allure = pytest.importorskip("allure")
 from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
-@allure.story("DI-29")
+@allure.tag("item-07-008")
 @allure.label("output", "rdm/publishing/dmr.py")
 def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) -> None:
     """DI-29: one entry per controlled document (id, title, path, revision),
@@ -55,46 +55,3 @@ def test_dmr_index_data_is_generated_from_frontmatter(tmp_path: Path, capsys) ->
         assert out.read_text() == first
 
 
-@allure.story("DI-31")
-@allure.label("output", "rdm/specification/tags.py")
-def test_polyglot_test_sources_are_discovered(tmp_path: Path) -> None:
-    """DI-31: JS/TS allure.story calls and Java @Story annotations are
-    discovered across conventional test-file names; features name no input."""
-    from rdm.specification.tags import scan_source_tags
-
-    tests = tmp_path / "tests"
-    tests.mkdir()
-    (tests / "test_core.py").write_text(
-        "import allure\n\n"
-        "def helper():\n    return 1\n\n"
-        '@allure.story("DI-1")\ndef test_py():\n    assert helper() == 1\n'
-    )
-    (tests / "alarms.test.ts").write_text(
-        "import { allure } from 'allure-playwright';\n"
-        "test('alarm fires', async () => {\n"
-        "  await allure.story('DI-2');\n"
-        "  await allure.feature('DI-7');\n"
-        "  expect(fire()).toBe(true);\n"
-        "});\n"
-    )
-    (tests / "AlarmTest.java").write_text(
-        "import io.qameta.allure.Story;\n\n"
-        "public class AlarmTest {\n"
-        '  @Story("DI-3")\n'
-        '  @Feature("DI-8")\n'
-        "  @Test\n  void alarmFires() { assertTrue(fire()); }\n"
-        "}\n"
-    )
-    (tests / "x.test.js").write_text("test('a', async () => { await allure.story('DI-4'); });\n")
-    (tests / "y.spec.ts").write_text("test('b', async () => { await allure.story('DI-5'); });\n")
-    (tests / "FooTests.java").write_text('public class FooTests {\n  @Story("DI-6")\n  @Test\n  void foo() {}\n}\n')
-    (tests / "notes.txt").write_text('allure.story("DI-9") mentioned in prose\n')
-
-    with verification_step("Every language's story tag is discovered; features and the non-test file are not"):
-        tags = scan_source_tags(tests)
-        assert set(tags) == {"DI-1", "DI-2", "DI-3", "DI-4", "DI-5", "DI-6"}
-        assert tags["DI-2"] == [str(tests / "alarms.test.ts")]
-        assert tags["DI-3"] == [str(tests / "AlarmTest.java")]
-        assert tags["DI-4"] == [str(tests / "x.test.js")]
-        assert tags["DI-5"] == [str(tests / "y.spec.ts")]
-        assert tags["DI-6"] == [str(tests / "FooTests.java")]

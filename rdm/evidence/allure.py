@@ -1,17 +1,14 @@
 """
-Ingest Allure results into per-design-input verification status.
+Ingest Allure results into per-requirement verification status.
 
 Allure writes one ``*-result.json`` file per executed test into a results
-directory. Each result carries a ``status`` and a list of ``labels``; the
-``@allure.story("ID")`` decorator appears as a label named ``story``
-(``feature`` and ``epic`` carry the bounded context and user needs, DI-57).
-This module maps those IDs to an aggregated
-verification status so the DHF can report whether each design input was
-actually *verified* (executed and passed), not merely referenced by a tag.
-
-This is the executed-evidence counterpart to the test tags
-(``rdm.specification.tags``): a tag says a test *claims* to verify a design
-input; the Allure result says whether that test actually *passed*.
+directory. Each result carries a ``status`` and a list of ``labels``. A run
+claims the requirements of the factory's spec it verifies with ``tag``
+labels ``item-NN-SSS``: the tags a Gherkin runner (allure-pytest-bdd,
+allure-cucumber, allure-behave) writes from a scenario's ``@item-NN-SSS``,
+or ``@allure.tag("item-NN-SSS")`` on a plain test. This module maps those ids
+to an aggregated verification status: whether each requirement was actually
+*verified* (executed and passed), not merely named.
 """
 
 from __future__ import annotations
@@ -22,7 +19,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rdm.kernel.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
-from rdm.specification.tags import DESIGN_INPUT_LABELS
+
+# The label a run claims a requirement with, and the shape of its value.
+REQUIREMENT_LABEL = "tag"
+_ITEM_LIKE = re.compile(r"@?(item[\W_]*\d.*)", re.IGNORECASE)  # an item tag, or a mistyped one
 
 # Allure statuses: a result with any other is unreadable, since it could be a failed run.
 FAILING = {"failed", "broken"}
@@ -36,7 +36,7 @@ COMMIT_LABEL = "commit"            # the commit under test
 OUTPUT_LABEL = "output"            # a design output the test exercises
 WORKTREE_LABEL = "worktree"        # "dirty" when it had uncommitted changes
 DIRTY = "dirty"
-REQUIREMENT_ATTACHMENT = "requirement {}"   # the plugin's copy of a design input's text
+REQUIREMENT_ATTACHMENT = "requirement {}"   # an older plugin's copy of a requirement's text
 EXECUTOR_FILE = "executor.json"             # Allure's: who or what ran the tests
 ENVIRONMENT_FILE = "environment.properties"  # Allure's: the configuration and tools
 _COMMIT_SHA = re.compile(r"[0-9a-f]{7,40}")
@@ -53,16 +53,16 @@ class TestResult:
 
     name: str
     status: str
-    design_input_ids: list[str] = field(default_factory=list)
+    requirement_ids: list[str] = field(default_factory=list)
     # Design output(s) the test exercises, from @allure.label("output", ...).
     outputs: list[str] = field(default_factory=list)
 
 
 @dataclass
-class DesignInputVerification:
-    """Aggregated verification status for one declared design input."""
+class RequirementVerification:
+    """Aggregated verification status for one requirement."""
 
-    design_input_id: str
+    requirement_id: str
     status: str = UNTESTED
     passed: int = 0
     failed: int = 0
@@ -73,7 +73,7 @@ class DesignInputVerification:
 
 @dataclass
 class VerificationReport(StatusReportMixin):
-    by_id: dict[str, DesignInputVerification] = field(default_factory=dict)
+    by_id: dict[str, RequirementVerification] = field(default_factory=dict)
     orphan_ids: list[str] = field(default_factory=list)
     results_found: int = 0
     unreadable: list[str] = field(default_factory=list)  # result files that are not a JSON object
@@ -97,9 +97,14 @@ def labelled(data: dict, name: str) -> list[str]:
             and (value := str(label.get("value", "")).strip())]
 
 
-def design_input_tags(data: dict) -> list[str]:
-    """The design inputs an Allure result is tagged with (its story labels)."""
-    return [value for name in DESIGN_INPUT_LABELS for value in labelled(data, name)]
+def requirement_tags(data: dict) -> list[str]:
+    """The requirements an Allure result claims: its ``tag`` labels that name
+    an item, ``item-NN-SSS`` (a leading ``@`` dropped), in order, each once. A
+    tag that only looks like one (``Item_01_001``) is kept as written, so it
+    is reported as naming no requirement rather than dropped; other tags
+    (``smoke``) claim nothing."""
+    found = [m.group(1) for value in labelled(data, REQUIREMENT_LABEL) if (m := _ITEM_LIKE.fullmatch(value))]
+    return list(dict.fromkeys(found))
 
 
 def run_version(data: dict) -> tuple[str | None, bool]:
@@ -117,6 +122,21 @@ def full_name(rel: str, name: str | None) -> str | None:
         return None
     *owner, function = name.split("::")
     return ".".join([rel[:-3].replace("/", "."), *owner]) + "#" + function
+
+
+def test_of(full: str) -> str:
+    """The test a pytest ``fullName`` names, as ``file::Class::function``:
+    ``tests.x.TestClass#test_y`` → ``tests/x.py::TestClass::test_y`` (a
+    capitalised segment after the module is a class). Any other full name
+    (a Gherkin runner's, say) is returned as it is."""
+    module, hash_, function = full.partition("#")
+    if not hash_ or not module or not function:
+        return full
+    parts = module.split(".")
+    classes = []
+    while len(parts) > 1 and parts[-1][:1].isupper():
+        classes.insert(0, parts.pop())
+    return "::".join(["/".join(parts) + ".py", *classes, function])
 
 
 def write_run_facts(results_dir: Path, executor: dict, environment: dict[str, str]) -> None:
@@ -189,7 +209,7 @@ def _build_result(data: dict, filename: str) -> TestResult:
     return TestResult(
         name=str(data.get("name") or filename),
         status=run_status(data),
-        design_input_ids=design_input_tags(data),
+        requirement_ids=requirement_tags(data),
         outputs=labelled(data, OUTPUT_LABEL),
     )
 
@@ -204,9 +224,9 @@ def parse_results(results_dir: Path, unreadable: list[str] | None = None) -> lis
 
 
 def reconcile(sdd_ids: set[str], results_dir: Path | None) -> VerificationReport:
-    """Aggregate Allure results into a verification status per design input.
+    """Aggregate Allure results into a verification status per requirement.
 
-    Status rules per design input:
+    Status rules per requirement:
       - ``failed``   if any covering test failed or is broken,
       - ``verified`` else if any covering test passed,
       - ``untested`` if no covering test ran (or only skipped/unknown).
@@ -217,7 +237,7 @@ def reconcile(sdd_ids: set[str], results_dir: Path | None) -> VerificationReport
     unreadable: list[str] = []
     results = parse_results(Path(results_dir), unreadable) if results_dir is not None else []
 
-    def _fold(verification: DesignInputVerification, result: TestResult) -> None:
+    def _fold(verification: RequirementVerification, result: TestResult) -> None:
         verification.tests.append(result.name)
         for output in result.outputs:
             if output not in verification.outputs:
@@ -229,7 +249,7 @@ def reconcile(sdd_ids: set[str], results_dir: Path | None) -> VerificationReport
         else:
             verification.skipped += 1
 
-    def _status(verification: DesignInputVerification) -> str:
+    def _status(verification: RequirementVerification) -> str:
         if verification.failed:
             return FAILED
         if verification.passed:
@@ -239,8 +259,8 @@ def reconcile(sdd_ids: set[str], results_dir: Path | None) -> VerificationReport
     by_id, orphan_ids = aggregate_by_id(
         sdd_ids,
         results,
-        ids_of=lambda result: result.design_input_ids,
-        new=DesignInputVerification,
+        ids_of=lambda result: result.requirement_ids,
+        new=RequirementVerification,
         fold=_fold,
         status=_status,
     )

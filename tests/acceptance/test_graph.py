@@ -1,8 +1,8 @@
-"""Acceptance tests for the graph context's design inputs (see dhf/).
+"""Acceptance tests for the graph context's requirements (see .pi/spec/graph).
 
-DI-35 (the record projected into named RDF graphs) and DI-36 (Oxigraph store,
-SPARQL query, SPARQL endpoint), tagged `@allure.story`, over the real
-projection, the `rdm graph` commands and the served endpoint. Skips cleanly
+item-06-001 (the record projected into named RDF graphs) and item-06-002
+(Oxigraph store, SPARQL query, SPARQL endpoint), tagged `@allure.tag`, over
+the real projection, the `rdm graph` commands and the served endpoint. Skips cleanly
 if allure-pytest or the `graph` extra is not installed.
 """
 
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.util import git_run
+from tests.util import git_run, write_spec
 
 allure = pytest.importorskip("allure")
 
@@ -39,32 +39,55 @@ PREFIX oslc_rm: <http://open-services.net/ns/rm#>
 G = "urn:dhf:acme:graph/"
 
 
+ALARM_ALLIUM = """-- a need
+surface Alarm {
+    facing nurse: Nurse
+
+    provides:
+        SoundAlarm(device)
+
+    @guarantee Alarm
+}
+
+-- another need
+surface Logging {
+    facing nurse: Nurse
+
+    @guarantee Logging
+}
+
+rule SoundAlarm {
+    when: SoundAlarm(device)
+}
+"""
+
+
 def _record(tmp_path: Path, extra_input: bool = True) -> tuple[Path, Path]:
-    """A committed DHF: two needs, two contexts (one realising the other's
-    input), a review, tagged tests, and Allure results."""
+    """A committed repository: a spec of two contexts (alarms with two needs
+    and its requirements, ui with none), controlled documents, and Allure
+    results. item-01-001 covers the need Alarm (its guarantee and its rule
+    SoundAlarm); item-01-002, when ``extra_input``, covers Logging."""
     repo = tmp_path / "acme"
     docs = repo / "dhf" / "documents"
     (docs / "design").mkdir(parents=True)
-    (docs / "verification_and_validation_plan.md").write_text(
-        "---\nid: VVP-001\ntitle: V&V plan\nuser_needs:\n"
-        "  - {id: UN-001, text: 'a need'}\n  - {id: UN-002, text: 'another need'}\n---\n# Plan\n")
-    inputs = "  - id: DI-1\n    text: 'The device shall alarm.'\n    traces_to: [UN-001]\n"
+    items = [("item-01-001", "The device shall alarm.", ["Alarm"])]
     if extra_input:
-        inputs += "  - id: DI-2\n    text: 'The device shall log.'\n    traces_to: [UN-002]\n"
+        items.append(("item-01-002", "The device shall log.", ["Logging"]))
+    write_spec(repo, tuple(items), {"Alarm": ("alarms", "Nurse", "a need"),
+                                    "Logging": ("alarms", "Nurse", "another need")},
+               {"01": "alarms", "02": "ui"})
+    feature = repo / ".pi" / "spec" / "alarms" / "spec.feature"
+    feature.write_text(feature.read_text().replace(
+        "@allium-guarantee.Alarm", "@allium-guarantee.Alarm @allium-rule-success.SoundAlarm"))
+    (repo / ".pi" / "spec" / "alarms" / "allium" / "needs.allium").write_text(ALARM_ALLIUM)
+    (docs / "verification_and_validation_plan.md").write_text("---\nid: VVP-001\ntitle: V&V plan\n---\n# Plan\n")
     (docs / "design" / "alarms.md").write_text(
-        "---\nid: SDS-ALM-001\ntitle: Alarms design\nrevision: 3\nkind: design\ncontext: alarms\n"
-        f"design_inputs:\n{inputs}---\n# Alarms\n")
-    (docs / "design" / "ui.md").write_text(
-        "---\nid: SDS-UI-001\nkind: design\ncontext: ui\nrealises: [DI-1]\n"
-        "design_inputs: []\n---\n# UI\n")
+        "---\nid: SDS-ALM-001\ntitle: Alarms design\nrevision: 3\n---\n# Alarms\n")
     (docs / "design_review.md").write_text("---\nid: DR-001\n---\n# Review\nApproved.\n")
-    (repo / "tests").mkdir()
-    (repo / "tests" / "test_alarms.py").write_text(
-        'import allure\n\n@allure.story("DI-1")\ndef test_alarm():\n    assert True\n')
     results = repo / "allure-results"
     results.mkdir()
     (results / "r1-result.json").write_text(json.dumps(
-        {"name": "test_alarm", "status": "passed", "labels": [{"name": "story", "value": "DI-1"}]}))
+        {"name": "test_alarm", "status": "passed", "labels": [{"name": "tag", "value": "item-01-001"}]}))
     git_run(repo, "init")
     git_run(repo, "add", "-A")
     git_run(repo, "commit", "-m", "approve design")
@@ -83,40 +106,42 @@ def _ask(store, body: str) -> bool:
     return bool(store.query(PREFIXES + "ASK { " + body + " }", use_default_graph_as_union=True))
 
 
-@allure.story("DI-35")
+@allure.tag("item-06-001")
 @allure.label("output", "rdm/graph/project.py")
 def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
-    """DI-35: needs, contexts, inputs and documents in the record graph; tags in
-    tests; results in executions; latest commits in git; labels on every node;
-    the vocabulary in ontology; sorted N-Quads stable across runs."""
+    """item-06-001: the spec's user needs, requirements, Allium rules and
+    contexts, and the controlled documents, in the record graph; results in
+    executions; latest commits in git; labels on every node; the vocabulary in
+    ontology; sorted N-Quads stable across runs."""
     dhf, results = _record(tmp_path)
     quads = project(dhf, results)
     s = _store(quads)
-    rec, tst, exe, git, ont = (f"<{G}{n}>" for n in ("record", "tests", "executions", "git", "ontology"))
-    di1, ctx = "<urn:dhf:acme:input/DI-1>", "<urn:dhf:acme:context/alarms>"
+    rec, exe, git, ont = (f"<{G}{n}>" for n in ("record", "executions", "git", "ontology"))
+    req1, ctx = "<urn:dhf:acme:requirement/item-01-001>", "<urn:dhf:acme:context/alarms>"
+    alarm = "<urn:dhf:acme:need/Alarm>"
 
-    with verification_step("Record graph: needs, contexts, inputs (text, needs, owner, realiser, doc), documents"):
-        assert _ask(s, f"GRAPH {rec} {{ <urn:dhf:acme:need/UN-001> a rdm:UserNeed ; dcterms:identifier \"UN-001\" ; "
-                       f"rdm:text \"a need\" }}")
-        assert _ask(s, f"GRAPH {rec} {{ {ctx} a rdm:BoundedContext }}")
-        # a context's needs are not declared: they follow from its inputs (DI-1)
-        assert not _ask(s, "?c rdm:satisfies ?n")
-        assert _ask(s, f"?i rdm:ownedBy {ctx} ; rdm:tracesTo <urn:dhf:acme:need/UN-002>")
-        assert _ask(s, f'GRAPH {rec} {{ {di1} a rdm:DesignInput ; rdm:text "The device shall alarm." ; '
-                       f'rdm:tracesTo <urn:dhf:acme:need/UN-001> ; rdm:ownedBy {ctx} ; '
-                       f'rdm:declaredIn <urn:dhf:acme:doc/SDS-ALM-001> }}')
-        assert not _ask(s, f"GRAPH {rec} {{ {di1} rdm:tracesTo <urn:dhf:acme:need/UN-002> }}")
-        assert _ask(s, f"GRAPH {rec} {{ <urn:dhf:acme:context/ui> rdm:realises {di1} }}")
+    with verification_step("Record graph: user needs, with what they face, provide and guarantee"):
+        assert _ask(s, f'GRAPH {rec} {{ {alarm} a rdm:UserNeed ; dcterms:identifier "Alarm" ; rdm:text "a need" ; '
+                       f'rdm:facing "Nurse" ; rdm:surface "Alarm" ; rdm:guarantee "Alarm" ; '
+                       f'rdm:providesRule <urn:dhf:acme:rule/SoundAlarm> ; rdm:ownedBy {ctx} }}')
+    with verification_step("Record graph: requirements (text, rule coverage, needs, context, source line)"):
+        assert _ask(s, f'GRAPH {rec} {{ {req1} a rdm:Requirement ; dcterms:identifier "item-01-001" ; '
+                       f'rdm:text "The device shall alarm." ; rdm:tracesTo {alarm} ; rdm:ownedBy {ctx} ; '
+                       f'rdm:covers "guarantee.Alarm" ; rdm:coversRule <urn:dhf:acme:rule/SoundAlarm> ; '
+                       f'rdm:source ".pi/plan/01-alarms/spec.feature:5" }}')
+        assert not _ask(s, f"GRAPH {rec} {{ {req1} rdm:tracesTo <urn:dhf:acme:need/Logging> }}")
+        assert _ask(s, "<urn:dhf:acme:requirement/item-01-002> rdm:tracesTo <urn:dhf:acme:need/Logging>")
+    with verification_step("Record graph: Allium rules and bounded contexts, a context with no requirement too"):
+        assert _ask(s, f'GRAPH {rec} {{ <urn:dhf:acme:rule/SoundAlarm> a rdm:AlliumRule ; rdm:trigger "SoundAlarm" ; '
+                       f'rdm:ownedBy {ctx} }}')
+        assert _ask(s, f"GRAPH {rec} {{ {ctx} a rdm:BoundedContext . "
+                       f"<urn:dhf:acme:context/ui> a rdm:BoundedContext }}")
+    with verification_step("Record graph: controlled documents"):
         assert _ask(s, f'GRAPH {rec} {{ <urn:dhf:acme:doc/SDS-ALM-001> a rdm:Document ; '
                        f'dcterms:identifier "SDS-ALM-001" ; dcterms:title "Alarms design" ; rdm:revision "3" }}')
 
-    with verification_step("Tests graph: the tag, as a tag -- DI-2 has none, and nothing says it is \"unverified\""):
-        assert _ask(s, f"GRAPH {tst} {{ ?t a rdm:Test ; rdm:verifies {di1} ; rdm:definedIn ?f . "
-                       f"?f a rdm:TestFile ; rdm:path \"tests/test_alarms.py\" }}")
-        assert not _ask(s, "?f rdm:verifies <urn:dhf:acme:input/DI-2>")
-
     with verification_step("Executions graph, only when results are given"):
-        assert _ask(s, f'GRAPH {exe} {{ ?r a rdm:TestRun ; rdm:exercises {di1} ; rdm:status "passed" }}')
+        assert _ask(s, f'GRAPH {exe} {{ ?r a rdm:TestRun ; rdm:exercises {req1} ; rdm:status "passed" }}')
         assert not _ask(_store(project(dhf)), "?r a rdm:TestRun")
 
     with verification_step("Git graph: the design doc's latest commit, its time and author"):
@@ -130,7 +155,7 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
         assert not _ask(s, "GRAPH ?g { ?n a ?type } FILTER NOT EXISTS { GRAPH ?h { ?n rdfs:label ?l } }")
 
     with verification_step("Ontology graph: RDM's vocabulary, reusing OSLC RM"):
-        assert _ask(s, f"GRAPH {ont} {{ rdm:DesignInput rdfs:subClassOf oslc_rm:Requirement }}")
+        assert _ask(s, f"GRAPH {ont} {{ rdm:Requirement rdfs:subClassOf oslc_rm:Requirement }}")
 
     with verification_step("Sorted N-Quads, byte-identical for an unchanged record"):
         text = nquads(quads)
@@ -142,7 +167,7 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
         assert list(ox.parse(nquads(odd).encode(), format=ox.RdfFormat.N_QUADS)) == odd
 
 
-@allure.story("DI-36")
+@allure.tag("item-06-002")
 @allure.label("output", "rdm/graph/cli.py")
 def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
     """DI-36: the store is replaced (never merged) on each build; queries run
@@ -154,24 +179,24 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
 
     with verification_step("Query over the store (standard prefixes need no declaration; no GRAPH clause)"):
         capsys.readouterr()
-        sparql = "SELECT ?id WHERE { ?i a rdm:DesignInput ; dcterms:identifier ?id } ORDER BY ?id"
+        sparql = "SELECT ?id WHERE { ?i a rdm:Requirement ; dcterms:identifier ?id } ORDER BY ?id"
         assert graph_cli.graph_query_command(sparql, store=location) == 0
-        assert capsys.readouterr().out.splitlines() == ["?id", '"DI-1"', '"DI-2"']
+        assert capsys.readouterr().out.splitlines() == ["?id", '"item-01-001"', '"item-01-002"']
 
-    with verification_step("Rebuild after DI-2 is removed: replaced, not merged"):
+    with verification_step("Rebuild after item-01-002 is removed: replaced, not merged"):
         dhf2, _ = _record(tmp_path / "v2", extra_input=False)
         assert build_store(location, project(dhf2, project_name="acme")) > 0
         assert graph_cli.graph_query_command(sparql, store=location) == 0
-        assert capsys.readouterr().out.splitlines() == ["?id", '"DI-1"']
+        assert capsys.readouterr().out.splitlines() == ["?id", '"item-01-001"']
 
     with verification_step("In-memory projection when no store is given; ASK and CONSTRUCT too"):
         assert graph_cli.graph_query_command(sparql, dhf_dir=dhf) == 0
-        assert capsys.readouterr().out.splitlines() == ["?id", '"DI-1"', '"DI-2"']
+        assert capsys.readouterr().out.splitlines() == ["?id", '"item-01-001"', '"item-01-002"']
         assert graph_cli.graph_query_command("ASK { ?r rdm:exercises ?i }", store=location) == 0
         assert capsys.readouterr().out.strip() == "false"  # v2 was built without results
         assert graph_cli.graph_query_command(
             "CONSTRUCT { ?i rdm:tracesTo ?n } WHERE { ?i rdm:tracesTo ?n }", dhf_dir=dhf) == 0
-        assert "<urn:dhf:acme:input/DI-1> <https://github.com/scope-impact/rdm/ns#tracesTo>" in capsys.readouterr().out
+        assert "<urn:dhf:acme:requirement/item-01-001> <https://github.com/scope-impact/rdm/ns#tracesTo>" in capsys.readouterr().out
 
     with verification_step("Query refuses SPARQL Update and SERVICE: nothing changes, nothing reaches the network"):
         for refused in ("CLEAR ALL", "SELECT * WHERE { SERVICE <http://127.0.0.1:9/x> { ?s ?p ?o } }"):
@@ -207,13 +232,13 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
             urllib.request.urlopen(request, timeout=5)
         return error.value.code
 
-    labels = "SELECT ?l WHERE { ?n a rdm:DesignInput ; rdfs:label ?l } ORDER BY ?l"
+    labels = "SELECT ?l WHERE { ?n a rdm:Requirement ; rdfs:label ?l } ORDER BY ?l"
     try:
         with verification_step("Serve: the union default graph, standard prefixes, CORS open"):
             with get(labels) as response:
                 body = response.read().decode()
                 cors = response.headers.get("Access-Control-Allow-Origin")
-            assert body.split() == ["l", "DI-1"] and cors == "*"  # the v2 build: DI-2 removed
+            assert body.split() == ["l", "item-01-001"] and cors == "*"  # the v2 build: item-01-002 removed
             with get("ASK { ?s ?p ?o }", "application/sparql-results+json") as response:
                 assert json.loads(response.read())["boolean"] is True
         with verification_step("Serve refuses an update from another origin, and the data stays"):
@@ -222,7 +247,7 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
                 headers={"Origin": "https://elsewhere.example", "Content-Type": "application/x-www-form-urlencoded"})
             assert refused(update) == 403
             with get(labels) as response:
-                assert response.read().decode().split() == ["l", "DI-1"]
+                assert response.read().decode().split() == ["l", "item-01-001"]
         with verification_step("Serve refuses SERVICE, a comment ended by a carriage return included"):
             listener = socket.socket()
             listener.bind(("127.0.0.1", 0))
@@ -239,7 +264,7 @@ def test_store_query_and_serve(tmp_path: Path, capsys) -> None:
         with verification_step("Serve answers from the last build"):
             assert build_store(location, project(dhf, results, project_name="acme")) > 0
             with get(labels) as response:
-                assert response.read().decode().split() == ["l", "DI-1", "DI-2"]
+                assert response.read().decode().split() == ["l", "item-01-001", "item-01-002"]
     finally:
         server.shutdown()
         server.server_close()

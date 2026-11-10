@@ -4,3 +4,8 @@ md_extensions:
     #- 'rdm.md_extensions.AuditNoteExclusionExtension'
 
 reviews_required: True
+
+# The spec RDM traces the requirements and user needs of (the plan directory of
+# a Löyly-shaped spec, relative to this directory). Leave it out when the spec
+# is at .pi/plan in the repository.
+# spec: ../.pi/plan

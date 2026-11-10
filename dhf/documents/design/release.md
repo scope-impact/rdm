@@ -2,21 +2,6 @@
 id: SDS-REL-001
 kind: design
 context: release
-# Implements part of inputs other contexts own.
-realises: [DI-33, DI-44, DI-50]
-design_inputs:
-  - id: DI-3
-    text: "RDM shall block release unless every declared design input is verified by a passing test."
-    traces_to: [UN-003]
-  - id: DI-4
-    text: "RDM shall reconcile each declared design input against the story labels of the executed Allure results as verified, failed or untested, and render the traceability matrix of those statuses grouped under the user needs."
-    traces_to: [UN-004]
-  - id: DI-30
-    text: "RDM shall produce a release evidence bundle from the record: the verification data and the rendered traceability matrix, the verification report, the executed Allure results with every attachment and container they reference, and a manifest listing the bundle's files and any referenced attachment or result it could not include, written to an output directory apart from the results, replacing an earlier bundle there, and refusing to write a bundle it cannot complete."
-    traces_to: [UN-012]
-  - id: DI-63
-    text: "RDM shall provide its gates for reuse in another repository's CI: a reusable workflow that runs the repository's acceptance tests and then verify, the release gate, graph validation over the named checklists and the evidence bundle with the verification report, uploading the bundle, with RDM installed from the revision the caller pinned rather than a package index; a composite gates action that does the same for workflows of their own; and a composite action that renders the documents with the image of the release it is pinned to (the latest image for a branch or commit). The CI workflow rdm adopt lays down, and RDM's own CI, shall call the reusable workflow, pinned to the installed RDM's version and to the commit under test respectively."
-    traces_to: [UN-011, UN-003]
 ---
 
 # Release — Software Design
@@ -27,7 +12,7 @@ design_inputs:
 went ahead on: the release gate over the record's verified status, its risks
 and its user needs; the verification data the gate and its reviewers
 read; and the reusable gates that run all of it in another
-repository's pipeline. Its language: a design input is *verified* (a passing
+repository's pipeline. Its language: a requirement is *verified* (a passing
 run of a tagged test, no failed one); the *release gate* blocks a release;
 *release-grade evidence* is what a release needs; the *traceability matrix*
 is generated, never edited; the *evidence bundle* is what a release keeps.
@@ -40,23 +25,24 @@ that other repositories' pipelines call.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Release gate | The release decision over verified status, risk and validation | DI-3; realises DI-33, DI-44, DI-50 |
-| Verification data | Every declared design input reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from | DI-4, DI-30 |
-| Reusable workflow | Runs a repository's acceptance tests, then the gates, with RDM installed from the revision the caller pinned | DI-63 |
-| Gates action | The gate steps, written once: verification data, release gate, graph validation and the evidence bundle | DI-63, DI-30 |
+| Release gate | The release decision over verified status, risk and validation | item-04-001; realises item-01-004, item-02-002, item-02-003 |
+| Verification data | Every requirement reconciled against the executed results: the data the traceability matrix and the evidence bundle are built from | item-04-002, item-04-003 |
+| Reusable workflow | Runs a repository's acceptance tests, then the gates, with RDM installed from the revision the caller pinned | item-04-004 |
+| Gates action | The gate steps, written once: verification data, release gate, graph validation and the evidence bundle | item-04-004, item-04-003 |
 
-**Release gate.** It blocks a release when no design input is declared; when a design input failed
+**Release gate.** It blocks a release when no spec is found, or the spec
+cannot be read whole (an unstamped scenario, an item stamped twice, a file it
+cannot read); when the spec holds no requirement; when a requirement failed
 or is untested in the given results; when a result file in them cannot be
 read (it could hold a failed run); when the risk register's release rules
-report a blocking finding; and when a user need is addressed by no design
-input. It warns, never blocks, on a user need with no approved validation
-record, and on a test tag that matches no design input (compared on its
-leading letters, so `di-1` or `DI_1` is an orphan, not silence). A results
-directory that does not exist is refused.
+report a blocking finding; and when a user need is addressed by no
+requirement covering its rules or guarantees. It warns, never blocks, on a
+user need with no approved validation record, and on an item tag that
+matches no requirement. A results directory that does not exist is refused.
 
-**Verification data.** For each declared design input: its status, run
+**Verification data.** For each requirement: its status, run
 counts, tests and their outputs, grouped by user need, with a summary and
-the tags that match no design input, and the result files that cannot be
+the tags that match no requirement, and the result files that cannot be
 read, which make `verify` exit non-zero. It is generated, never edited.
 
 **Reusable workflow and Gates action.** The caller pins the workflow and
@@ -74,11 +60,11 @@ never spliced into the script text, so an input cannot inject shell.
 
 Relationships that matter, in the direction of the arrow:
 
-- The release gate reads the record with the record reader and the validation records (`specification`), reconciles
+- The release gate reads the spec with the spec reader and the validation records (`specification`), reconciles
   results with the Allure reader (`test_evidence`) and reports the risk
   findings of the risk register (`risk`).
 - Verification data reconciles results with the Allure reader and reads the
-  record with the record reader.
+  spec with the spec reader.
 - The Reusable workflow runs the acceptance test run and then the gates with
   the Gates action, which writes the verification data,
   runs the release gate, validates the graph with SHACL validation (`graph`)
@@ -99,7 +85,7 @@ and uploaded.
 ## Dependencies
 
 Layer 4 of the dependency rule. Depends on `test_evidence` (the Allure
-reader), `specification` (the record reader, the validation records) and `risk` (the risk register), all below it, and on the shared
+reader), `specification` (the spec reader, the validation records) and `risk` (the risk register), all below it, and on the shared
 kernel. Depended on by `publishing` (the verification report and the
 evidence bundle build on the verification data) and by the composition
 root. The Gates action, in its own container, also runs `graph`'s SHACL

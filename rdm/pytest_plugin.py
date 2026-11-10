@@ -2,9 +2,10 @@
 pytest plugin: record which version of the code an acceptance run is evidence
 for, and who or what ran it.
 
-A test carries one tag, ``@allure.story("DI-n")``. The plugin adds no
-requirement labels of its own: the trace from a run to what it verifies is the
-tag, read by RDM from the results. At run time it adds:
+A test claims the requirements of the spec it verifies with
+``@allure.tag("item-NN-SSS")``. The plugin adds no requirement labels of its
+own: the trace from a run to what it verifies is the tag, read by RDM from
+the results. At run time it adds:
 
 - ``commit``: the commit under test, and ``worktree=dirty`` when the working
   tree had uncommitted changes (DI-59);
@@ -31,9 +32,8 @@ from pathlib import Path
 
 import pytest
 
-from rdm.evidence.allure import COMMIT_LABEL, DIRTY, WORKTREE_LABEL, write_run_facts
+from rdm.evidence.allure import COMMIT_LABEL, DIRTY, REQUIREMENT_LABEL, WORKTREE_LABEL, write_run_facts
 from rdm.kernel.git import head, repo_root
-from rdm.specification.tags import DESIGN_INPUT_LABELS
 
 
 def pytest_addoption(parser):
@@ -43,20 +43,20 @@ def pytest_addoption(parser):
 
 @lru_cache(maxsize=4)
 def _record(dhf: str) -> dict:
-    """The declared design-input ids, and the commit under test."""
-    from rdm.specification.sdd import design_input_ids
+    """The spec's requirement ids, and the commit under test."""
+    from rdm.specification.sdd import requirement_ids
 
     path = Path(dhf)
     commit, dirty = head((repo_root(path) or path.parent).resolve())
-    return {"inputs": set(design_input_ids(path)), "commit": commit, "dirty": dirty}
+    return {"requirements": set(requirement_ids(path)), "commit": commit, "dirty": dirty}
 
 
-def story_ids(item) -> list[str]:
-    """The design inputs a test is tagged with: allure-pytest keeps its labels
-    as ``allure_label`` marks on the test function."""
-    ids = [str(v) for m in item.iter_markers(name="allure_label")
-           if str(getattr(m.kwargs.get("label_type"), "value", m.kwargs.get("label_type"))) in DESIGN_INPUT_LABELS
-           for v in m.args]
+def item_ids(item) -> list[str]:
+    """The requirements a test claims: its ``@allure.tag("item-NN-SSS")``
+    tags (allure-pytest keeps its labels as ``allure_label`` marks)."""
+    ids = [str(v).lstrip("@") for m in item.iter_markers(name="allure_label")
+           if str(getattr(m.kwargs.get("label_type"), "value", m.kwargs.get("label_type"))) == REQUIREMENT_LABEL
+           for v in m.args if str(v).lstrip("@").startswith("item-")]
     return list(dict.fromkeys(ids))
 
 
@@ -129,7 +129,7 @@ def _label(item) -> None:
         import allure
     except ImportError:
         return
-    ids = story_ids(item)
+    ids = item_ids(item)
     if not ids:
         return
     dhf = Path(item.config.getoption("--rdm-dhf", default=None) or item.config.rootpath / "dhf")
@@ -137,7 +137,7 @@ def _label(item) -> None:
     _record_run(item.config, record)
     if record is None:
         return
-    declared = [di for di in ids if di in record["inputs"]]
+    declared = [i for i in ids if i in record["requirements"]]
     if declared and record["commit"]:  # DI-59: the version this run is evidence for
         allure.dynamic.label(COMMIT_LABEL, record["commit"])
         if record["dirty"]:

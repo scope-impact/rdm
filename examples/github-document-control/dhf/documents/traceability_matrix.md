@@ -20,28 +20,31 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 {% if verification is defined %}
 # Summary
 
-| Verified | Failed | Untested | Total design inputs | Allure results |
+| Verified | Failed | Untested | Total requirements | Allure results |
 | --- | --- | --- | --- | --- |
 | {{ verification.summary.verified }} | {{ verification.summary.failed }} | {{ verification.summary.untested }} | {{ verification.summary.total }} | {{ verification.summary.results_found }} |
 
 # Traceability matrix
 
-Runs: passed / failed / skipped.
+Each user need, with the requirements (stamped scenarios of the spec) that
+address it. Runs: passed / failed / skipped.
 
 {% for group in verification.groups %}
 ## {{ group.user_need }}
 
-| Input | Status | Runs | Verifying tests | Output |
-| ------------ | ------------ | ---------- | ------------------------------------ | ---------------------------- |
-{%- for di in group.design_inputs %}
-| {{ di.design_input }} | {{ di.status }} | {{ di.passed }}/{{ di.failed }}/{{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
+{% if group.text %}{{ group.text }}{% endif %}{% if group.actors %} Facing: {{ group.actors|join(', ') }}.{% endif %}
+
+| Requirement | Scenario | Status | Runs | Verifying tests |
+| ------------ | ------------------------------------ | ------------ | ---------- | ------------------------------------ |
+{%- for r in group.requirements %}
+| {{ r.requirement }} | {{ r.text }} | {{ r.status }} | {{ r.passed }}/{{ r.failed }}/{{ r.skipped }} | {{ r.tests|join(', ') if r.tests else '—' }} |
 {%- endfor %}
 {% endfor %}
 
 {% if verification.orphans %}
 # Orphan test tags
 
-Allure tags matching no declared design input:
+Allure tags matching no requirement:
 {% for orphan in verification.orphans %}
 - {{ orphan }}
 {%- endfor %}

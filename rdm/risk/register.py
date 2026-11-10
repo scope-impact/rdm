@@ -1,9 +1,9 @@
 """
 The risk register (DI-43) and its release rules (DI-44).
 
-Risks are frontmatter in ``kind: risk`` documents, as design inputs are in
-``kind: design`` ones: a safety or security (STRIDE) risk, hazard → situation
-→ harm, severity × probability, controls (design input ids), residual,
+Risks are frontmatter in ``kind: risk`` documents: a safety or security
+(STRIDE) risk, hazard → situation → harm, severity × probability, controls
+(requirement ids of the spec, ``item-NN-SSS``), residual,
 acceptance, status. Risks are evaluated only against a ``risk_policy`` the
 project declares — there is no default, because acceptability criteria are
 the project's, set before any individual decision.
@@ -245,7 +245,7 @@ class Finding(Event):
     risk: int | None = None
 
 
-def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tuple[list[Risk], list[Finding]]:
+def assess(dhf_dir: Path, requirement_ids: set[str], verified: set[str]) -> tuple[list[Risk], list[Finding]]:
     """The register and every finding of the risk rules (DI-44, DI-50) — the one
     place the rules are written: the release gate reports these findings, and
     the graph projects them for its shapes (DI-45)."""
@@ -296,8 +296,8 @@ def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tup
         elif r.recorded_level and r.recorded_level != r.level:
             block(LEVEL_MISMATCH, f"{name} records level {r.recorded_level}; the risk policy says {r.level}")
         for control in r.controls:
-            if control not in design_input_ids:
-                block(UNKNOWN_CONTROL, f"{name} names control {control}, which is not a declared design input")
+            if control not in requirement_ids:
+                block(UNKNOWN_CONTROL, f"{name} names control {control}, which is not a requirement of the spec")
         if r.controls and not r.residual_probability:
             block(RESIDUAL_UNSCORED, f"{name} has controls but no residual score")
         elif policy is not None and r.level is not None and r.residual_probability and r.residual_level is None:
@@ -306,7 +306,7 @@ def assess(dhf_dir: Path, design_input_ids: set[str], verified: set[str]) -> tup
         elif r.residual_level and r.recorded_residual_level and r.recorded_residual_level != r.residual_level:
             block(LEVEL_MISMATCH, f"{name} records residual level {r.recorded_residual_level}; "
                   f"the risk policy says {r.residual_level}")
-        unverified = [c for c in r.controls if c in design_input_ids and c not in verified]
+        unverified = [c for c in r.controls if c in requirement_ids and c not in verified]
         if unverified and r.residual_level is not None:
             block(CONTROL_UNVERIFIED,
                   f"{name}: residual not evaluated — control {', '.join(unverified)} has no passing test")

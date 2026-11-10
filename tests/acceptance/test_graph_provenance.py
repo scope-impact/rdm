@@ -44,7 +44,7 @@ def _label(quads, node: str) -> str:
     return next(q.object.value for q in quads if q.subject.value == node and q.predicate.value.endswith("#label"))
 
 
-@allure.story("DI-51")
+@allure.tag("item-06-011")
 @allure.label("output", "rdm/graph/project.py")
 def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Path) -> None:
     """DI-51: the first-parent commit of the default branch that landed a
@@ -120,7 +120,7 @@ def test_each_design_document_records_who_landed_its_latest_change(tmp_path: Pat
             quads, "urn:dhf:proj:doc/SDS-1")
 
 
-@allure.story("DI-52")
+@allure.tag("item-06-012")
 @allure.label("output", "rdm/graph/project.py")
 def test_needs_risks_and_design_documents_link_to_their_documents(tmp_path: Path) -> None:
     """DI-52: each user need to the document that declares it, each risk to the

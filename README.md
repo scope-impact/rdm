@@ -5,17 +5,19 @@
 # RDM
 
 <!-- --8<-- [start:intro] -->
-RDM keeps the design record of regulated software — medical-device software
-under IEC 62304 first — as Markdown and tests in git. It checks the record,
-renders regulatory documents from it, and builds it into one read-only graph
-that people and agents query.
+RDM audits the record of regulated software — medical-device software under
+IEC 62304 first. It reads the spec a factory such as Löyly writes (stamped
+Gherkin scenarios, Allium surfaces, an event model), checks documents against
+the checklists of the standards that apply, traces every requirement to the
+Allure runs that verify it, renders regulatory documents, and builds it all
+into one read-only graph that people and agents query.
 
 The chain it holds:
 
 ```
 regulation → checklist → clause ← document
-user need → design input → tagged test → run → source file
-risk → risk control (a design input) → tagged test → run
+user need (screen, surface) → requirement (item-NN-SSS) → Allure run → commit
+risk → risk control (a requirement) → Allure run
 design document → the commit that landed it
 ```
 
@@ -29,8 +31,8 @@ never edited.
 
 | Part | What it is | Commands |
 | --- | --- | --- |
-| **Record** | User needs; design inputs, one design document per bounded context; the risk register; checklists; tests tagged `@allure.story("DI-n")`. Markdown and git. | `rdm init`, `rdm adopt` |
-| **Gates** | No release until every design input has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story release-gate`, `rdm gap` |
+| **Record** | The spec it reads (Löyly's layout: `.pi/plan`, stamped scenarios, Allium, event model); the risk register; checklists; controlled documents; tests tagged `@allure.tag("item-NN-SSS")`. Markdown and git. | `rdm init`, `rdm adopt` |
+| **Gates** | No release until every requirement of the spec has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story release-gate`, `rdm gap` |
 | **Graph** | The record as RDF: needs, inputs, contexts, documents, tests, runs, commits, risks, clauses. Read-only; agents read it over MCP, people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents rendered from the record: templates and YAML data → Markdown → PDF/DOCX. | `rdm render`, `make pdfs` |
 
@@ -51,7 +53,7 @@ Two choices shape it:
 <!-- --8<-- [start:limits] -->
 - It does not make a device compliant. It keeps the evidence straight; a
   regulator judges the evidence.
-- A green release gate means every design input has a passing tagged test, not
+- A green release gate means every requirement has a passing tagged test, not
   that the test proves it. The pull-request reviewer judges that.
 - Checklists are written by hand; nothing turns a regulation into one.
 - The risk gate checks a register's form, not its truth: whether a risk control
@@ -115,7 +117,7 @@ and the CLI and API reference.
 |---|---|---|
 | **What it is** | RDM's instructions for use (IFU-001), the site above | RDM's own design history file: the record RDM develops itself under |
 | **Controlled?** | Yes, as one document: IFU-001 lists its pages; each change is a reviewed pull request | Yes: every change is a reviewed pull request, and the release gate holds it |
-| **Read by RDM's tools?** | The graph reads its pages: the design inputs each names, its test examples | Yes: the gates, `trace`, the graph, the evidence |
+| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the evidence |
 
 `docs/` explains; `dhf/` decides. The full comparison is in
 [the DHF's overview](dhf/README.md).
@@ -141,9 +143,6 @@ analysis, and traceability and audit from the executed results
 
 Not built yet, in rough order:
 
-- Reading the factory's stamped Gherkin scenarios (`@item-NN-SSS`) as the
-  requirements in place of design inputs, with the Gherkin story as the user
-  need.
 - Turning a regulation into a checklist mapped to its standard's clauses.
 - `rdm graph push` to an external graph database, with the vocabulary and gate
   shapes versioned so another store reads them the same way.

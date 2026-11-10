@@ -3,9 +3,9 @@ Allure results as RDF (DI-53, DI-54).
 
 Each ``*-result.json`` becomes an ``rdm:TestRun`` (a ``prov:Activity``) with
 what counts as evidence: uuid, full name, start and end times, status and its
-message and trace, parameters, steps and attachments. ``story`` labels link a
-run to the design inputs it verifies, and ``output`` labels to the source
-files it exercises. Nothing else is projected: other labels, links,
+message and trace, parameters, steps and attachments. ``tag`` labels
+``item-NN-SSS`` link a run to the requirements it verifies, and ``output``
+labels to the source files it exercises. Nothing else is projected: other labels, links,
 test cases and container fixtures repeat the record or say nothing about
 design controls; the raw results keep them, in the evidence bundle.
 Attachment content stays in the files; the graph holds the reference.
@@ -19,9 +19,13 @@ from pathlib import Path
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
-from rdm.evidence.allure import COMMIT_LABEL, WORKTREE_LABEL, named_results, run_status, run_version
-from rdm.specification.tags import DESIGN_INPUT_LABELS
-from rdm.kernel.ids import is_id
+from rdm.evidence.allure import (
+    OUTPUT_LABEL,
+    named_results,
+    requirement_tags,
+    run_status,
+    run_version,
+)
 
 GRAPH = "executions"
 
@@ -71,7 +75,7 @@ def _source(ds: _Dataset, value: str) -> ox.NamedNode:
     return source
 
 
-def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
+def _result(ds: _Dataset, path: Path, raw: dict) -> None:
     stem = path.stem
     run = ds.thing(ds.node("run", stem), rdm("TestRun"), str(raw.get("name") or stem), GRAPH)
     ds.add(run, rdm("status"), run_status(raw), GRAPH)  # a failed step fails the run, as the gates read it
@@ -97,28 +101,17 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode],
         ds.add(run, rdm("testedAt"), commit, GRAPH)
     if dirty:
         ds.add(run, rdm("uncommittedChanges"), ox.Literal("true", datatype=_term(_XSD + "boolean")), GRAPH)
+    for ident in requirement_tags(raw):  # the requirements the run claims, by their item tags
+        ds.add(run, rdm("exercises"), ds.node("requirement", ident), GRAPH)
     for label in raw.get("labels") or []:
-        if not isinstance(label, dict) or not label.get("name"):
-            continue
-        name, value = str(label["name"]), str(label.get("value", "")).strip()
-        if name in (COMMIT_LABEL, WORKTREE_LABEL):
-            continue
-        if name in DESIGN_INPUT_LABELS and (is_id(value) or value in declared):
-            ds.add(run, rdm("exercises"), ds.node("input", value), GRAPH)
-        elif name == "output" and value:  # the code the run exercises
-            ds.add(run, rdm("exercisesOutput"), _source(ds, value), GRAPH)
-    test = tests.get(str(raw.get("fullName") or ""))
-    if test is not None:  # DI-61: the test this run ran
-        ds.add(run, rdm("runOf"), test, GRAPH)
+        if isinstance(label, dict) and label.get("name") == OUTPUT_LABEL and str(label.get("value", "")).strip():
+            ds.add(run, rdm("exercisesOutput"), _source(ds, str(label["value"]).strip()), GRAPH)
     _evidence(ds, run, raw, stem)
 
 
-def project_results(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode] | None = None,
-                    declared: set[str] = frozenset()) -> None:
+def project_results(ds: _Dataset, results_dir: Path) -> None:
     """Every result in an Allure results directory, read as the gates read it
-    (one that cannot be read is the record's finding, not a run), as quads;
-    ``tests`` maps the full names Allure gives runs to the tests in the tests
-    graph, and ``declared`` is the design input ids a story may name."""
+    (one that cannot be read is the record's finding, not a run), as quads."""
     named, _ = named_results(Path(results_dir))
     for raw, name in named:
-        _result(ds, Path(results_dir) / name, raw, tests or {}, declared)
+        _result(ds, Path(results_dir) / name, raw)

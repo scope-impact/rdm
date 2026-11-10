@@ -13,7 +13,7 @@ risks:
     harm: "Staff follow a procedure no authorized signer approved, and product is built or released from wrong instructions."
     severity: Serious
     probability: Possible
-    controls: [DI-1, DI-9]
+    controls: [item-01-001, item-01-003]
     residual: {probability: Rare}
   - id: RISK-DC-002
     category: security
@@ -25,7 +25,7 @@ risks:
     harm: "An unapproved change reaches the controlled set while the checked-in configuration still reads as enforced."
     severity: Serious
     probability: Unlikely
-    controls: [DI-11, DI-6]
+    controls: [item-01-004, item-01-002]
     residual: {probability: Rare}
   - id: RISK-DC-003
     category: security
@@ -36,7 +36,7 @@ risks:
     harm: "An approver can deny signing the released revision, and an audit finds the signature not linked to its record (§11.70)."
     severity: Serious
     probability: Possible
-    controls: [DI-6, DI-1]
+    controls: [item-01-002, item-01-001]
     residual: {probability: Rare}
   - id: RISK-DC-004
     category: safety
@@ -46,7 +46,7 @@ risks:
     harm: "A document set whose controls are not verified is distributed as released, and staff rely on it."
     severity: Serious
     probability: Possible
-    controls: [DI-10]
+    controls: [item-03-003]
     residual: {probability: Rare}
   - id: RISK-DC-005
     category: safety
@@ -56,7 +56,7 @@ risks:
     harm: "Users work from a copy that no one approved, and no record shows which revision it was."
     severity: Serious
     probability: Unlikely
-    controls: [DI-3, DI-8]
+    controls: [item-03-001, item-03-002]
     residual: {probability: Rare}
   - id: RISK-DC-006
     category: security
@@ -68,7 +68,7 @@ risks:
     harm: "An unapproved change reaches the controlled set under a genuine signer's name."
     severity: Serious
     probability: Possible
-    controls: [DI-1]
+    controls: [item-01-001]
     residual: {probability: Unlikely}
     acceptance:
       by: "the quality owner, by approving the pull request that records this register"

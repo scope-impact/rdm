@@ -2,16 +2,6 @@
 id: SDS-RISK-001
 kind: design
 context: risk
-design_inputs:
-  - id: DI-43
-    text: "RDM shall read the risk register from the frontmatter of kind: risk documents — for each risk its id, category (safety or security), STRIDE category for a security risk, linked risks, hazard, situation, harm, severity, probability, controls (design input ids), residual severity and probability (severity defaults to the initial one), acceptance (who and why) and status (proposed or approved; the document's when the risk gives none) — and evaluate each risk only against a risk policy the project declares (severities, probabilities, a level for each pair, and for each level whether it is acceptable, acceptable only with a recorded justification, or unacceptable), refusing a policy that does not give each pair one level and each level one of those, or a second declared policy, and shipping no default policy."
-    traces_to: [UN-016]
-  - id: DI-44
-    text: "The release gate shall block when the register has risks and no risk policy is declared or the declared policy is malformed, and on a risk document (other than one that only declares the policy) whose risks are not a list of risks, a risk id declared twice or missing, an empty hazard, situation or harm, a missing or unknown category, a security risk without a STRIDE category, a link to an undeclared risk, a severity or probability the policy does not define, a recorded level other than the policy's, a control that is not a declared design input, or controls with no residual score."
-    traces_to: [UN-016, UN-003]
-  - id: DI-50
-    text: "The release gate shall block a risk whose residual is not evaluated because a control has no passing test, whose residual — the initial risk when nothing controls it — the policy calls unacceptable, or that the policy accepts only with justification and no acceptance saying who accepted it and why; a risk whose status is neither proposed nor approved shall block, and a proposed risk or policy — one with no status — shall be a warning."
-    traces_to: [UN-016, UN-003]
 ---
 
 # Risk — Software Design
@@ -24,7 +14,7 @@ is risk analysis and risk evaluation: a risk is a hazard, the hazardous
 situation it leads to and the harm that situation can cause — one harm
 pathway per risk — with a severity from the harm and a probability from the
 situation; a safety risk or a STRIDE threat; the risk controls that reduce
-it, each a design input; the initial risk and the residual risk, the same
+it, each a requirement; the initial risk and the residual risk, the same
 estimate before and after the controls; and a proposal, a rating or a policy
 no person has approved yet. The method is the requirements and risk-analysis
 skills' (user need → safety and STRIDE branches; hazard → situation → harm;
@@ -38,7 +28,7 @@ other contexts use it:
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Risk register | Reads the declared risk policy (refusing a second) and the register, evaluates each risk's initial and residual risk against the policy, gives each risk its residual decision, and writes the risk rules as findings, each blocking or a warning and tied to the risk it is about | DI-43, DI-44, DI-50 |
+| Risk register | Reads the declared risk policy (refusing a second) and the register, evaluates each risk's initial and residual risk against the policy, gives each risk its residual decision, and writes the risk rules as findings, each blocking or a warning and tied to the risk it is about | item-02-001, item-02-002, item-02-003 |
 
 The register is the frontmatter of `kind: risk` documents — the record
 interface authors write, with one entry per risk:
@@ -54,7 +44,7 @@ risks:
     severity: Serious            # from the harm
     probability: Possible        # from the situation
     level: Medium                # optional; must be the policy's level
-    controls: [DI-40]            # each control is a design input
+    controls: [item-04-001]      # each control is a requirement of the spec
     residual: {probability: Rare}  # severity optional: the initial's
     acceptance: {by: "...", rationale: "..."}
     status: proposed             # until a person approves the rating
@@ -88,7 +78,7 @@ The rules the Risk register applies, which a reviewer needs to judge it:
   as a list of mappings under `risks`; any other shape, or no `risks` at all,
   is a blocking finding naming the document, never a register silently left
   out. A document that only declares the risk policy is not a register.
-- **The findings** are every refusal of DI-44 and DI-50, and also a risk
+- **The findings** are every refusal of item-02-002 and item-02-003, and also a risk
   whose status is neither proposed nor approved, which blocks. A proposed
   risk or policy is a warning. The Risk register is the one place these
   rules are written.
@@ -97,19 +87,19 @@ Relationships, in the direction of the arrow:
 
 - The **Release gate** (`release`) reports the risk findings of the Risk
   register: it adds the blocking findings to its blocking list and the
-  warnings to its warnings. That is the part of DI-44 and DI-50 the release
-  context realises (`realises` in its design document).
+  warnings to its warnings. That is the part of item-02-002 and item-02-003 the release
+  context.
 - The **Projection** (`graph`) reads risks and findings with the Risk
   register — the policy, the register, each residual decision and the
-  findings — into the risks named graph for its gate shapes (DI-45, owned by
+  findings — into the risks named graph for its gate shapes (item-06-008, owned by
   `graph`), so the release gate and the shapes cannot disagree.
 - The **Verification report** (`publishing`) reads risk status and residual
-  decisions with the Risk register, beside the design inputs that control
+  decisions with the Risk register, beside the requirements that control
   each risk.
-- The **pytest plugin** (`test_evidence`) finds the risks each design input
+- The **pytest plugin** (`test_evidence`) finds the risks each requirement
   controls with the Risk register, to label its test runs.
 
-The Risk register is handed the declared design input ids and the verified
+The Risk register is handed the requirement ids and the verified
 ones; it reads nothing of the specification. It parses frontmatter with the
 shared kernel, which the specification's design document draws.
 

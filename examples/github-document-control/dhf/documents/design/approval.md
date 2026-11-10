@@ -3,21 +3,7 @@ id: SDS-AP-001
 title: "Approval — Design"
 kind: design
 context: approval
-realises: [DI-5]
 references: [SDS-SYS-001]
-design_inputs:
-  - id: DI-1
-    text: "Changes to the default branch shall require a pull request with at least one code-owner approval, verified commit signatures, passing status checks, and protection against history rewriting and branch deletion, enforced by a repository ruleset kept as configuration code."
-    traces_to: [UN-002, UN-004]
-  - id: DI-6
-    text: "Repository merge behavior shall be declared as configuration code: pull requests merge only by merge commit so the reviewed SHA is preserved in history, squash and rebase merges are disabled, head branches are deleted on merge, and the setup script shall apply and drift-check these settings against the live repository."
-    traces_to: [UN-001, UN-004]
-  - id: DI-9
-    text: "Every pull request to the default branch shall run the design controls (the acceptance tests, verification, the release gate and graph validation) through RDM's reusable gates pinned to a released revision, and the Part 11 gap analysis, and the ruleset shall require exactly the checks that workflow reports."
-    traces_to: [UN-002, UN-004]
-  - id: DI-11
-    text: "A scheduled audit shall compare the live ruleset and repository settings with the checked-in configuration at least daily, and shall fail on any difference."
-    traces_to: [UN-002, UN-004]
 ---
 
 # Approval — Software Design
@@ -37,19 +23,19 @@ for, and which design inputs it meets.
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Branch ruleset | What a change must pass to reach the default branch | DI-1, DI-9 |
-| Code owners | Routes every controlled path to the quality team for review | DI-1 |
-| Merge settings | Only merge commits, so the reviewed SHA is the one kept; branches deleted on merge | DI-6 |
-| Settings applier | Applies the ruleset and merge settings to the repository, and checks them for drift | DI-6, DI-11 |
-| Design-controls workflow | Runs RDM's gates and the record checks on every pull request: the required checks | DI-9 |
-| Drift audit | Compares the live settings with the declared ones daily, and fails on a difference | DI-11 |
+| Branch ruleset | What a change must pass to reach the default branch | item-01-001, item-01-003 |
+| Code owners | Routes every controlled path to the quality team for review | item-01-001 |
+| Merge settings | Only merge commits, so the reviewed SHA is the one kept; branches deleted on merge | item-01-002 |
+| Settings applier | Applies the ruleset and merge settings to the repository, and checks them for drift | item-01-002, item-01-004 |
+| Design-controls workflow | Runs RDM's gates and the record checks on every pull request: the required checks | item-01-003 |
+| Drift audit | Compares the live settings with the declared ones daily, and fails on a difference | item-01-004 |
 
 GitHub enforces the branch ruleset, which requires review from the code
 owners and the checks of the design-controls workflow. The settings applier
 applies the ruleset and the merge settings and, run by the drift audit,
 checks them. The design-controls workflow runs RDM's acceptance tests, verify and
 release gate, and holds the procedure to the Part 11 checklist: this
-context's part of `records`' DI-5.
+context's part of `records`' item-02-003.
 
 ## Dependencies
 

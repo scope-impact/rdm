@@ -73,7 +73,7 @@ if [ "$MODE" = "check" ]; then
         fi
     fi
 
-    # Repository merge settings (DI-6): the live values of every declared key
+    # Repository merge settings (item-01-002): the live values of every declared key
     # must equal the declared values exactly.
     live_settings="$(gh api "repos/$REPO")"
     want_settings="$(cat "$SETTINGS_FILE")"

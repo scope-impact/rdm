@@ -1,4 +1,4 @@
-"""Acceptance test for the validation context's DI-33 (see dhf/).
+"""Acceptance test for item-01-004 (.pi/spec/specification/spec.feature).
 
 Summative validation records: ingested per user need, with the release gate
 naming every need lacking an approved record — as a warning, never a blocker
@@ -14,7 +14,7 @@ import pytest
 
 from rdm.specification.validation import parse_validation_records, unvalidated_user_needs
 from rdm.release.gate import run_release_gate
-from tests.util import git_run
+from tests.util import spec_project, write_allure_result
 
 allure = pytest.importorskip("allure")
 
@@ -22,76 +22,57 @@ from tests.acceptance.evidence import verification_step  # noqa: E402
 
 
 def _validated_record(tmp_path: Path) -> tuple[Path, Path]:
-    """A minimal passing record: two user needs, one DI each, verified."""
-    dhf = tmp_path / "dhf"
-    (dhf / "documents" / "design").mkdir(parents=True)
-    (dhf / "documents" / "vv_plan.md").write_text(
-        "---\nuser_needs:\n"
-        "  - {id: UN-001, text: 'a need'}\n"
-        "  - {id: UN-002, text: 'another need'}\n---\n"
-    )
-    (dhf / "documents" / "design" / "core.md").write_text(
-        "---\nid: SDS-C-001\nkind: design\ncontext: core\n"
-        ""
-        "design_inputs:\n"
-        "  - id: DI-1\n    text: 'req one'\n    traces_to: [UN-001]\n"
-        "  - id: DI-2\n    text: 'req two'\n    traces_to: [UN-002]\n---\n\n# Core\n"
-    )
-    (dhf / "documents" / "design_review.md").write_text(
-        "---\nid: DR-001\n---\n# Review\nApproved.\n"
-    )
+    """A minimal passing record: two user needs of the spec, one requirement
+    covering each, verified."""
+    dhf = spec_project(tmp_path, (("item-01-001", "req one", ["Alarm"]), ("item-01-002", "req two", ["Log"])),
+                       {"Alarm": ("core", "Nurse", "A nurse is alerted."),
+                        "Log": ("core", "Nurse", "A nurse reads the log.")}, {"01": "core"})
     results = tmp_path / "allure-results"
-    results.mkdir()
-    for di in ("DI-1", "DI-2"):
-        (results / f"{di}-result.json").write_text(json.dumps(
-            {"name": di, "status": "passed",
-             "labels": [{"name": "story", "value": di}]}
-        ))
-    git_run(tmp_path, "init")
-    git_run(tmp_path, "add", "-A")
-    git_run(tmp_path, "commit", "-m", "approve design")
+    for item in ("item-01-001", "item-01-002"):
+        write_allure_result(results, item, "passed", item)
     return dhf, results
 
 
-@allure.story("DI-33")
+@allure.tag("item-01-004")
 @allure.label("output", "rdm/specification/validation.py")
 def test_release_gate_names_unvalidated_user_needs(tmp_path: Path) -> None:
-    """DI-33: validation records are ingested per user need; the release gate
-    warns (never blocks) for each need without an APPROVED record."""
+    """item-01-004: validation records are ingested per user need of the spec;
+    the release gate warns (never blocks) for each need without an approved
+    record."""
     dhf, results = _validated_record(tmp_path)
 
     with verification_step("No validation records at all: every need is named, as a warning only"):
         gate = run_release_gate(dhf, results)
         validation_warnings = [w for w in gate.warnings if "validation record" in w]
-        assert any("UN-001" in w for w in validation_warnings)
-        assert any("UN-002" in w for w in validation_warnings)
+        assert any("Alarm" in w for w in validation_warnings)
+        assert any("Log" in w for w in validation_warnings)
         assert gate.passed  # warnings never block
 
-    with verification_step("An APPROVED record for UN-001 clears its warning; a non-approved disposition for UN-002 "
+    with verification_step("An APPROVED record for Alarm clears its warning; a non-approved disposition for Log "
                            "does not"):
         validation = dhf / "validation"
         validation.mkdir()
-        (validation / "UN-001-validation.json").write_text(json.dumps(
-            {"user_need": "UN-001", "disposition": "approved",
+        (validation / "alarm-validation.json").write_text(json.dumps(
+            {"user_need": "Alarm", "disposition": "approved",
              "reviewer": "maintainer (summative)", "summary": "journey reviewed"}
         ))
-        (validation / "UN-002-validation.json").write_text(json.dumps(
-            {"user_need": "UN-002", "disposition": "pending", "reviewer": "maintainer"}
+        (validation / "log-validation.json").write_text(json.dumps(
+            {"user_need": "Log", "disposition": "pending", "reviewer": "maintainer"}
         ))
         gate = run_release_gate(dhf, results)
         validation_warnings = [w for w in gate.warnings if "validation record" in w]
-        assert not any("UN-001" in w for w in validation_warnings)
-        assert any("UN-002" in w for w in validation_warnings)
+        assert not any("Alarm" in w for w in validation_warnings)
+        assert any("Log" in w for w in validation_warnings)
         assert gate.passed
 
     with verification_step("The ingest itself: records keyed by user need, disposition and reviewer read"):
         records = parse_validation_records(validation)
-        assert records["UN-001"]["disposition"] == "approved"
-        assert records["UN-001"]["reviewer"] == "maintainer (summative)"
-        assert unvalidated_user_needs(dhf) == ["UN-002"]
+        assert records["Alarm"]["disposition"] == "approved"
+        assert records["Alarm"]["reviewer"] == "maintainer (summative)"
+        assert unvalidated_user_needs(dhf) == ["Log"]
 
     with verification_step("An approved record that names no reviewer is no validation: a person makes it"):
         for reviewer in ({"reviewer": ""}, {}, {"reviewer": ["maintainer"]}):
-            (validation / "UN-001-validation.json").write_text(json.dumps(
-                {"user_need": "UN-001", "disposition": "approved", **reviewer}))
-            assert unvalidated_user_needs(dhf) == ["UN-001", "UN-002"], reviewer
+            (validation / "alarm-validation.json").write_text(json.dumps(
+                {"user_need": "Alarm", "disposition": "approved", **reviewer}))
+            assert unvalidated_user_needs(dhf) == ["Alarm", "Log"], reviewer

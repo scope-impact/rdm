@@ -1,11 +1,11 @@
 """
-The verification report (DI-64): what was run to verify each design input, as a PDF.
+The verification report (DI-64): what was run to verify each requirement, as a PDF.
 
 Written for the person who judges the evidence without having run it: an
 auditor, a notified body, the pull-request reviewer, in the record's language
-(``CONTEXT.md``): a design input is an acceptance criterion, baseline or
-risk-based; a test verifies it through its verification steps; a design input
-allocated to a risk is a control *for* it, and the risk is not shown as
+(``CONTEXT.md``): a requirement is a stamped scenario of the spec, one
+acceptance criterion; a test verifies it through its verification steps; a
+requirement allocated to a risk is a control *for* it, and the risk is not shown as
 controlled until its residual is evaluated acceptable. It answers the reader's
 questions in their order:
 
@@ -14,9 +14,9 @@ questions in their order:
    the results, and an evidence status: release-grade, or each reason not;
    beside it, the risk register's state (proposals, residuals not evaluated);
 2. what went wrong — the anomalies;
-3. what traces to what — user need, design input, the risks it is a control
+3. what traces to what — user need, requirement, the risks it is a control
    for, tests, result;
-4. the evidence — per design input, each run with its verification steps and
+4. the evidence — per requirement, each run with its verification steps and
    the attachments the test made;
 5. how to check it — every result file and its SHA-256.
 
@@ -40,14 +40,13 @@ from importlib.resources import files
 from pathlib import Path
 
 from rdm.evidence.allure import (
-    FAILING, REQUIREMENT_ATTACHMENT, design_input_tags, full_name, read_results, read_run_facts, run_status,
+    FAILING, REQUIREMENT_ATTACHMENT, requirement_tags, read_results, read_run_facts, run_status,
     run_version,
 )
-from rdm.specification.tags import find_tests_dir, scan_source_tests
 from rdm.kernel.git import git, head, repo_root, repository_url
 from rdm.kernel.ids import sort_key
 from rdm.risk.register import NOT_EVALUATED, policy_or_none, residual_decision, risks
-from rdm.specification.sdd import design_inputs
+from rdm.specification.sdd import requirements
 from rdm.release.verify import build_verification
 from rdm.kernel.version import __version__
 
@@ -62,7 +61,7 @@ CAPTURED = {"stdout", "stderr", "log"}
 # Labels the report already shows elsewhere, Allure's severity (beside a risk it
 # reads as a harm's severity, and it is not one), and runner internals: not
 # repeated per run. The layout lists them in its appendix.
-SHOWN_LABELS = {"story", "epic", "feature", "output", "commit", "worktree", "severity"}
+SHOWN_LABELS = {"tag", "output", "commit", "worktree", "severity"}
 RUNNER_LABELS = {"host", "thread", "framework", "language", "suite", "parentSuite", "subSuite", "package"}
 
 
@@ -149,21 +148,7 @@ def _step(step: dict, reader: _Reader, requirement: set[str]) -> dict:
     }
 
 
-def _test_ids(dhf_dir: Path, root: Path | None) -> dict[str, str]:
-    """The source test each Allure ``fullName`` names, as ``file::name``."""
-    tests_dir = find_tests_dir(dhf_dir)
-    if tests_dir is None:
-        return {}
-    base = root or tests_dir.parent
-    ids = {}
-    for file, name, _tags in scan_source_tests(tests_dir):
-        rel = Path(file).resolve().relative_to(base.resolve()).as_posix()
-        if (key := full_name(rel, name)) is not None:
-            ids[key] = f"{rel}::{name}"
-    return ids
-
-
-def _run(result: dict, reader: _Reader, tagged: list[str], test_ids: dict[str, str]) -> dict:
+def _run(result: dict, reader: _Reader, tagged: list[str]) -> dict:
     labels = [{"name": str(label.get("name", "")), "value": str(label.get("value", ""))}
               for label in result.get("labels") or [] if isinstance(label, dict)]
     commit, dirty = run_version(result)
@@ -171,7 +156,7 @@ def _run(result: dict, reader: _Reader, tagged: list[str], test_ids: dict[str, s
     requirement = {REQUIREMENT_ATTACHMENT.format(di) for di in tagged}
     name = str(result.get("fullName") or result.get("name") or "")
     return {
-        "test": test_ids.get(name, name),
+        "test": test_of(name),
         "status": run_status(result),
         "message": message,
         "trace": trace,
@@ -196,14 +181,14 @@ def _all_attachments(node: dict):
 def _assess(inputs: list[dict], others: list[dict], commits: list[str], record: tuple[str | None, bool],
             orphans: list[str], unreadable: list[str]) -> tuple[list[str], list[dict]]:
     """The reasons the evidence is not release-grade (none: it is), and the
-    anomalies. Every run counts: those of the design inputs, and ``others``,
-    the runs of tests tagged with no declared design input."""
+    anomalies. Every run counts: those of the requirements, and ``others``,
+    the runs that claim no requirement of the spec."""
     runs = [run for di in inputs for run in di["runs"]] + others
     record_commit, record_dirty = record
     reasons = []
     unverified = [di["id"] for di in inputs if di["status"] != "verified"]
     if unverified:
-        reasons.append(f"{len(unverified)} design input(s) not verified: {', '.join(unverified)}")
+        reasons.append(f"{len(unverified)} requirement(s) not verified: {', '.join(unverified)}")
     if unreadable:
         reasons.append(f"{len(unreadable)} result file(s) cannot be read: {', '.join(unreadable)}")
     for counts, message in ((lambda r: r["status"] in FAILING, "test(s) failed or broke"),
@@ -238,12 +223,12 @@ def _assess(inputs: list[dict], others: list[dict], commits: list[str], record: 
         anomalies.append({"subject": name, "kind": "unreadable", "detail": "it could hold a failed run"})
     for orphan in orphans:
         anomalies.append({"subject": orphan, "kind": "orphan tag",
-                          "detail": "a test is tagged with an id no design document declares"})
+                          "detail": "a run is tagged with an id that is no requirement of the spec"})
     return reasons, anomalies
 
 
 def _register(dhf_dir: Path, verified: set[str]) -> tuple[list[dict], dict[str, list[dict]], str]:
-    """Each risk's status and residual decision, the risks each design input is
+    """Each risk's status and residual decision, the risks each requirement is
     a control for, and the acceptability criteria's state."""
     policy = policy_or_none(dhf_dir)  # malformed: the release gate reports it; no residual is evaluated
     register, control_for = [], {}
@@ -264,21 +249,20 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     the caller already has it."""
     dhf_dir, results_dir = Path(dhf_dir), Path(results_dir)
     verification = verification or build_verification(dhf_dir, results_dir)
-    status = {row["design_input"]: row for group in verification["groups"] for row in group["design_inputs"]}
+    status = {row["requirement"]: row for group in verification["groups"] for row in group["requirements"]}
     register, control_for, policy_state = _register(
         dhf_dir, {di for di, row in status.items() if row["status"] == "verified"})
 
     root = repo_root(dhf_dir)
     reader = _Reader(results_dir)
-    test_ids = _test_ids(dhf_dir, root)
-    declared = sorted(design_inputs(dhf_dir), key=lambda di: sort_key(di["id"]))
+    declared = requirements(dhf_dir)
     ids = {di["id"] for di in declared}
     runs: dict[str, list[dict]] = {}
-    others: list[dict] = []  # runs of tests tagged with no declared design input: they count too
+    others: list[dict] = []  # runs that claim no requirement of the spec: they count too
     results, unreadable = read_results(results_dir)
     for result in sorted(results, key=lambda r: (r.get("start") or 0, str(r.get("fullName", "")))):
-        tagged = [di for di in design_input_tags(result) if di in ids]
-        run = _run(result, reader, tagged, test_ids)
+        tagged = [di for di in requirement_tags(result) if di in ids]
+        run = _run(result, reader, tagged)
         for di in tagged:
             runs.setdefault(di, []).append(run)
         if not tagged:
@@ -323,7 +307,7 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
         "anomalies": anomalies,
         "summary": verification["summary"],
         "left_out": {"shown": sorted(SHOWN_LABELS), "runner": sorted(RUNNER_LABELS)},
-        "design_inputs": inputs,
+        "requirements": inputs,
         "files": reader.files,
     }
 
@@ -350,7 +334,7 @@ def render_pdf(report: dict, results_dir: Path, output: Path) -> Path:
         workdir = Path(tmp)
         (workdir / LAYOUT).write_text((files("rdm.publishing") / LAYOUT).read_text(encoding="utf-8"), encoding="utf-8")
         (workdir / "attachments").mkdir()
-        for di in report["design_inputs"]:
+        for di in report["requirements"]:
             for run in di["runs"]:
                 for attachment in _all_attachments(run):
                     if attachment["kind"] == "image":
@@ -386,6 +370,6 @@ def evidence_report_command(dhf_dir: Path | None = None, allure_results_dir: Pat
     summary = report["summary"]
     grade = "release-grade" if report["release_grade"] else "NOT release-grade: " + "; ".join(report["reasons"])
     print(f"Wrote {out}: {summary['verified']} verified, {summary['failed']} failed, {summary['untested']} "
-          f"untested of {summary['total']} design input(s); results sha256 {report['results_sha256'][:12]}; "
+          f"untested of {summary['total']} requirement(s); results sha256 {report['results_sha256'][:12]}; "
           f"evidence {grade}")
     return 0

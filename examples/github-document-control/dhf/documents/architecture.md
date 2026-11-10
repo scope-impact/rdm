@@ -27,5 +27,5 @@ plan, and a context serves the needs its design inputs trace to.
 
 A design input is owned by one context. Where another context implements part
 of it, that context declares it under `realises`: `approval` runs the Part 11
-gap analysis `records` owns (DI-5), and `records` renders the copies `release`
-publishes (DI-3).
+gap analysis `records` owns (item-02-003), and `records` renders the copies `release`
+publishes (item-03-001).

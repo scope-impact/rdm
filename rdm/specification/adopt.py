@@ -3,7 +3,8 @@ Bring an existing repository under RDM's audit (DI-24).
 
 `rdm adopt [target]` lays down what RDM reads and runs into a repo that
 already has code: the DHF skeleton (V&V plan, traceability-matrix template,
-render config, README) and a CI workflow that runs RDM's gates.
+render config, README) and a CI workflow that runs RDM's gates. The
+requirements and user needs are the product's spec, which RDM reads.
 
 Existing files are skipped, never overwritten — adoption must not disturb the
 repository it is protecting, and re-running is safe (idempotent).
@@ -23,10 +24,10 @@ _VERSION_TOKEN = "{rdm_version}"
 
 NEXT_STEPS = """\
 Next steps:
-  1. Register your user needs in dhf/documents/verification_and_validation_plan.md
-  2. Tag each acceptance test with the requirement it verifies
+  1. Point RDM at your spec: a Löyly-shaped spec at .pi/plan, or `spec:` in dhf/config.yml
+  2. Claim each requirement in its acceptance test with @allure.tag("item-NN-SSS")
   3. Set acceptance-tests and release-gate to true in
-     .github/workflows/design-controls.yml once the first tagged test passes\
+     .github/workflows/design-controls.yml once the first claimed test passes\
 """
 
 

@@ -32,10 +32,10 @@ def _copy_dhf(tmp_path: Path) -> Path:
     return copy
 
 
-@allure.story("DI-2")
+@allure.tag("item-02-001")
 @allure.label("output", "dhf/documents/procedures/document_control_procedure.md")
 def test_controlled_documents_declare_identity_and_revision(tmp_path: Path) -> None:
-    """DI-2: every controlled document carries id + revision frontmatter."""
+    """item-02-001: every controlled document carries id + revision frontmatter."""
     docs = sorted(PROCEDURES.glob("*.md"))
     with verification_step("there are controlled documents"):
         assert docs, "no controlled documents found"
@@ -58,10 +58,10 @@ def test_controlled_documents_declare_identity_and_revision(tmp_path: Path) -> N
         assert "SOP-DC-001: procedure declares no revision" in found
 
 
-@allure.story("DI-4")
+@allure.tag("item-02-002")
 @allure.label("output", "dhf/documents/procedures/document_control_procedure.md")
 def test_rendered_sop_embeds_generated_revision_history() -> None:
-    """DI-4: the rendered SOP's history table comes from repository data."""
+    """item-02-002: the rendered SOP's history table comes from repository data."""
     rendered = render(SOP)
     history = yaml.safe_load((DHF / "data" / "history.yml").read_text())
     attach("data/history.yml", history)
@@ -75,10 +75,10 @@ def test_rendered_sop_embeds_generated_revision_history() -> None:
         assert history["entries"][-1]["revision"] == frontmatter(SOP)["revision"]
 
 
-@allure.story("DI-5")
+@allure.tag("item-02-003")
 @allure.label("output", "checklists/part11_document_control.txt")
 def test_sop_addresses_every_part11_checklist_item(tmp_path: Path) -> None:
-    """DI-5: gap analysis over the SOP with the Part 11 checklist reports full
+    """item-02-003: gap analysis over the SOP with the Part 11 checklist reports full
     coverage — and the check is falsifiable (a stripped SOP fails it)."""
     attach("part11_document_control.txt", CHECKLIST.read_text())
     with verification_step("the gap analysis reports no missing checklist item"):
@@ -98,10 +98,10 @@ def test_sop_addresses_every_part11_checklist_item(tmp_path: Path) -> None:
         assert "SOP cites no checklist clause" not in _graph_rules(DHF)
 
 
-@allure.story("DI-7")
+@allure.tag("item-02-004")
 @allure.label("output", "dhf/documents/procedures/device_master_record_index.md")
 def test_dmr_index_lists_the_specification_set_from_generated_data(tmp_path: Path) -> None:
-    """DI-7: the DMR index is a controlled document rendered from index data
+    """item-02-004: the DMR index is a controlled document rendered from index data
     generated from the procedures' frontmatter, listing each with its identity
     and revision."""
     committed = (DHF / "data" / "dmr.yml").read_text()

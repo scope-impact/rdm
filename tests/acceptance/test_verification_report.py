@@ -142,7 +142,7 @@ def _text(pdf: Path) -> str:
     return " ".join(" ".join(page.extract_text() for page in pypdf.PdfReader(pdf).pages).split())
 
 
-@allure.story("DI-64")
+@allure.tag("item-07-009")
 @allure.label("output", "rdm/publishing/report.py")
 @allure.label("output", "rdm/publishing/verification_report.typ")
 @allure.label("output", "rdm/publishing/bundle.py")

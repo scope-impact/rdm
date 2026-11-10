@@ -4,17 +4,6 @@ title: "Verification and Validation Plan — git/GitHub document control"
 references: [SDS-SYS-001, SOP-DC-001]
 # User-need registry: the validated journeys this document-control system
 # serves. Design inputs in the per-context design documents refine these.
-user_needs:
-  - id: UN-001
-    text: "An auditor can identify the current approved revision of any controlled document, who approved it, and its complete change history."
-  - id: UN-002
-    text: "No change reaches the controlled document set without review and approval by an independent, authorized signer."
-  - id: UN-003
-    text: "A released document set is retrievable, complete, and human-readable throughout the retention period."
-  - id: UN-004
-    text: "The document control system satisfies the applicable 21 CFR Part 11 controls for electronic records and electronic signatures."
-  - id: UN-005
-    text: "The current approved specification set (device master record) and the record of each release (device history record) are identifiable and retrievable from the system."
 ---
 
 # Purpose
@@ -35,8 +24,8 @@ proving the SOP addresses every item of the Part 11 checklist.
 
 | User need | Summative (record of truth) | Formative (supporting) |
 |-----------|-----------------------------|------------------------|
-| UN-001..003 | quality-owner review that a walked release (draft → PR → approval → tag → release artifacts) satisfies the journey | dogfooding: this example repository operates under its own procedure |
-| UN-004 | quality/regulatory review of the Part 11 mapping in SOP-DC-001 against the regulation text | `rdm gap` over SOP-DC-001 with the Part 11 checklist (automated) |
+| CurrentRevision..003 | quality-owner review that a walked release (draft → PR → approval → tag → release artifacts) satisfies the journey | dogfooding: this example repository operates under its own procedure |
+| Part11Controls | quality/regulatory review of the Part 11 mapping in SOP-DC-001 against the regulation text | `rdm gap` over SOP-DC-001 with the Part 11 checklist (automated) |
 
 The summative record of each user need is `dhf/validation/UN-nnn-validation.json`.
 Each is **pending** until the quality owner has done the review above; the
