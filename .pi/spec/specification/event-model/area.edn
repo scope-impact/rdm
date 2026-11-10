@@ -15,4 +15,4 @@
    :specification/validation-visible
    {:description "A reviewer can see, at release, which user needs have no approved validation by a person."
     :grain/allium [{:spec ".pi/spec/specification/allium/scaffolding.allium" :kind :surface :name "ValidationAtRelease"}]
-    :commands #{:specification/record-validation}}}}}
+    :commands #{}}}}}

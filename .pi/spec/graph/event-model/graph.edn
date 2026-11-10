@@ -18,9 +18,17 @@
    :graph/serve-agent
    {:description "Serve the record to an agent over stdio (rdm graph mcp). Issued by: agent harness."
     :grain/allium [{:spec ".pi/spec/graph/allium/graph.allium" :kind :rule :name "ServeAgent"}]
-    :produces #{:graph/agent-served}}}
+    :produces #{:graph/agent-served}}
+   :graph/query
+   {:description "Answer a SPARQL query over the store or a fresh projection (rdm graph query). Issued by: regulatory author."
+    :produces #{:graph/query-answered}}
+   :graph/serve
+   {:description "Serve the store as a read-only SPARQL endpoint (rdm graph serve). Issued by: regulatory author."
+    :produces #{:graph/store-served}}}
   :events
   {:graph/graph-built {:description "The record was projected and the store replaced."}
    :graph/graph-validated {:description "The shapes were validated over the projection; each result reported."}
    :graph/explorer-file-written {:description "The graph was written as a Graph Explorer file."}
-   :graph/agent-served {:description "An agent read the record through the read-only tools."}}}}
+   :graph/agent-served {:description "An agent read the record through the read-only tools."}
+   :graph/query-answered {:description "A SPARQL query was answered."}
+   :graph/store-served {:description "The store was served read-only to a graph browser."}}}}

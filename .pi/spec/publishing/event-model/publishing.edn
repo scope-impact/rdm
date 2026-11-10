@@ -5,6 +5,10 @@
   {:publishing/render
    {:description "Render a Markdown template against the data files supplied, then post-process it (rdm render). Issued by: regulatory author."
     :grain/allium [{:spec ".pi/spec/publishing/allium/publishing.allium" :kind :rule :name "Render"}]
-    :produces #{:publishing/document-rendered}}}
+    :produces #{:publishing/document-rendered}}
+   :publishing/collect
+   {:description "Collect the RDOC/ENDRDOC snippets of source files into a data file (rdm collect). Issued by: regulatory author."
+    :produces #{:publishing/snippets-collected}}}
   :events
-  {:publishing/document-rendered {:description "A document was rendered from its template and the data files supplied."}}}}
+  {:publishing/document-rendered {:description "A document was rendered from its template and the data files supplied."}
+   :publishing/snippets-collected {:description "Snippets were collected from source files, keyed by name."}}}}

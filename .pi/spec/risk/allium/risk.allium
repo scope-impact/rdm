@@ -59,17 +59,6 @@ entity Risk {
 -- Rules
 ------------------------------------------------------------
 
--- Read the declared risk policy. Only a policy the project declares evaluates a risk.
-rule ReadRiskPolicy {
-    when: ReadRiskPolicy(owner, dhf)
-    -- 1. each severity and probability pair has exactly one level, and each level is
-    --    acceptable, acceptable only with a justification, or unacceptable
-    requires: well_formed(policy)
-    -- 2. no second document declares a risk policy
-    requires: count(declared_policies(dhf)) <= 1
-    ensures: RiskPolicyRead(source: policy.source)
-}
-
 ------------------------------------------------------------
 -- Invariants
 ------------------------------------------------------------

@@ -1,7 +1,7 @@
 ;; .pi/spec/risk/event-model/register.edn: the register as a read model. Risks and the
 ;; policy are written by a reviewed change to the record's documents, not by a command of
 ;; RDM; the release gate and the graph read them. Allium: ../allium/risk.allium (entities
-;; Risk and RiskPolicy, rule ReadRiskPolicy).
+;; Risk and RiskPolicy).
 {:risk
  {:read-models
   {:risk/risks

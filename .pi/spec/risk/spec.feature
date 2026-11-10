@@ -9,7 +9,7 @@ Feature: Risk
 
   Rule: The register is read from kind: risk frontmatter and evaluated only against a declared policy
 
-    # risk.allium, surface RiskRegisterDesk, guarantee RegisterReadFromFrontmatter; rule ReadRiskPolicy (requires 1 to 2)
+    # risk.allium, surface RiskRegisterDesk, guarantee RegisterReadFromFrontmatter
     @allium-guarantee.RegisterReadFromFrontmatter
     @item-02-001
     Scenario: Every field of a risk is read, and its levels come only from the declared risk policy

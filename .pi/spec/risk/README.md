@@ -4,7 +4,7 @@ Slice 02. The risk register kept in the record, each risk scored only against th
 policy the project declares, and the residual decision the release gate holds a release to.
 
 - `spec.feature`: the accepted scenarios (`@item-02-001` to `@item-02-003`).
-- `allium/risk.allium`: entities Risk and RiskPolicy, rule ReadRiskPolicy; surface
+- `allium/risk.allium`: entities Risk and RiskPolicy; surface
   RiskRegisterDesk, the need this context is home to, with its four guarantees
   (RisksProjectedWithShapes is the graph's item-06-008).
 - `event-model/area.edn`: screen `risk-register`.
