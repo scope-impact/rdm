@@ -79,6 +79,10 @@ rdm:tracesTo a owl:ObjectProperty ;
     rdfs:label "traces to" ; rdfs:domain rdm:Requirement ; rdfs:range rdm:UserNeed ;
     rdfs:comment "A user need a requirement addresses: one whose rules or guarantees it covers, else each need of its own context." .
 
+rdm:addresses a owl:ObjectProperty ;
+    rdfs:label "addresses" ; rdfs:domain rdm:Requirement ; rdfs:range rdm:UserNeed ;
+    rdfs:comment "A user need the spec's needs source links the requirement to directly: the Feature it sits under, or (Allium adapter) a need whose rules or guarantees it covers. A need no requirement addresses blocks a release." .
+
 rdm:ownedBy a owl:ObjectProperty ;
     rdfs:label "owned by" ; rdfs:range rdm:BoundedContext ;
     rdfs:comment "The context of the spec a requirement, user need or rule belongs to." .

@@ -1,15 +1,17 @@
 # ADR 0002: The spec lives with the factory; RDM audits it
 
-> Status: Accepted and implemented (2026-11-10). RDM reads a Löyly-shaped spec
-> (`rdm/specification/spec.py`); design inputs are gone from RDM and from its
-> own record, whose spec is now in Löyly's layout under `.pi/`. Against
-> Löyly's `spec-v2` the reading gives 201 stamped items, Löyly's own golden.
-> Decided along the way, superseding the sections below where they differ:
-> a run claims a requirement with an Allure `tag` label `item-NN-SSS`; a user
-> need is an event-model screen with the Allium surfaces it links (a surface,
-> where a context has no screens), captured with the event storm, not the
-> Gherkin Feature; RDM's own record was converted in one go. Open: whether
-> Löyly's graded verdicts become a second kind of evidence.
+> Status: Accepted and implemented (2026-11-10), then narrowed the same day:
+> **RDM's contract with a spec is Gherkin and Allure; the rest is abstract.**
+> A requirement is a Gherkin scenario tagged with an id (any id-shaped tag, or
+> the configured pattern); a run claims it with an Allure `tag` label of that
+> id. Where the feature files are and what a user need is come from `spec:`
+> in the DHF's `config.yml` (default: each Feature is a need). Löyly's layout,
+> and its user needs read from the event model, Allium and the event storm,
+> are one adapter (`layout: loyly`, `needs: allium`), not the model; against
+> Löyly's `spec-v2` it reads 201 stamped items, Löyly's own golden. RDM's own
+> spec is plain Gherkin under `spec/`. Where the sections below say "Löyly"
+> or "the factory", read "a spec's owner", Löyly being one. Open: whether
+> graded verdicts (Löyly's) become a second kind of evidence.
 
 ## Context
 

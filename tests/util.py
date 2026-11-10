@@ -39,20 +39,46 @@ def write_spec(
     needs: dict[str, tuple[str, str, str]] | None = None,
     contexts: dict[str, str] | None = None,
     unstamped: tuple[tuple[str, str], ...] = (),
+    layout: str = "gherkin",
 ) -> Path:
-    """Write a Löyly-shaped spec under ``repo/.pi`` and return its plan directory.
+    """Write a spec under ``repo`` and return its root.
 
-    ``items`` is ``(item-NN-SSS, scenario title, [user needs it covers])``; a
-    need is an Allium surface named in ``needs`` as ``{name: (context, actor,
-    text)}`` (a surface whose guarantee, of the same name, the scenario is
-    tagged with). ``contexts`` names each slice's context (``{"01":
-    "alarms"}``; default ``context01``). ``unstamped`` adds ``(context slice,
-    title)`` scenarios without an item id.
+    ``items`` is ``(item-NN-SSS, scenario title, [user needs it addresses])``;
+    ``needs`` is ``{name: (context, actor, text)}``; ``contexts`` names each
+    slice's context (``{"01": "alarms"}``; default ``context01``);
+    ``unstamped`` adds ``(slice, title)`` scenarios without an id.
+
+    ``layout="gherkin"`` (the default): plain feature files,
+    ``repo/spec/<context>/<need>.feature``, each need a Feature (its text the
+    description) holding the scenarios whose first need it is; scenarios with
+    no need sit under a Feature named for the context. ``layout="loyly"``:
+    Löyly's layout under ``repo/.pi``, each need an Allium surface whose
+    guarantee, of the same name, the scenario is tagged with; returns the plan
+    directory.
     """
     needs = needs or {}
     contexts = dict(contexts or {})
     slices = sorted({ident.split("-")[1] for ident, _, _ in items} | {s for s, _ in unstamped}
                     | {s for s, c in contexts.items()})
+    if layout == "gherkin":
+        root = repo / "spec"
+        for slice_no in slices:
+            context = contexts.setdefault(slice_no, f"context{slice_no}")
+            folder = root / context
+            folder.mkdir(parents=True, exist_ok=True)
+            groups: dict[str | None, list[str]] = {}
+            for ident, title, covers in items:
+                if ident.split("-")[1] == slice_no:
+                    groups.setdefault(covers[0] if covers else None, []).extend(
+                        [f"  @{ident}", f"  Scenario: {title}", ""])
+            for slice_of, title in unstamped:
+                if slice_of == slice_no:
+                    groups.setdefault(None, []).extend([f"  Scenario: {title}", ""])
+            for need, scenarios in groups.items():
+                head = [f"Feature: {need}", f"  {needs[need][2]}", ""] if need in needs else \
+                    [f"Feature: {need or context}", ""]
+                (folder / f"{need or context}.feature").write_text("\n".join(head + scenarios))
+        return root
     plan = repo / ".pi" / "plan"
     plan.mkdir(parents=True, exist_ok=True)
     for slice_no in slices:
@@ -118,7 +144,7 @@ def spec_project(
     **spec_options,
 ) -> Path:
     """A git repository at ``root`` with a DHF (``dhf/documents``) and a
-    Löyly-shaped spec (:func:`write_spec`); returns the DHF."""
+    spec (:func:`write_spec`); returns the DHF."""
     docs = root / "dhf" / "documents"
     docs.mkdir(parents=True, exist_ok=True)
     git_run(root, "init", "-q")

@@ -1,12 +1,12 @@
 # What RDM is for
 
 RDM audits the record of regulated software — medical-device software
-first — next to the code, in git, on every commit. The spec is written by a
-factory such as [Löyly](https://github.com/scope-impact/loyly); RDM reads
+first — next to the code, in git, on every commit. The spec is Gherkin,
+written by the team or by a factory that regenerates code from it; RDM reads
 it. With it a team:
 
-- holds the factory's spec (stamped Gherkin scenarios as requirements, event
-  model and Allium surfaces as user needs) to its tests and runs;
+- holds the spec (tagged Gherkin scenarios as requirements, their Features as
+  user needs) to its tests and runs;
 - keeps its risks and their controls as Markdown in the repository;
 - tags the acceptance test that verifies each requirement, and keeps each
   test run tied to the commit it tested;

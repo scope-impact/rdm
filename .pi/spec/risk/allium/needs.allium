@@ -1,9 +1,0 @@
--- RDM's user needs in this context: one surface per need.
-
--- A team can keep its risk register in the record, each risk scored from its own matrix and each control a verified requirement, and cannot release while a risk is unscored, uncontrolled, or residually unacceptable without a named acceptance.
-surface RiskRegister {
-    facing user: Team
-
-    @guarantee RiskRegister
-        -- A team can keep its risk register in the record, each risk scored from its own matrix and each control a verified requirement, and cannot release while a risk is unscored, uncontrolled, or residually unacceptable without a named acceptance.
-}

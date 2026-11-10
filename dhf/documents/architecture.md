@@ -27,8 +27,8 @@ references: [DC-001]
 RDM keeps the design record of regulated software as Markdown and tests in
 git, checks it, renders regulatory documents from it, and builds it into a
 read-only graph that people and agents query. This document holds **design
-only** — RDM's requirements and user needs are its spec (`.pi/`, in Löyly's
-layout), read like any project's.
+only** — RDM's requirements and user needs are its spec (`spec/`, plain
+Gherkin), read like any project's.
 
 RDM audits a specification; it does not author one. Writing the
 specification and regenerating code from it belong to the factory that owns

@@ -1,15 +1,16 @@
 # Changing the record
 
 Every change that alters what the product does reaches the record the same
-way. The spec changes in the factory that owns it (Löyly: a scenario drafted,
-accepted by the product owner, stamped); the tests, documents and risks
-change in one pull request, reviewed by someone other than its author. That
+way. The spec changes in its own process (a scenario written and tagged with
+an id, by the team or by the factory that owns the spec); the tests,
+documents and risks change in one pull request, reviewed by someone other
+than its author. That
 review is the approval; the merge records it.
 
 ```
- WHO needs it                  WHAT it must do                PROOF it does it
- User need: screen + surface ◄─ Requirement  item-NN-SSS  ◄── Acceptance test
- (event model, Allium)  covers   (stamped scenario)   claims  @allure.tag("item-NN-SSS")
+ WHO needs it              WHAT it must do                PROOF it does it
+ User need: a Feature ◄──── Requirement  @REQ-12  ◄────────── Acceptance test
+                     under  (tagged scenario)        claims  @allure.tag("REQ-12")
                                                                    │ executed
  Traceability matrix ◄─────── verification.yml ◄────────────── Allure results
 ```
@@ -17,20 +18,19 @@ review is the approval; the merge records it.
 ## Do I need a requirement?
 
 - The change alters behaviour, an interface or an output: it is governed by
-  a requirement. If one covers it (ask the graph: `trace item-NN-SSS` in
+  a requirement. If one covers it (ask the graph: `trace REQ-12` in
   `rdm graph mcp`, or a `rdm graph query`), keep its test passing; if none
-  does, the spec needs a new scenario, from the factory.
+  does, the spec needs a new scenario.
 - A refactor, documentation, comments or CI plumbing: no spec work. The gates
   still run and should stay green.
 
 ## The steps
 
-1. **The spec.** The scenario is accepted and stamped `@item-NN-SSS` in its
-   context's `spec.feature`, tagged with the Allium rules or guarantees it
-   covers, so it addresses its user need:
+1. **The spec.** The scenario is written under the Feature (the user need)
+   it serves and tagged with a new id:
    [The spec and its tests](spec-and-tests.md).
 2. **The test.** Write the acceptance test that verifies it, tagged
-   `@allure.tag("item-NN-SSS")` (a Gherkin runner writes the tag for you), and
+   `@allure.tag("REQ-12")` (a Gherkin runner writes the tag for you), and
    the code that makes it pass.
 3. **Risks.** If the requirement controls a risk, name it in the risk's
    `controls:` ([Risk register](risk-register.md)).

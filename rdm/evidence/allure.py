@@ -3,12 +3,12 @@ Ingest Allure results into per-requirement verification status.
 
 Allure writes one ``*-result.json`` file per executed test into a results
 directory. Each result carries a ``status`` and a list of ``labels``. A run
-claims the requirements of the factory's spec it verifies with ``tag``
-labels ``item-NN-SSS``: the tags a Gherkin runner (allure-pytest-bdd,
-allure-cucumber, allure-behave) writes from a scenario's ``@item-NN-SSS``,
-or ``@allure.tag("item-NN-SSS")`` on a plain test. This module maps those ids
-to an aggregated verification status: whether each requirement was actually
-*verified* (executed and passed), not merely named.
+claims the requirements of the spec it verifies with ``tag`` labels naming
+their ids: the tags a Gherkin runner (allure-pytest-bdd, allure-cucumber,
+allure-behave) writes from a scenario's id tag, or ``@allure.tag("<id>")`` on
+a plain test. This module maps those ids to an aggregated verification
+status: whether each requirement was actually *verified* (executed and
+passed), not merely named.
 """
 
 from __future__ import annotations
@@ -20,9 +20,8 @@ from pathlib import Path
 
 from rdm.kernel.reconcile import StatusReportMixin, aggregate_by_id, load_json_records
 
-# The label a run claims a requirement with, and the shape of its value.
+# The label a run claims a requirement with.
 REQUIREMENT_LABEL = "tag"
-_ITEM_LIKE = re.compile(r"@?(item[\W_]*\d.*)", re.IGNORECASE)  # an item tag, or a mistyped one
 
 # Allure statuses: a result with any other is unreadable, since it could be a failed run.
 FAILING = {"failed", "broken"}
@@ -98,13 +97,12 @@ def labelled(data: dict, name: str) -> list[str]:
 
 
 def requirement_tags(data: dict) -> list[str]:
-    """The requirements an Allure result claims: its ``tag`` labels that name
-    an item, ``item-NN-SSS`` (a leading ``@`` dropped), in order, each once. A
-    tag that only looks like one (``Item_01_001``) is kept as written, so it
-    is reported as naming no requirement rather than dropped; other tags
-    (``smoke``) claim nothing."""
-    found = [m.group(1) for value in labelled(data, REQUIREMENT_LABEL) if (m := _ITEM_LIKE.fullmatch(value))]
-    return list(dict.fromkeys(found))
+    """What an Allure result claims: its ``tag`` labels (a leading ``@``
+    dropped), in order, each once. Those that are requirement ids count for
+    them; the gates report, as naming no requirement, the others that share a
+    requirement id's leading letters (a mistyped ``Item_01_001``), and leave
+    unrelated tags (``smoke``) alone."""
+    return list(dict.fromkeys(value.lstrip("@") for value in labelled(data, REQUIREMENT_LABEL) if value.lstrip("@")))
 
 
 def run_version(data: dict) -> tuple[str | None, bool]:

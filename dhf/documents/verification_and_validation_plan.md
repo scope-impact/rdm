@@ -20,16 +20,15 @@ itself establish compliance; it keeps the evidence that a team presents.
 
 # User needs
 
-RDM's user needs are in its spec (`.pi/spec/<context>/allium/needs.allium`):
-one Allium surface per need, naming the actor it faces and what it
-guarantees. They are the validation anchors. Every user need must be
+RDM's user needs are in its spec (`spec/<context>/<need>.feature`): one
+Gherkin Feature per need, its description what the actor needs. They are the validation anchors. Every user need must be
 addressed by a verified requirement before a release, and validated by a
 person.
 
 # Verification approach
 
-RDM's requirements are the stamped scenarios of its spec (`.pi/spec/<context>/
-spec.feature`, `item-NN-SSS`), one bounded context per slice of `.pi/plan`.
+RDM's requirements are the scenarios of its spec tagged `@item-NN-SSS`
+(`spec/<context>/*.feature`), one directory per bounded context.
 Each is an acceptance criterion, verified by the automated tests in RDM's
 `tests/acceptance/` that claim it with `@allure.tag("item-NN-SSS")`. The
 test's verification steps are its own, not criteria: a requirement is

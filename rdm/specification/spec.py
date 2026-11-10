@@ -1,367 +1,233 @@
-"""The factory's specification, read: a Löyly-shaped spec (ADR 0002).
+"""The spec the record is held to, read (ADR 0002).
 
-RDM reads the spec; it never writes it. The spec is a plan directory whose
-``NN-<context>`` entries (links, in Löyly) each hold one bounded context:
+RDM reads a spec; it never writes it. What it needs from one is small and
+concrete: **Gherkin**. Every requirement is a scenario tagged with an id
+(``rdm.specification.gherkin``), and every test run claims the requirements
+it verifies with Allure ``tag`` labels of the same ids. The rest is
+abstract, chosen by the DHF's ``config.yml``:
 
-- ``spec.feature``: the accepted Gherkin scenarios, each stamped
-  ``@item-NN-SSS``. A stamped scenario is a **requirement**; its tags
-  ``@allium-<kind>.<Name>`` name the Allium obligations it covers.
-- ``allium/*.allium``: rules (``rule X { when: T(...) }``), actors and
-  surfaces (``surface S { facing a: Actor  provides: T(...)  @guarantee G }``).
-- ``event-model/*.edn``: the Grain event model; its **screens** link the
-  surfaces a person faces.
-- ``../event-storm.edn`` (beside the contexts): the Big Picture board; an
-  event an actor causes links to the screen whose command produces it.
+.. code-block:: yaml
 
-A **user need** is a screen of the event model, with the surfaces it links
-(what an actor faces, the rules it provides, what it guarantees) and the
-storm events behind it. A context with no screens offers each of its
-surfaces as a need. A requirement addresses a need when it covers one of the
-need's rules or guarantees.
+    spec:
+      features: ["../spec/**/*.feature"]   # globs, from the DHF directory
+      exclude: ["**/drafts.feature"]       # optional
+      id: "REQ-\\d+"                        # optional: the id tag's pattern, without "@"
+      needs: feature                       # feature (default) | allium
 
-The Gherkin is read as Löyly's checklist reads it (``gen_checklist``, its
-guarantee ``OneReadingOfTheSpec``): plan entries whose name starts with a
-digit, sorted; a slice whose ``plan.md`` says ``status: planned`` or
-``status: backlog`` is skipped and recorded; ``drafts.feature`` is never
-read; a tag line is a stripped line starting with ``@``, and the last
-``@item`` tag before a ``Scenario`` is its id; a ``Rule:`` line sets the rule
-of the scenarios after it, reset per file; a scenario without an id is
-unstamped, and listed.
+- **Where the Gherkin is** (``layout``): globs (the default), or a factory's
+  layout through an adapter (``layout: loyly`` with ``plan: <dir>``,
+  ``rdm.specification.loyly``). Without ``spec`` in the configuration RDM
+  looks, from the repository root, for ``.pi/plan`` (Löyly's layout), then
+  ``spec/**/*.feature``, then ``features/**/*.feature``.
+- **What a user need is** (``needs``): by default each Gherkin ``Feature``,
+  its description the need's text, addressed by the scenarios under it; or
+  an adapter's richer reading (``needs: allium``: event-model screens with
+  their Allium surfaces and the event storm).
+
+A requirement's **context** is the directory its feature file sits in,
+below the spec's root (or the adapter's context).
 """
 
 from __future__ import annotations
 
-import re
+import fnmatch
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rdm.kernel.edn import Keyword, loads_all
 from rdm.kernel.util import load_yaml
+from rdm.specification.gherkin import DEFAULT_ID, Item, Reading, read_feature
 
-ITEM_PREFIX = "item-"
-SKIPPED_STATUSES = {"planned", "backlog"}
-
-_SCENARIO = re.compile(r"^\s*Scenario(?: Outline)?:\s*(.+?)\s*$")
-_RULE = re.compile(r"^\s*Rule:\s*(.*?)\s*$")
-_FEATURE = re.compile(r"^\s*Feature:\s*(.*?)\s*$")
-_ITEM_TAG = re.compile(r"@item-(\d+-\d+)")
-_OBLIGATION = re.compile(r"@allium-([a-z-]+)\.([A-Za-z0-9_]+)")
-_STATUS = re.compile(r"(?m)^status:\s*(\S+)")
-
-_ALLIUM_BLOCK = re.compile(r"^(rule|surface|actor)\s+([A-Za-z0-9_]+)\s*\{(.*?)^\}", re.MULTILINE | re.DOTALL)
-_WHEN = re.compile(r"^\s*when:\s*([A-Za-z0-9_]+)\s*\(", re.MULTILINE)
-_FACING = re.compile(r"^\s*facing\s+\w+\s*:\s*([A-Za-z0-9_]+)", re.MULTILINE)
-_PROVIDES = re.compile(r"^\s*provides:\s*\n((?:[ \t]+\S.*\n?)+)", re.MULTILINE)
-_TRIGGER = re.compile(r"^\s*([A-Za-z0-9_]+)\s*\(", re.MULTILINE)
-_GUARANTEE = re.compile(r"^\s*@guarantee\s+([A-Za-z0-9_]+)", re.MULTILINE)
-
-
-def requirement_id(item_id: str) -> str:
-    """RDM's id for a stamped item: ``02-001`` → ``item-02-001``."""
-    return item_id if item_id.startswith(ITEM_PREFIX) else ITEM_PREFIX + item_id
-
-
-@dataclass(frozen=True)
-class Item:
-    """A stamped scenario: one requirement."""
-
-    id: str                      # Löyly's identity, "02-001"
-    context: str                 # the bounded context: the slice's directory
-    title: str
-    rule: str | None
-    source: str                  # "<plan path>/02-measurement/spec.feature:12", from the repository root
-    tags: tuple[str, ...] = ()
-    obligations: tuple[tuple[str, str], ...] = ()   # (kind, name) of each @allium-<kind>.<Name>
-
-    @property
-    def requirement(self) -> str:
-        return requirement_id(self.id)
-
-    @property
-    def slice(self) -> str:
-        return self.id.split("-", 1)[0]
-
-
-@dataclass
-class Surface:
-    name: str
-    context: str
-    facing: list[str]
-    triggers: list[str]
-    guarantees: list[str]
-    file: str
-    description: str = ""
+__all__ = ["Item", "Need", "Spec", "find_spec", "read_spec", "load"]
 
 
 @dataclass
 class Need:
-    """A user need: an event-model screen and the surfaces it links, or a
-    surface of a context that has no screens."""
+    """A user need. Every source gives its id, context and text; an adapter
+    may add the actors it faces and what addresses it (rules, guarantees,
+    surfaces, commands, storm events)."""
 
     id: str
     context: str
     text: str
-    surfaces: list[str] = field(default_factory=list)
+    source: str = ""
     actors: list[str] = field(default_factory=list)
+    surfaces: list[str] = field(default_factory=list)
     rules: list[str] = field(default_factory=list)
     guarantees: list[str] = field(default_factory=list)
     commands: list[str] = field(default_factory=list)
     storm_events: list[str] = field(default_factory=list)
-    source: str = ""
 
 
 @dataclass
 class Spec:
-    plan: Path
-    contexts: list[tuple[str, str]] = field(default_factory=list)       # (slice entry name, context)
+    root: Path                                                          # what the sources are cited from
+    contexts: list[tuple[str, str]] = field(default_factory=list)       # (where, context)
     items: list[Item] = field(default_factory=list)
     unstamped: list[tuple[str, str]] = field(default_factory=list)      # (source, title)
-    skipped: list[tuple[str, str]] = field(default_factory=list)        # (slice entry name, status)
-    features: dict[str, str] = field(default_factory=dict)              # context -> Feature title
-    surfaces: list[Surface] = field(default_factory=list)
-    rules: dict[str, tuple[str, str]] = field(default_factory=dict)     # rule name -> (context, trigger)
+    skipped: list[tuple[str, str]] = field(default_factory=list)        # (where, why)
     needs: list[Need] = field(default_factory=list)
-    problems: list[str] = field(default_factory=list)                   # files the reader could not read
+    addresses: dict[str, list[str]] = field(default_factory=dict)       # requirement -> needs it addresses
+    rules: dict[str, tuple[str, str]] = field(default_factory=dict)     # adapter: rule -> (context, trigger)
+    surfaces: list[str] = field(default_factory=list)                   # adapter: surface names
+    problems: list[str] = field(default_factory=list)                   # files that could not be read
 
     def item(self, requirement: str) -> Item | None:
         return next((i for i in self.items if i.requirement == requirement), None)
 
     def duplicates(self) -> dict[str, list[str]]:
-        """Each requirement id stamped on more than one scenario, with every source."""
+        """Each requirement id tagged on more than one scenario, with every source."""
         seen: dict[str, list[str]] = {}
         for item in self.items:
             seen.setdefault(item.requirement, []).append(item.source)
         return {i: s for i, s in seen.items() if len(s) > 1}
 
     def needs_of(self, item: Item) -> list[str]:
-        """The needs a requirement addresses: those whose rules or guarantees
-        it covers; else, when it covers none (a system-facing seam, an
-        invariant), the needs of its own context."""
-        covered = {name for kind, name in item.obligations}
-        direct = [n.id for n in self.needs if covered & (set(n.rules) | set(n.guarantees))]
-        return direct or [n.id for n in self.needs if n.context == item.context]
+        """The needs a requirement addresses; one the needs source links to
+        none traces to the needs of its own context."""
+        return self.addresses.get(item.requirement) or [n.id for n in self.needs if n.context == item.context]
 
     def directly_addressed(self, need: Need) -> list[str]:
-        """The requirements that cover one of the need's rules or guarantees."""
-        own = set(need.rules) | set(need.guarantees)
-        return [i.requirement for i in self.items if own & {name for kind, name in i.obligations}]
+        """The requirements the needs source links to the need."""
+        return [r for r, needs in self.addresses.items() if need.id in needs]
 
 
-# --- Locating the spec -----------------------------------------------------
+# --- Configuration ----------------------------------------------------------
 
-def find_plan(dhf: Path) -> Path | None:
-    """The plan directory of the spec the record is held to: ``spec`` in the
-    DHF's ``config.yml`` (relative to the DHF), else ``.pi/plan`` beside the
-    DHF or in a parent directory up to the repository root."""
-    dhf = Path(dhf)
-    config = dhf / "config.yml"
-    if config.is_file():
-        declared = (load_yaml(str(config)) or {}).get("spec")
-        if declared:
-            path = (dhf / str(declared)).resolve()
-            return path if path.is_dir() else None
-    here = dhf.resolve().parent
+def _config(dhf: Path) -> dict | None:
+    config = Path(dhf) / "config.yml"
+    if not config.is_file():
+        return None
+    declared = (load_yaml(str(config)) or {}).get("spec")
+    if declared is None:
+        return None
+    if isinstance(declared, str):  # a directory: a plan directory, or a root of feature files
+        path = (Path(dhf) / declared).resolve()
+        from rdm.specification.loyly import slice_entries
+
+        if path.is_dir() and slice_entries(path):
+            return {"layout": "loyly", "plan": str(path), "needs": "allium"}
+        return {"features": [str(path / "**" / "*.feature")]}
+    if not isinstance(declared, dict):
+        raise ValueError("`spec` in config.yml must be a directory or a mapping")
+    out = dict(declared)
+    if out.get("plan"):
+        out["plan"] = str((Path(dhf) / str(out["plan"])).resolve())
+    out["features"] = [str((Path(dhf) / g)) for g in out.get("features") or []]
+    return out
+
+
+def _repo_root(path: Path) -> Path:
+    path = Path(path).resolve()
+    for directory in (path, *path.parents):
+        if (directory / ".git").exists():
+            return directory
+    return path.parent
+
+
+def find_spec(dhf: Path) -> dict | None:
+    """The spec's configuration: the DHF's ``spec``, else the first of
+    ``.pi/plan``, ``spec/`` and ``features/`` found from the DHF's parent up
+    to the repository root that holds Gherkin."""
+    declared = _config(dhf)
+    if declared is not None:
+        return declared
+    here = Path(dhf).resolve().parent
     for directory in (here, *here.parents):
-        candidate = directory / ".pi" / "plan"
-        if candidate.is_dir():
-            return candidate
+        if (directory / ".pi" / "plan").is_dir():
+            return {"layout": "loyly", "plan": str(directory / ".pi" / "plan"), "needs": "allium"}
+        for name in ("spec", "features"):
+            if (directory / name).is_dir() and any((directory / name).rglob("*.feature")):
+                return {"features": [str(directory / name / "**" / "*.feature")]}
         if (directory / ".git").exists():
             break
     return None
 
 
-def _slice_entries(plan: Path) -> list[Path]:
-    return sorted((p for p in plan.iterdir() if p.is_dir() and p.name[:1].isdigit()), key=lambda p: p.name)
+# --- Reading ----------------------------------------------------------------
+
+def _glob_root(pattern: str) -> Path:
+    parts = Path(pattern).parts
+    head = [p for p in parts[: next((i for i, p in enumerate(parts) if any(c in p for c in "*?[")), len(parts))]]
+    return Path(*head) if head else Path(".")
 
 
-def _context_name(entry: Path) -> str:
-    """The context a plan entry holds: the directory it links to, else its
-    name after the slice number."""
-    target = entry.resolve()
-    if target != entry.absolute() and target.name:
-        return target.name
-    return entry.name.split("-", 1)[1] if "-" in entry.name else entry.name
+def _read_globs(config: dict, root: Path, spec: Spec) -> tuple[Reading, dict[str, Path]]:
+    reading, dirs = Reading(), {}
+    excludes = config.get("exclude") or []
+    files: list[tuple[Path, Path]] = []
+    for pattern in config.get("features") or []:
+        base = _glob_root(pattern)
+        relative = Path(pattern).relative_to(base).as_posix() if base != Path(".") else pattern
+        for path in sorted(base.glob(relative)):
+            if path.is_file() and not any(fnmatch.fnmatch(path.as_posix(), e) or fnmatch.fnmatch(path.name, e)
+                                          for e in excludes):
+                files.append((path, base))
+    seen = set()
+    for path, base in files:
+        if path.resolve() in seen:
+            continue
+        seen.add(path.resolve())
+        parent = path.parent.resolve().relative_to(base.resolve()).as_posix() if path.parent != base else ""
+        context = parent.split("/", 1)[0] if parent and parent != "." else ""
+        if context and context not in dirs:
+            dirs[context] = path.parent
+            spec.contexts.append((_rel(path.parent, root), context))
+        read_feature(path, _rel(path, root), context, config.get("id") or DEFAULT_ID, reading)
+    return reading, dirs
 
 
 def _rel(path: Path, root: Path) -> str:
     try:
-        return path.relative_to(root).as_posix()
+        return Path(path).resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
-        return path.as_posix()
+        return Path(path).as_posix()
 
 
-# --- Gherkin ---------------------------------------------------------------
-
-def scan_feature(path: Path, source: str, context: str) -> tuple[list[Item], list[tuple[str, str]], str]:
-    """One spec file read as the checklist reads it: its stamped items, its
-    unstamped scenarios, and its Feature title."""
-    items, unstamped, feature = [], [], ""
-    rule, pending, tags = None, None, []
-    for number, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
-        stripped = line.strip()
-        if stripped.startswith("@"):
-            found = _ITEM_TAG.findall(line)
-            if found:
-                pending = found[-1]
-            tags.extend(stripped.split())
-        elif (match := _RULE.match(line)) and not stripped.startswith("#"):
-            rule = match.group(1) or None
-        elif match := _SCENARIO.match(line):
-            title = match.group(1)
-            if pending:
-                obligations = tuple(_OBLIGATION.findall(" ".join(tags)))
-                items.append(Item(pending, context, title, rule, f"{source}:{number}",
-                                  tuple(t for t in tags if t.startswith("@")), obligations))
-            else:
-                unstamped.append((f"{source}:{number}", title))
-            pending, tags = None, []
-        elif not feature and (match := _FEATURE.match(line)):
-            feature = match.group(1)
-    return items, unstamped, feature
+def _feature_needs(spec: Spec, reading: Reading) -> None:
+    """Each Feature a need: its title the id, its description the text."""
+    seen = set()
+    for feature in reading.features:
+        if feature.title and feature.title not in seen:
+            seen.add(feature.title)
+            spec.needs.append(Need(feature.title, feature.context, feature.description, feature.source))
+    for item in spec.items:
+        if item.feature:
+            spec.addresses[item.requirement] = [item.feature]
 
 
-# --- Allium ----------------------------------------------------------------
+def read_spec(config: dict | str | Path, root: Path | None = None) -> Spec:
+    """Read the spec a configuration (``find_spec``) names, or the plan
+    directory of a Löyly-layout spec. Sources are cited from ``root``
+    (default: the repository holding the spec)."""
+    if isinstance(config, (str, Path)):
+        config = {"layout": "loyly", "plan": str(config), "needs": "allium"}
+    if config.get("layout") == "loyly":
+        from rdm.specification import loyly
 
-def _read_allium(context_dir: Path, context: str, root: Path, spec: Spec) -> list[Surface]:
-    surfaces = []
-    for path in sorted((context_dir / "allium").glob("*.allium")):
-        text = path.read_text(encoding="utf-8")
-        for kind, name, body in _ALLIUM_BLOCK.findall(text):
-            if kind == "rule":
-                when = _WHEN.search(body)
-                spec.rules[name] = (context, when.group(1) if when else name)
-            elif kind == "surface":
-                provides = _PROVIDES.search(body)
-                triggers = _TRIGGER.findall(provides.group(1)) if provides else []
-                surfaces.append(Surface(name, context, _FACING.findall(body), triggers,
-                                        _GUARANTEE.findall(body), _rel(path, root), _doc_comment(text, name)))
-    return surfaces
+        plan = Path(config["plan"])
+        root = Path(root) if root is not None else _repo_root(plan)
+        spec = Spec(root=root)
+        reading, spec.contexts, spec.skipped, dirs = loyly.read_layout(plan, root, config.get("id"))
+    else:
+        features = config.get("features") or []
+        root = Path(root) if root is not None else (_repo_root(_glob_root(features[0])) if features else Path("."))
+        spec = Spec(root=root)
+        reading, dirs = _read_globs(config, root, spec)
+        plan = None
+    spec.items, spec.unstamped = list(reading.items), list(reading.unstamped)
+    needs = config.get("needs") or "feature"
+    if needs == "allium":
+        from rdm.specification import loyly
 
-
-def _doc_comment(text: str, surface: str) -> str:
-    """The ``--`` comment lines right above ``surface <name> {``, joined."""
-    lines = text.split("\n")
-    start = next((n for n, line in enumerate(lines) if re.match(rf"^surface\s+{surface}\s*\{{", line)), None)
-    found = []
-    for line in reversed(lines[:start] if start is not None else []):
-        if not line.strip().startswith("--"):
-            break
-        found.insert(0, line.strip()[2:].strip())
-    return " ".join(found)
-
-
-# --- Event model and event storm -------------------------------------------
-
-def _edn(path: Path, spec: Spec, root: Path) -> list:
-    try:
-        return loads_all(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as error:
-        spec.problems.append(f"{_rel(path, root)}: {error}")
-        return []
-
-
-def _blocks(context_dir: Path, spec: Spec, root: Path) -> tuple[dict, dict, dict]:
-    """The screens, commands and events of a context's event model, merged
-    across its fragments, each keyed by its qualified name."""
-    screens, commands, events = {}, {}, {}
-    for path in sorted((context_dir / "event-model").glob("*.edn")):
-        for value in _edn(path, spec, root):
-            if not isinstance(value, dict):
-                continue
-            for area in value.values():
-                if not isinstance(area, dict):
-                    continue
-                screens.update(area.get(Keyword("screens")) or {})
-                commands.update(area.get(Keyword("commands")) or {})
-                events.update(area.get(Keyword("events")) or {})
-    return screens, commands, events
-
-
-def _surface_links(block: dict) -> list[str]:
-    return [str(link.get(Keyword("name"))) for link in block.get(Keyword("grain/allium")) or []
-            if isinstance(link, dict) and link.get(Keyword("kind")) == Keyword("surface")]
-
-
-def _storm(plan: Path, spec: Spec, root: Path) -> list[tuple[str, str, str]]:
-    """The board's events an actor causes: (local id, name, actor)."""
-    board = None
-    for directory in {plan.resolve().parent / "spec", plan.parent / "spec", plan.parent}:
-        if (directory / "event-storm.edn").is_file():
-            board = directory / "event-storm.edn"
-            break
-    if board is None:
-        return []
-    values = _edn(board, spec, root)
-    out = []
-    for phase in (values[0].get(Keyword("phases")) if values and isinstance(values[0], dict) else None) or []:
-        for event in phase.get(Keyword("events")) or []:
-            cause = event.get(Keyword("caused-by")) or {}
-            if cause.get(Keyword("kind")) == Keyword("actor"):
-                out.append((str(event.get(Keyword("id"))), str(event.get(Keyword("name"))),
-                            str(cause.get(Keyword("name")))))
-    return out
-
-
-# --- The whole spec ---------------------------------------------------------
-
-def read_spec(plan: Path, root: Path | None = None) -> Spec:
-    """Read the spec under a plan directory. ``root`` is what sources are
-    relative to (the repository root; default: the plan's grandparent)."""
-    plan = Path(plan)
-    root = Path(root) if root is not None else plan.absolute().parent.parent
-    spec = Spec(plan=plan)
-    storm = _storm(plan, spec, root)
-    for entry in _slice_entries(plan):
-        context = _context_name(entry)
-        plan_md = entry / "plan.md"
-        status = None
-        if plan_md.is_file():
-            match = _STATUS.search(plan_md.read_text(encoding="utf-8"))
-            status = match.group(1) if match else None
-        if status in SKIPPED_STATUSES:
-            spec.skipped.append((entry.name, status))
-            continue
-        feature = entry / "spec.feature"
-        if not feature.is_file():
-            continue
-        spec.contexts.append((entry.name, context))
-        items, unstamped, title = scan_feature(feature, _rel(entry.absolute() / "spec.feature", root.absolute()),
-                                               context)
-        spec.items += items
-        spec.unstamped += unstamped
-        spec.features[context] = title
-
-        surfaces = _read_allium(entry, context, root, spec)
-        spec.surfaces += surfaces
-        by_name = {s.name: s for s in surfaces}
-        screens, commands, events = _blocks(entry, spec, root)
-        if screens:
-            for key, screen in sorted(screens.items()):
-                linked = [by_name[n] for n in _surface_links(screen) if n in by_name]
-                spec.needs.append(_need(str(key), context, str(screen.get(Keyword("description")) or ""),
-                                        linked, [str(c) for c in sorted(screen.get(Keyword("commands")) or [])],
-                                        commands, events, storm, spec))
-        else:
-            for surface in surfaces:
-                spec.needs.append(_need(surface.name, context, surface.description, [surface], [], {}, {},
-                                        storm, spec))
+        loyly.read_needs(spec, dirs, plan or root, root)
+    elif needs == "feature":
+        _feature_needs(spec, reading)
+    else:
+        spec.problems.append(f"unknown needs source {needs!r} (feature or allium)")
     return spec
 
 
-def _need(ident, context, text, surfaces, command_names, commands, events, storm, spec) -> Need:
-    triggers = {t for s in surfaces for t in s.triggers}
-    rules = sorted(name for name, (ctx, trigger) in spec.rules.items() if trigger in triggers or name in triggers)
-    produced = set()
-    for name in command_names:
-        block = commands.get(Keyword(name)) or {}
-        produced |= {str(e).split("/", 1)[-1] for e in block.get(Keyword("produces")) or []}
-    return Need(
-        id=ident, context=context, text=text,
-        surfaces=[s.name for s in surfaces],
-        actors=sorted({a for s in surfaces for a in s.facing}),
-        rules=rules,
-        guarantees=sorted({g for s in surfaces for g in s.guarantees}),
-        commands=command_names,
-        storm_events=[f"{name} ({actor})" for local, name, actor in storm if local in produced],
-        source=surfaces[0].file if surfaces else "",
-    )
+def load(dhf: Path) -> Spec | None:
+    """The spec of a DHF, or None when none is configured or found."""
+    config = find_spec(Path(dhf))
+    return read_spec(config) if config is not None else None

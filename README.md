@@ -6,8 +6,8 @@
 
 <!-- --8<-- [start:intro] -->
 RDM audits the record of regulated software — medical-device software under
-IEC 62304 first. It reads the spec a factory such as Löyly writes (stamped
-Gherkin scenarios, Allium surfaces, an event model), checks documents against
+IEC 62304 first. It reads the spec as Gherkin (every scenario tagged with a
+requirement id), checks documents against
 the checklists of the standards that apply, traces every requirement to the
 Allure runs that verify it, renders regulatory documents, and builds it all
 into one read-only graph that people and agents query.
@@ -16,7 +16,7 @@ The chain it holds:
 
 ```
 regulation → checklist → clause ← document
-user need (screen, surface) → requirement (item-NN-SSS) → Allure run → commit
+user need (a Feature) → requirement (a tagged scenario) → Allure run → commit
 risk → risk control (a requirement) → Allure run
 design document → the commit that landed it
 ```
@@ -31,7 +31,7 @@ never edited.
 
 | Part | What it is | Commands |
 | --- | --- | --- |
-| **Record** | The spec it reads (Löyly's layout: `.pi/plan`, stamped scenarios, Allium, event model); the risk register; checklists; controlled documents; tests tagged `@allure.tag("item-NN-SSS")`. Markdown and git. | `rdm init`, `rdm adopt` |
+| **Record** | The spec it reads: Gherkin feature files, each scenario tagged with a requirement id (layouts and richer sources of needs, such as Löyly's, through adapters); the risk register; checklists; controlled documents; tests tagged `@allure.tag("item-NN-SSS")`. Markdown and git. | `rdm init`, `rdm adopt` |
 | **Gates** | No release until every requirement of the spec has a passing test, every need is addressed, and every risk is evaluated with its risk controls verified. No required checklist clause left unreferenced. | `rdm story release-gate`, `rdm gap` |
 | **Graph** | The record as RDF: needs, inputs, contexts, documents, tests, runs, commits, risks, clauses. Read-only; agents read it over MCP, people browse it. | `rdm graph build \| query \| validate \| serve \| explorer-file \| mcp` |
 | **Documents** | Regulatory documents rendered from the record: templates and YAML data → Markdown → PDF/DOCX. | `rdm render`, `make pdfs` |

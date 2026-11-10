@@ -3,7 +3,7 @@
 This is RDM's own DHF: RDM's own record, checked by RDM's own gates. Every
 change lands through a reviewed pull request with the gates green. The method
 is the docs' *How RDM works* (`docs/about/how-rdm-works.md`); the direction,
-the spec moving to the factory (Löyly), is ADR 0002 (`decisions/`).
+the spec read as Gherkin rather than authored here, is ADR 0002 (`decisions/`).
 
 Scope note: RDM is not a medical device, so this DHF deliberately implements
 the **design-controls slice** (requirements, verification, validation,
@@ -29,10 +29,10 @@ documents/
 decisions/                           ADR 0002: the spec lives with the factory; RDM audits it
 ```
 
-RDM's requirements and user needs are its spec, outside this directory, in
-Löyly's layout: `.pi/plan/NN-<context>` → `.pi/spec/<context>/` with a
-`spec.feature` of stamped scenarios (`item-NN-SSS`) and the Allium surfaces
-of its user needs. Trace any of them through the graph:
+RDM's requirements and user needs are its spec, outside this directory: plain
+Gherkin under `spec/<context>/<need>.feature`, each Feature a user need and
+each scenario tagged `@item-NN-SSS` a requirement. Trace any of them through
+the graph:
 
 ```bash
 rdm graph query --dhf dhf '…'           # SPARQL; or the `trace` tool of `rdm graph mcp`

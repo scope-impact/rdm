@@ -88,7 +88,7 @@ def test_the_spec_is_read_as_the_factory_checklist_reads_it(tmp_path: Path) -> N
                            "before a scenario is its id; the Rule is reset per file"):
         first, second, third = spec.items
         assert (first.rule, first.title, first.source) == ("Booting", "boots fresh", ".pi/plan/03-gate/spec.feature:6")
-        assert (second.id, second.title) == ("03-002", "refuses a busy seam")
+        assert (second.id, second.title) == ("item-03-002", "refuses a busy seam")
         assert third.rule is None and third.context == "stamps"
     with verification_step("the Allium obligations a scenario's tags name are read"):
         assert first.obligations == (("rule-success", "BootFresh"), ("guarantee", "Fresh"))
@@ -212,3 +212,72 @@ def test_user_needs_are_read_from_the_event_model_allium_and_storm(tmp_path: Pat
             loyly = read_spec(LOYLY_PLAN, ROOT / "loyly")
             attach("Löyly needs", {n.id: loyly.directly_addressed(n) for n in loyly.needs})
             assert len(loyly.needs) == 6 and all(loyly.directly_addressed(n) for n in loyly.needs)
+
+
+@allure.tag("item-01-001")
+@allure.label("output", "rdm/specification/gherkin.py")
+@allure.label("output", "rdm/specification/spec.py")
+def test_plain_gherkin_is_read_by_glob_with_any_id_convention(tmp_path: Path) -> None:
+    """Any feature files, wherever the configuration's globs find them, or
+    spec/ and features/ at the repository root: each scenario tagged with an
+    id-shaped tag (or the configured pattern) a requirement, its context the
+    directory below the root, untagged scenarios listed."""
+    from rdm.specification.spec import find_spec
+
+    (tmp_path / ".git").mkdir()
+    dhf = tmp_path / "dhf"
+    dhf.mkdir()
+    features = tmp_path / "features" / "alarms"
+    features.mkdir(parents=True)
+    (features / "sound.feature").write_text(
+        "@needs\nFeature: Alarms sound\n  A nurse is alerted to a dangerous vital.\n\n"
+        "  Rule: Thresholds\n    @smoke @REQ-1\n    Scenario: a high heart rate alarms\n      Given x\n\n"
+        "    Scenario: not yet tagged\n")
+    (tmp_path / "features" / "top.feature").write_text("Feature: Top\n  @REQ-2\n  Scenario: at the root\n")
+
+    with verification_step("without configuration, features/ at the repository root is found; any id-shaped "
+                           "tag is a requirement id, other tags are kept, an untagged scenario is listed"):
+        config = find_spec(dhf)
+        spec = read_spec(config)
+        attach("items", [vars(i) for i in spec.items])
+        reqs = {i.requirement: i for i in spec.items}
+        assert sorted(reqs) == ["REQ-1", "REQ-2"]
+        first = reqs["REQ-1"]
+        assert (first.context, first.feature, first.rule, first.title) == (
+            "alarms", "Alarms sound", "Thresholds", "a high heart rate alarms")
+        assert first.source == "features/alarms/sound.feature:7" and "@smoke" in first.tags
+        assert reqs["REQ-2"].context == ""
+        assert spec.unstamped == [("features/alarms/sound.feature:10", "not yet tagged")]
+    with verification_step("the configuration names the globs, files to exclude and the id pattern"):
+        (dhf / "config.yml").write_text(
+            "spec:\n  features: ['../features/**/*.feature']\n  exclude: ['top.feature']\n  id: 'REQ-1'\n")
+        spec = read_spec(find_spec(dhf))
+        assert [i.requirement for i in spec.items] == ["REQ-1"]
+
+
+@allure.tag("item-01-005")
+@allure.label("output", "rdm/specification/spec.py")
+def test_by_default_each_feature_is_a_user_need(tmp_path: Path) -> None:
+    """Without a needs adapter each Gherkin Feature is a user need, its
+    description the need's text, addressed by the scenarios under it."""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "dhf").mkdir()
+    spec_dir = tmp_path / "spec" / "alarms"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "sound.feature").write_text(
+        "Feature: Alarms sound\n  A nurse is alerted to a dangerous vital.\n\n"
+        "  @REQ-1\n  Scenario: a high heart rate alarms\n")
+    (spec_dir / "quiet.feature").write_text("Feature: Quiet hours\n  @REQ-2\n  Scenario: night mode\n")
+    from rdm.specification.sdd import load_spec
+
+    spec = load_spec(tmp_path / "dhf")
+    needs = {n.id: n for n in spec.needs}
+    attach("needs", {k: vars(v) for k, v in needs.items()})
+    with verification_step("each Feature is a need, its description its text, in its file's context"):
+        assert sorted(needs) == ["Alarms sound", "Quiet hours"]
+        assert needs["Alarms sound"].text == "A nurse is alerted to a dangerous vital."
+        assert needs["Alarms sound"].context == "alarms"
+    with verification_step("a requirement addresses the Feature it sits under"):
+        by_id = {i.requirement: i for i in spec.items}
+        assert spec.needs_of(by_id["REQ-1"]) == ["Alarms sound"]
+        assert spec.directly_addressed(needs["Quiet hours"]) == ["REQ-2"]

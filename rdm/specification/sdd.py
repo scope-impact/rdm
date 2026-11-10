@@ -1,18 +1,17 @@
 """
-The record's requirements and user needs, read from the factory's spec
+The record's requirements and user needs, read from the spec
 (``rdm.specification.spec``, ADR 0002), and the DHF documents RDM renders.
 
-RDM no longer declares requirements of its own: a requirement is a stamped
-scenario of the spec (``item-NN-SSS``), and a user need is a screen of its
-event model with the Allium surfaces it links (or a surface of a context with
-no screens). This module gives the rest of RDM that reading as plain data.
+A requirement is a Gherkin scenario tagged with an id; a user need is what
+the spec's needs source makes one (a Feature, by default). This module gives
+the rest of RDM that reading as plain data.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from rdm.specification.spec import Spec, find_plan, read_spec
+from rdm.specification.spec import Spec, find_spec, read_spec
 
 # The traceability-matrix template: an output, rendered from the record, never
 # part of it (DI-58) — the graph leaves it out, the evidence bundle renders it.
@@ -29,23 +28,11 @@ def find_dhf_doc(dhf_dir: Path, basename: str) -> Path | None:
     return matches[0] if matches else None
 
 
-def repo_root_of(path: Path) -> Path:
-    """The repository holding ``path`` (its nearest parent with ``.git``),
-    else the path's parent."""
-    path = Path(path).resolve()
-    for directory in (path, *path.parents):
-        if (directory / ".git").exists():
-            return directory
-    return path.parent
-
-
 def load_spec(dhf_dir: Path) -> Spec | None:
     """The spec the record is held to, or None when the DHF names none and
-    none is found (``rdm.specification.spec.find_plan``)."""
-    plan = find_plan(Path(dhf_dir))
-    if plan is None:
-        return None
-    return read_spec(plan, repo_root_of(plan))
+    none is found (``rdm.specification.spec.find_spec``)."""
+    config = find_spec(Path(dhf_dir))
+    return read_spec(config) if config is not None else None
 
 
 def requirements(dhf_dir: Path, spec: Spec | None = None) -> list[dict]:

@@ -3,7 +3,7 @@ pytest plugin: record which version of the code an acceptance run is evidence
 for, and who or what ran it.
 
 A test claims the requirements of the spec it verifies with
-``@allure.tag("item-NN-SSS")``. The plugin adds no requirement labels of its
+``@allure.tag("<requirement id>")``. The plugin adds no requirement labels of its
 own: the trace from a run to what it verifies is the tag, read by RDM from
 the results. At run time it adds:
 
@@ -52,11 +52,12 @@ def _record(dhf: str) -> dict:
 
 
 def item_ids(item) -> list[str]:
-    """The requirements a test claims: its ``@allure.tag("item-NN-SSS")``
-    tags (allure-pytest keeps its labels as ``allure_label`` marks)."""
+    """What a test claims: its ``@allure.tag(...)`` values (allure-pytest
+    keeps its labels as ``allure_label`` marks); the plugin acts on those
+    that are requirements of the spec."""
     ids = [str(v).lstrip("@") for m in item.iter_markers(name="allure_label")
            if str(getattr(m.kwargs.get("label_type"), "value", m.kwargs.get("label_type"))) == REQUIREMENT_LABEL
-           for v in m.args if str(v).lstrip("@").startswith("item-")]
+           for v in m.args]
     return list(dict.fromkeys(ids))
 
 

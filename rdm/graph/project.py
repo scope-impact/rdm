@@ -172,6 +172,8 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         source(node, item.source)
         for need in spec.needs_of(item):
             ds.add(node, rdm("tracesTo"), ds.node("need", need), g)
+        for need in spec.addresses.get(item.requirement, []):  # linked directly by the spec's needs source
+            ds.add(node, rdm("addresses"), ds.node("need", need), g)
         for kind, name in item.obligations:
             ds.add(node, rdm("covers"), f"{kind}.{name}", g)
             if kind.startswith("rule-") and name in spec.rules:

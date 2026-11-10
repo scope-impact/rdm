@@ -24,14 +24,14 @@ It prints the next steps.
 
 ### Your first passing release gate
 
-1. Have the spec: your factory's `.pi/plan` and `.pi/spec/` in the
-   repository (or a submodule; then name its plan directory as `spec:` in
-   `dhf/config.yml`). Its stamped scenarios are your requirements, its
-   event-model screens and Allium surfaces your user needs; see
+1. Have the spec: Gherkin feature files under `spec/` or `features/` at the
+   repository root (anywhere else, name them as `spec:` in
+   `dhf/config.yml`). Each scenario tagged with an id (`@REQ-1`) is a
+   requirement; each Feature is a user need. See
    [The spec and its tests](../use/spec-and-tests.md).
 2. Tag the acceptance test that verifies each requirement with
-   `@allure.tag("item-01-001")` (a Gherkin runner writes the scenario's tags
-   for you), and run the suite with Allure.
+   `@allure.tag("REQ-1")` (a Gherkin runner writes the scenario's tags for
+   you), and run the suite with Allure.
 3. Run `rdm story release-gate --dhf dhf --allure-results dhf/allure-results`.
    It passes once every requirement has a passing tagged run and every user
    need is addressed.

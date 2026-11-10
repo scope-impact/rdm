@@ -60,8 +60,8 @@ How the components relate, in the direction of the arrows:
 The behaviour a reviewer needs to judge the design:
 
 - **Named graphs.** The record graph holds the spec (user needs with their
-  actors, surfaces, rules, guarantees and storm events; requirements with
-  their rule, source and the obligations they cover; Allium rules; bounded
+  text and, from an adapter, actors, surfaces, rules, guarantees and storm
+  events; requirements with their rule and source; an adapter's rules; bounded
   contexts) and the controlled documents, each context's declaring document
   and part, and the documents' references; the executions graph
   the Allure results, when given; the git graph each document's latest
@@ -117,7 +117,7 @@ code; the release context's gates action runs `rdm graph validate` as a CI
 step, not as an import. It projects:
 
 - **specification**, through the Spec reader and the Need reader: needs,
-  requirements, Allium rules, contexts;
+  requirements, an adapter's rules, contexts;
 - **test evidence**, through the Allure reader: results and labels, and the
   verified set;
 - **risk**, through the Risk register: the register, the policy, the

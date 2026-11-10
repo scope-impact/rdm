@@ -1,9 +1,0 @@
--- RDM's user needs in this context: one surface per need.
-
--- A regulatory author can check that documents contain the references a chosen standard's checklist requires (gap analysis).
-surface GapAnalysis {
-    facing user: RegulatoryAuthor
-
-    @guarantee GapAnalysis
-        -- A regulatory author can check that documents contain the references a chosen standard's checklist requires (gap analysis).
-}

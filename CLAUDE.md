@@ -35,21 +35,22 @@ broken link or missing nav entry — run it the way CI does.
 
 ## RDM's own record (dogfood)
 
-RDM audits a spec rather than authoring one (ADR 0002): writing the spec and
-regenerating code from it belong to the factory, Löyly (`loyly/`, submodule
-on `spec-v2`). RDM reads a spec in Löyly's layout and checks it with its own
-gates; RDM's own spec is in that layout too.
+RDM audits a spec rather than authoring one (ADR 0002). Its contract with a
+spec is **Gherkin and Allure**: a requirement is a scenario tagged with an id,
+and a test run claims it with an Allure `tag` label of that id. Everything
+else is abstract: where the feature files are and what a user need is come
+from `spec:` in `dhf/config.yml`, or an adapter (`rdm/specification/loyly.py`
+reads Löyly's layout and its Allium/event-model/event-storm needs; the
+`loyly/` submodule on `spec-v2` is a real spec to read).
 
-- **The spec** — `.pi/plan/NN-<context>` → `.pi/spec/<context>/`:
-  `spec.feature` holds the requirements, stamped scenarios `@item-NN-SSS`;
-  `allium/*.allium` the user needs as surfaces (`facing`, `@guarantee`). A
-  scenario addresses a need through its `@allium-guarantee.<Need>` tag. RDM
-  reads it with `rdm/specification/spec.py`; `rdm/kernel/edn.py` reads event
-  models and event-storm boards.
+- **RDM's own spec** — plain Gherkin under `spec/<context>/<need>.feature`:
+  each Feature is a user need (its description the need's text), each
+  scenario tagged `@item-NN-SSS` a requirement. Read by
+  `rdm/specification/gherkin.py` and `spec.py`.
 - **The rest of the record** — `dhf/`: the design documents (one per context,
-  design output only), the risk policy and register (`controls:` name item
-  ids), the V&V plan, validation records, document control. Never hand-edit
-  the traceability matrix — it is generated.
+  design output only), the risk policy and register (`controls:` name
+  requirement ids), the V&V plan, validation records, document control.
+  Never hand-edit the traceability matrix — it is generated.
 - **Tests** — an acceptance test claims the requirement it verifies with
   `@allure.tag("item-NN-SSS")` and checks only what that scenario states.
 - **Vocabulary** — `CONTEXT.md` is the glossary; use its terms.
@@ -81,7 +82,7 @@ layer; `tests/dependency_rule_test.py` fails on an import that breaks the rule):
 
 - `rdm/main.py` — the composition root: the `rdm` command; argparse subcommands dispatch to the contexts.
 - `rdm/kernel/` — the shared kernel: YAML and files (`util.py`), EDN (`edn.py`), ids, git, frontmatter, the reconcile helpers.
-- `rdm/specification/` — the core: the spec reader (`spec.py`, `sdd.py`), `init`/`adopt` and their templates, validation records.
+- `rdm/specification/` — the core: the Gherkin reader (`gherkin.py`), the spec and its configuration (`spec.py`, `sdd.py`), the Löyly adapter (`loyly.py`), `init`/`adopt` and their templates, validation records.
 - `rdm/evidence/` and `rdm/pytest_plugin.py` — test evidence: Allure results (`allure.py`); the plugin labels each run with the commit under test.
 - `rdm/risk/`, `rdm/compliance/` — the leaves: the risk register; gap analysis and the built-in checklists.
 - `rdm/release/` — the release gate (`gate.py`), the verification data (`verify.py`).

@@ -16,11 +16,9 @@ rdm:UserNeedAddressedShape a sh:NodeShape ;
     sh:targetClass rdm:UserNeed ;
     sh:sparql [
         a sh:SPARQLConstraint ; sh:prefixes rdm: ;
-        sh:message "user need is addressed by no requirement covering its rules or guarantees" ;
+        sh:message "user need is addressed by no requirement" ;
         sh:select """SELECT $this WHERE {
-            FILTER NOT EXISTS { ?r a rdm:Requirement ; rdm:coversRule ?rule . $this rdm:providesRule ?rule }
-            FILTER NOT EXISTS { ?r a rdm:Requirement ; rdm:covers ?c . $this rdm:guarantee ?g
-                                FILTER (?c = CONCAT("guarantee.", ?g)) } }""" ;
+            FILTER NOT EXISTS { ?r a rdm:Requirement ; rdm:addresses $this } }""" ;
     ] .
 
 rdm:RequirementVerifiedShape a sh:NodeShape ;

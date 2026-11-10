@@ -10,7 +10,8 @@ context: specification
 
 The core bounded context: the spec the record is held to, read, never
 written. Its requirements are the spec's stamped scenarios (`item-NN-SSS`)
-and its user needs the event model's screens with their Allium surfaces.
+and its user needs, by default, its Features; adapters read richer layouts
+(Löyly's: event-model screens with their Allium surfaces).
 Every other context conforms to its ids. It also reads the validation
 records of the user needs. Onboarding
 (`rdm init`, `rdm adopt`), the commands that lay a project down, is not a
@@ -25,8 +26,9 @@ factory that owns it (ADR 0002).
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Spec reader | Reads the spec the record is held to (its plan directory: `spec` in the DHF's `config.yml`, else `.pi/plan` up to the repository root), as Löyly's checklist reads it: the slices in order, a planned or backlog slice skipped, each stamped scenario of `spec.feature` a requirement `item-NN-SSS` with its Rule, title, source line and Allium obligations, each unstamped scenario listed, `drafts.feature` never read. | item-01-001 |
-| Need reader | Reads the user needs: each screen of the event model (EDN) with the Allium surfaces it links, their actors, the rules whose triggers they provide and their guarantees, and the event-storm events its commands produce; each surface of a context with no screens. Gives each requirement the needs whose rules or guarantees it covers, else its context's. | item-01-005 |
+| Gherkin reader | Reads feature files: each scenario tagged with an id (any id-shaped tag, or the configured pattern) a requirement with its Feature, Rule, title, source line and tags; the last id tag before a scenario its id; each untagged scenario listed. | item-01-001 |
+| Spec configuration | Finds the spec the record is held to (`spec` in the DHF's `config.yml`: feature globs, exclusions, id pattern, needs source, layout; else `.pi/plan`, `spec/` or `features/` from the repository root) and its user needs: by default each Feature, addressed by the scenarios under it. | item-01-001, item-01-005 |
+| Löyly adapter | An optional layout and needs source: Löyly's plan of slices (planned and backlog skipped, `drafts.feature` never read) and its user needs, the event-model screens with their Allium surfaces, actors, rules and guarantees and the event-storm events behind them. | item-01-001, item-01-005 |
 | Project scaffold | `rdm init`: copies the project templates into a new directory; refuses a directory that exists (exit 2), and on success names what it laid down and the next steps. | item-01-002 |
 | Project templates | What `rdm init` lays down: the document templates (the traceability matrix among them), the build Makefile (a Word document is rebuilt when its reference document changes), the render configuration, the container build (installing the RDM release from git when no wheel is given), and the Pandoc and Typst configuration. Templates use only local images. | item-01-002 |
 | Adoption | `rdm adopt`: creates each missing file of the adoption templates and skips, never overwrites, one that exists (a symbolic link exists, dangling or not); when a `.gitignore` exists, names the lines of RDM's generated files to add to it; stamps the installed version as its release tag (a pre-release such as 2.0.0a0 as 2.0.0-alpha, the tag the release and its image carry); reports what it skipped and prints the next steps. | item-01-003 |

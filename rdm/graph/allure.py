@@ -3,8 +3,8 @@ Allure results as RDF (DI-53, DI-54).
 
 Each ``*-result.json`` becomes an ``rdm:TestRun`` (a ``prov:Activity``) with
 what counts as evidence: uuid, full name, start and end times, status and its
-message and trace, parameters, steps and attachments. ``tag`` labels
-``item-NN-SSS`` link a run to the requirements it verifies, and ``output``
+message and trace, parameters, steps and attachments. Id-shaped ``tag``
+labels link a run to the requirements it claims, and ``output``
 labels to the source files it exercises. Nothing else is projected: other labels, links,
 test cases and container fixtures repeat the record or say nothing about
 design controls; the raw results keep them, in the evidence bundle.
@@ -19,6 +19,7 @@ from pathlib import Path
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
+from rdm.kernel.ids import is_id
 from rdm.evidence.allure import (
     OUTPUT_LABEL,
     named_results,
@@ -101,7 +102,7 @@ def _result(ds: _Dataset, path: Path, raw: dict) -> None:
         ds.add(run, rdm("testedAt"), commit, GRAPH)
     if dirty:
         ds.add(run, rdm("uncommittedChanges"), ox.Literal("true", datatype=_term(_XSD + "boolean")), GRAPH)
-    for ident in requirement_tags(raw):  # the requirements the run claims, by their item tags
+    for ident in filter(is_id, requirement_tags(raw)):  # the requirements the run claims, by id-shaped tags
         ds.add(run, rdm("exercises"), ds.node("requirement", ident), GRAPH)
     for label in raw.get("labels") or []:
         if isinstance(label, dict) and label.get("name") == OUTPUT_LABEL and str(label.get("value", "")).strip():

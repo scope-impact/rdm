@@ -282,7 +282,8 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     record_commit = head(root)[0] if root else None
     # Uncommitted changes to the record itself: what the runs verified is in no commit.
     spec = load_spec(dhf_dir)
-    record_paths = [str(dhf_dir.resolve())] + ([str(spec.plan.absolute().parent)] if spec is not None else [])
+    spec_files = sorted({str((spec.root / i.source.rsplit(":", 1)[0]).resolve()) for i in spec.items}) if spec else []
+    record_paths = [str(dhf_dir.resolve())] + spec_files
     record_dirty = bool(root and git(root, "status", "--porcelain", "--", *record_paths))
     commits = sorted({run["commit"] for run in [*others, *(r for di in inputs for r in di["runs"])] if run["commit"]})
     reasons, anomalies = _assess(inputs, others, commits, (record_commit, record_dirty), verification["orphans"],

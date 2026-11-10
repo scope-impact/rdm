@@ -7,7 +7,7 @@ Mixing them up is the easiest way to get design controls wrong.
 
 | Where | What it is | It is the truth for |
 |-------|------------|---------------------|
-| the spec (`.pi/plan`, `.pi/spec/…`) | stamped scenarios (requirements), event model and Allium surfaces (user needs) | what the product must do |
+| the spec (Gherkin feature files) | tagged scenarios (requirements) under their Features (user needs) | what the product must do |
 | the DHF (`dhf/documents/…`) | risks, design documents, controlled documents, validation records | how it is designed, what could go wrong, who validated it |
 | Allure results | test runs | whether each requirement passes |
 | git history | reviewed, merged pull requests | who approved what, and when |

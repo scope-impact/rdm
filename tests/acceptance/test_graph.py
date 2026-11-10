@@ -62,11 +62,13 @@ rule SoundAlarm {
 """
 
 
-def _record(tmp_path: Path, extra_input: bool = True) -> tuple[Path, Path]:
-    """A committed repository: a spec of two contexts (alarms with two needs
-    and its requirements, ui with none), controlled documents, and Allure
-    results. item-01-001 covers the need Alarm (its guarantee and its rule
-    SoundAlarm); item-01-002, when ``extra_input``, covers Logging."""
+def _record(tmp_path: Path, extra_input: bool = True, layout: str = "gherkin") -> tuple[Path, Path]:
+    """A committed repository: a spec of the context alarms (two needs and
+    their requirements), controlled documents, and Allure results.
+    item-01-001 addresses the need Alarm; item-01-002, when ``extra_input``,
+    Logging. In plain Gherkin (the default) each need is a Feature; with
+    ``layout="loyly"`` each is an Allium surface, item-01-001 also covers the
+    rule SoundAlarm, and a second context, ui, holds no requirement."""
     repo = tmp_path / "acme"
     docs = repo / "dhf" / "documents"
     (docs / "design").mkdir(parents=True)
@@ -75,11 +77,12 @@ def _record(tmp_path: Path, extra_input: bool = True) -> tuple[Path, Path]:
         items.append(("item-01-002", "The device shall log.", ["Logging"]))
     write_spec(repo, tuple(items), {"Alarm": ("alarms", "Nurse", "a need"),
                                     "Logging": ("alarms", "Nurse", "another need")},
-               {"01": "alarms", "02": "ui"})
-    feature = repo / ".pi" / "spec" / "alarms" / "spec.feature"
-    feature.write_text(feature.read_text().replace(
-        "@allium-guarantee.Alarm", "@allium-guarantee.Alarm @allium-rule-success.SoundAlarm"))
-    (repo / ".pi" / "spec" / "alarms" / "allium" / "needs.allium").write_text(ALARM_ALLIUM)
+               {"01": "alarms", "02": "ui"} if layout == "loyly" else {"01": "alarms"}, layout=layout)
+    if layout == "loyly":
+        feature = repo / ".pi" / "spec" / "alarms" / "spec.feature"
+        feature.write_text(feature.read_text().replace(
+            "@allium-guarantee.Alarm", "@allium-guarantee.Alarm @allium-rule-success.SoundAlarm"))
+        (repo / ".pi" / "spec" / "alarms" / "allium" / "needs.allium").write_text(ALARM_ALLIUM)
     (docs / "verification_and_validation_plan.md").write_text("---\nid: VVP-001\ntitle: V&V plan\n---\n# Plan\n")
     (docs / "design" / "alarms.md").write_text(
         "---\nid: SDS-ALM-001\ntitle: Alarms design\nrevision: 3\n---\n# Alarms\n")
@@ -120,22 +123,26 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
     req1, ctx = "<urn:dhf:acme:requirement/item-01-001>", "<urn:dhf:acme:context/alarms>"
     alarm = "<urn:dhf:acme:need/Alarm>"
 
-    with verification_step("Record graph: user needs, with what they face, provide and guarantee"):
+    with verification_step("Record graph: user needs (each Feature: its title the id, its description the text)"):
         assert _ask(s, f'GRAPH {rec} {{ {alarm} a rdm:UserNeed ; dcterms:identifier "Alarm" ; rdm:text "a need" ; '
-                       f'rdm:facing "Nurse" ; rdm:surface "Alarm" ; rdm:guarantee "Alarm" ; '
-                       f'rdm:providesRule <urn:dhf:acme:rule/SoundAlarm> ; rdm:ownedBy {ctx} }}')
-    with verification_step("Record graph: requirements (text, rule coverage, needs, context, source line)"):
+                       f'rdm:ownedBy {ctx} ; rdm:source "spec/alarms/Alarm.feature:1" }}')
+    with verification_step("Record graph: requirements (text, needs, context, source line) and contexts"):
         assert _ask(s, f'GRAPH {rec} {{ {req1} a rdm:Requirement ; dcterms:identifier "item-01-001" ; '
-                       f'rdm:text "The device shall alarm." ; rdm:tracesTo {alarm} ; rdm:ownedBy {ctx} ; '
-                       f'rdm:covers "guarantee.Alarm" ; rdm:coversRule <urn:dhf:acme:rule/SoundAlarm> ; '
-                       f'rdm:source ".pi/plan/01-alarms/spec.feature:5" }}')
+                       f'rdm:text "The device shall alarm." ; rdm:tracesTo {alarm} ; rdm:addresses {alarm} ; '
+                       f'rdm:ownedBy {ctx} ; rdm:source "spec/alarms/Alarm.feature:5" . {ctx} a rdm:BoundedContext }}')
         assert not _ask(s, f"GRAPH {rec} {{ {req1} rdm:tracesTo <urn:dhf:acme:need/Logging> }}")
         assert _ask(s, "<urn:dhf:acme:requirement/item-01-002> rdm:tracesTo <urn:dhf:acme:need/Logging>")
-    with verification_step("Record graph: Allium rules and bounded contexts, a context with no requirement too"):
-        assert _ask(s, f'GRAPH {rec} {{ <urn:dhf:acme:rule/SoundAlarm> a rdm:AlliumRule ; rdm:trigger "SoundAlarm" ; '
-                       f'rdm:ownedBy {ctx} }}')
-        assert _ask(s, f"GRAPH {rec} {{ {ctx} a rdm:BoundedContext . "
-                       f"<urn:dhf:acme:context/ui> a rdm:BoundedContext }}")
+    with verification_step("With an adapter's needs (Löyly's layout, Allium): what a need faces, provides and "
+                           "guarantees, the rules a requirement covers, Allium rules, a context with no requirement"):
+        dhf_l, _ = _record(tmp_path / "loyly", layout="loyly")
+        sl = _store(project(dhf_l))
+        assert _ask(sl, f'GRAPH {rec} {{ {alarm} a rdm:UserNeed ; rdm:facing "Nurse" ; rdm:surface "Alarm" ; '
+                        f'rdm:guarantee "Alarm" ; rdm:providesRule <urn:dhf:acme:rule/SoundAlarm> ; rdm:ownedBy {ctx} }}')
+        assert _ask(sl, f'GRAPH {rec} {{ {req1} rdm:covers "guarantee.Alarm" ; '
+                        f'rdm:coversRule <urn:dhf:acme:rule/SoundAlarm> ; rdm:addresses {alarm} ; '
+                        f'rdm:source ".pi/plan/01-alarms/spec.feature:5" }}')
+        assert _ask(sl, f'GRAPH {rec} {{ <urn:dhf:acme:rule/SoundAlarm> a rdm:AlliumRule ; '
+                        f'rdm:trigger "SoundAlarm" ; rdm:ownedBy {ctx} . <urn:dhf:acme:context/ui> a rdm:BoundedContext }}')
     with verification_step("Record graph: controlled documents"):
         assert _ask(s, f'GRAPH {rec} {{ <urn:dhf:acme:doc/SDS-ALM-001> a rdm:Document ; '
                        f'dcterms:identifier "SDS-ALM-001" ; dcterms:title "Alarms design" ; rdm:revision "3" }}')
