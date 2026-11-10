@@ -1,8 +1,9 @@
-# Computer software validation (CSV) of a tool used in production and the
-# quality management system: here, an agentic software factory (Löyly's pi
-# harness), and the record system that keeps its validation (git, GitHub, RDM).
+# Computer software validation (CSV) of a tool used in production or the
+# quality management system, and of the record system that keeps its
+# validation: an agentic software factory (RDM's worked example validates
+# Löyly's pi harness), or RDM itself (RDM's own CSV-001).
 #
-# The keys are this example's mnemonics, not the documents' own numbering;
+# The keys are mnemonics, not the documents' own numbering;
 # each item names its section and page below. This checklist does not replace
 # reading the guidance and the standard.
 #
@@ -35,7 +36,7 @@
 # How Part 11 and CSV fit: [CSA] §V.B (printed pp. 21-22) says a document
 # required as evidence of validation and kept in electronic form is generally
 # a Part 11 electronic record, so the system that keeps the validation record
-# is held to Part 11 (RDM's built-in part11_document_control checklist). For
+# is held to Part 11 (the built-in part11_document_control checklist). For
 # that system's own validation, Part 11 §11.10(a) asks for validation and
 # [P11G] §III.C.1 asks that it rest on "a justified and documented risk
 # assessment": the risk-based approach of [CSA], which this checklist follows.

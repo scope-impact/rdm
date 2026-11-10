@@ -36,7 +36,7 @@ Feature: Compliance
     @item-05-002
     Scenario: The built-in checklists are listed by name, hold unique keys and resolve their includes
       When the regulatory author lists the built-in checklists
-      Then 62304_2015_class_b, 14971_2019 and FDA-SW_2021_enhanced are listed by name
+      Then 62304_2015_class_b, 14971_2019, FDA-SW_2021_enhanced and csv_tool_validation (computer software validation of a tool) are listed by name
       And IEC 62304, ISO 14971, FDA-SW, FDA-CYBER and FDA-HFE each have a built-in checklist with clauses
       And no built-in checklist holds a key twice
       And 62304_2015_class_b, which includes 62304_2015_class_a by name, requires every clause of class A and more

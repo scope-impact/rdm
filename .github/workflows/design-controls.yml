@@ -25,3 +25,5 @@ jobs:
       submodules: 'true'   # loyly: the adapter is checked against Löyly's own spec
       install-command: uv sync --all-extras && echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       test-command: uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+      # RDM's record is held to Part 11 (DC-001) and validated as a tool (CSV-001).
+      checklists: part11_document_control csv_tool_validation

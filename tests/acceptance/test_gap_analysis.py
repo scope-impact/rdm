@@ -135,7 +135,7 @@ def test_ships_composable_builtin_checklists(tmp_path: Path, capsys) -> None:
     with verification_step("the built-in checklists are listed by name"):
         list_default_checklists()
         listed = capsys.readouterr().out
-        for expected in ("62304_2015_class_b", "14971_2019", "FDA-SW_2021_enhanced"):
+        for expected in ("62304_2015_class_b", "14971_2019", "FDA-SW_2021_enhanced", "csv_tool_validation"):
             assert expected in listed
 
     with verification_step("IEC 62304, ISO 14971, FDA-SW, FDA-CYBER and FDA-HFE each have a built-in with clauses"):

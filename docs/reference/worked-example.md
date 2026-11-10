@@ -27,7 +27,7 @@ Löyly knows nothing of RDM or Allure:
   the architecture (the six contexts, each a slice with its code), a risk
   policy and a register of four harness risks whose controls are Löyly
   requirements, the V&V plan and the traceability matrix, checked against a
-  CSV checklist (`checklists/csv_tool_validation.txt`, each item citing its
+  CSV checklist (the built-in `csv_tool_validation`, each item citing its
   source PDF, section and page). Its record is held to 21 CFR Part 11 (a
   document-control statement checked against the built-in
   `part11_document_control`), and the record system is validated by the same

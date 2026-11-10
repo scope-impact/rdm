@@ -23,8 +23,10 @@ are tags; the revision history is the git history itself. Planning artifacts
 
 # Controls
 
-- **Validation** [[P11:11.10a]] — the controls are enforced configuration and
-  code, exercised on every change: the CI pipeline (`design-controls.yml`)
+- **Validation** [[P11:11.10a]] — RDM and this record system are validated
+  as CSV-001 records (computer software assurance, on a documented risk
+  assessment). The controls are enforced configuration and code, exercised
+  on every change: the CI pipeline (`design-controls.yml`)
   and the branch ruleset run RDM's own release gate and graph validation,
   verified by RDM's own acceptance tests, with every change independently
   reviewed on its pull request. Altered records are discernible

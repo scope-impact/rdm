@@ -29,6 +29,7 @@ documents/
   risk/policy.md                     risk acceptability policy (RMP-001, proposed)
   risk/tool_risks.md                 register of RDM's tool risks (RMF-001, proposed)
   document_control.md                git and GitHub as this record's document control (DC-001, Part 11-mapped)
+  tool_validation.md                 RDM validated as a tool: computer software assurance (CSV-001, proposed)
   user_manual.md                     the IFU: the docs site's pages, in reading order (IFU-001)
   traceability_matrix.md             the matrix template, rendered from generated data, never hand-edited
 decisions/

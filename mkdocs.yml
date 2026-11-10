@@ -142,5 +142,6 @@ nav:
       - Risk policy: dhf/documents/risk/policy.md
       - Risk register: dhf/documents/risk/tool_risks.md
       - Document control: dhf/documents/document_control.md
+      - Tool validation (CSV): dhf/documents/tool_validation.md
       - Instructions for use (IFU): dhf/documents/user_manual.md
       - "ADR 0002: RDM reads the spec as Gherkin and audits it with Allure": dhf/decisions/adr-0002-rdm-reads-gherkin-and-allure.md

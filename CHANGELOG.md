@@ -48,6 +48,15 @@
     held to by `rdm gap` and graph validation in CI. Its record is held to
     21 CFR Part 11 too (DC-HAR-001, checked against `part11_document_control`),
     with the record system validated by the same CSV.
+  - New built-in checklist `csv_tool_validation`: computer software validation
+    of a tool used in production or the quality system, after FDA's Computer
+    Software Assurance guidance (3 Feb 2026) and ISO 13485 4.1.6 and 7.5.6,
+    each item citing its source PDF, section and page.
+  - RDM is validated as a tool: CSV-001 (proposed) records its intended use,
+    high process risk, assurance (its 44 verified requirements, the Löyly
+    example on every change), record and change control; DC-001's §11.10(a)
+    validation points to it. RDM's CI holds its record to
+    `part11_document_control` and `csv_tool_validation` (100% each).
   - Checklists cite their sources: each item of `part11_document_control`
     and of the example's CSV checklist names the source PDF (with its link),
     the section and the printed and PDF page.
