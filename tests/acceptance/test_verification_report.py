@@ -173,7 +173,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         assert "Release-grade evidence" in clean_text and "Not release-grade" not in clean_text
         assert "Design controls #42" in clean_text and "CPython 3.13.1" in clean_text
         # The run tested the record's commit: the commit is in the header twice, not repeated on the run.
-        assert clean_text.count(clean_commit) == 2 and "not the record" not in clean_text
+        assert clean_text.count(clean_commit) == 2 and "not the product" not in clean_text
 
     dhf, commit = _record(tmp_path / "full", ITEM_1 + MORE)
     results = tmp_path / "full-results"
@@ -190,7 +190,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             "1 test(s) failed or broke",
             "1 test(s) ran with uncommitted changes in the worktree",
             "2 test(s) recorded no commit",
-            f"runs tested 1 other commit(s) than the record's ({commit[:12]}): {OTHER[:12]}",
+            f"runs tested 1 other commit(s) than the product's ({commit[:12]}): {OTHER[:12]}",
         ]
         assert report["executor"] is None and report["environment"] == {}
     with verification_step("the anomalies: failed and skipped runs, requirements with no run, missing attachments, "
@@ -259,7 +259,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
                  "Verification steps", "Appendix A"]
         assert [text.index(marker) for marker in order] == sorted(text.index(marker) for marker in order)
         for expected in ("3 requirement(s) not verified", "RISK-7", "2026-01-01 00:00:00 UTC", "1.50 s",
-                         "uncommitted changes", "not the record", "the tone is 1 kHz",
+                         "uncommitted changes", "not the product", "the tone is 1 kHz",
                          "AssertionError: still sounding", "the alarm kept sounding",
                          "item-01-001 in spec.feature", "alarm raised at 12:00", "line 0",
                          f"First lines shown of {TEXT_LINES + 20}",
@@ -357,3 +357,42 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
         feature.write_text(feature.read_text().replace("sound an alarm", "sound AND flash an alarm"))
         report = build_report(clean_dhf, clean_results)
         assert report["reasons"] == ["the record has uncommitted changes"], report["reasons"]
+
+
+@allure.tag("item-07-009")
+@allure.label("output", "rdm/publishing/report.py")
+def test_a_spec_in_another_repository_is_the_product(tmp_path: Path) -> None:
+    """item-07-009: when the spec lives in a repository of its own (a submodule,
+    another checkout), the runs must have tested that repository's commit, the
+    product's; the header names it beside the record's."""
+    product = tmp_path / "product"
+    write_spec(product, (("item-01-001", "The device shall sound an alarm.", ["Alarm"]),),
+               {"Alarm": NEEDS["Alarm"]}, {"01": "alarms"})
+    git_run(product, "init")
+    git_run(product, "add", "-A")
+    git_run(product, "commit", "-m", "spec")
+    record = tmp_path / "record"
+    (record / "dhf" / "documents").mkdir(parents=True)
+    (record / "dhf" / "config.yml").write_text(f"spec: {product / 'spec'}\n")
+    git_run(record, "init")
+    git_run(record, "add", "-A")
+    git_run(record, "commit", "-m", "record")
+    product_sha = git_run(product, "rev-parse", "HEAD").strip()
+    record_sha = git_run(record, "rev-parse", "HEAD").strip()
+    results = tmp_path / "results"
+    results.mkdir()
+    (results / "a-result.json").write_text(json.dumps({
+        "name": "test_alarm", "status": "passed", "start": 1, "stop": 2,
+        "labels": [{"name": "tag", "value": "item-01-001"}, {"name": "commit", "value": product_sha}]}))
+    report = build_report(record / "dhf", results)
+    attach("evidence status", report["reasons"])
+
+    with verification_step("the product's commit is the spec repository's; the record's stays its own"):
+        assert report["product_commit"] == product_sha and report["record_commit"] == record_sha
+    with verification_step("runs of the product's commit are release-grade evidence"):
+        assert report["reasons"] == []
+    with verification_step("the header names the product's commit beside the record's"):
+        pdf = tmp_path / "report.pdf"
+        render_pdf(report, results, pdf)
+        text = " ".join(page.extract_text() for page in pypdf.PdfReader(pdf).pages)
+        assert "Product commit" in text and product_sha in text and record_sha in text

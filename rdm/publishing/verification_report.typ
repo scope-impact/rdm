@@ -109,6 +109,7 @@ request; this report is its evidence.
 #field-table(
   ("Repository", d.repository),
   ("Record commit", either(if d.record_commit != none { raw(d.record_commit) }, "unknown")),
+  ..if d.product_commit != d.record_commit { (("Product commit", either(if d.product_commit != none { raw(d.product_commit) }, "unknown")),) },
   ("Commits tested", either(if d.commits.len() > 0 { d.commits.map(raw).join(linebreak()) }, "not recorded")),
   ("Executed by", either(if d.executor != none {
     let e = d.executor
@@ -134,7 +135,7 @@ request; this report is its evidence.
     if d.release_grade [Release-grade evidence] else [Not release-grade evidence])
   linebreak()
   if d.release_grade [
-    Every requirement has a passing run, no run failed, and every run tested the record's commit with no
+    Every requirement has a passing run, no run failed, and every run tested the product's commit with no
     uncommitted changes.
   ] else {
     list(..d.reasons)
@@ -176,13 +177,13 @@ request; this report is its evidence.
 == Traceability
 
 #table(
-  columns: (auto, auto, auto, 1fr, auto, auto), stroke: 0.4pt + charcoal.transparentize(84%), inset: 4pt,
+  columns: (auto, 1fr, auto, 1.6fr, auto, auto), stroke: 0.4pt + charcoal.transparentize(84%), inset: 4pt,
   ..("Requirement", "User needs", "Control for", "Tests", "Result", "Page").map(h => text(weight: "bold", h)),
   ..d.requirements.map(req => (
     link(req-label(req.id), req.id),
     req.addresses.join(", "),
     either(if req.control_for.len() > 0 { req.control_for.map(r => r.id).join(", ") }, "—"),
-    either(if req.runs.len() > 0 { req.runs.map(r => ident(r.test.split("::").last())).join(linebreak()) }, "none"),
+    either(if req.runs.len() > 0 { req.runs.map(r => ident(r.test.split("::").last().split("/").last())).join(linebreak()) }, "none"),
     badge(req.status),
     page-of(req.id),
   )).flatten(),
@@ -208,7 +209,7 @@ request; this report is its evidence.
     field-table(
       ("Run", [#either(r.start, "start not recorded") · #either(r.duration, "duration not recorded")]),
       if r.commit == none { ("Commit", text(fill: bad, "not recorded")) }
-      else if r.commit != d.record_commit { ("Commit", text(fill: bad, [#raw(r.commit) (not the record's)])) },
+      else if r.commit != d.product_commit { ("Commit", text(fill: bad, [#raw(r.commit) (not the product's)])) },
       if r.dirty { ("Worktree", text(fill: bad, "uncommitted changes")) },
       if r.labels.len() > 0 { ("Labels", r.labels.map(l => [#l.name: #l.value]).join(", ")) },
       if r.links.len() > 0 { ("Declared in", r.links.map(l => link(l.url, l.name)).join(linebreak())) },

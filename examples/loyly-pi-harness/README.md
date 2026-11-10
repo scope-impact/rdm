@@ -27,7 +27,14 @@ cd examples/loyly-pi-harness
 ./run-acceptance.sh
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
 rdm graph validate --dhf dhf --allure-results dhf/allure-results
+rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
 ```
+
+The bundle holds the verification report (`verification_report.pdf`: about 210
+pages, one per requirement with its scenario, need and runs, release-grade when
+every run tested Löyly's commit), the traceability matrix, the verification
+data and the results with their manifest. CI uploads it as the
+`loyly-pi-harness-evidence` artifact.
 
 ## How the evidence gets out without touching Löyly
 

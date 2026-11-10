@@ -197,9 +197,9 @@ def _assess(requirements: list[dict], others: list[dict], commits: list[str], re
         if n := len({run["test"] for run in runs if counts(run)}):
             reasons.append(f"{n} {message}")
     if record_commit is None:
-        reasons.append("the record's commit is unknown (not a git repository)")
+        reasons.append("the product's commit is unknown (not a git repository)")
     elif other := [c for c in commits if c != record_commit]:
-        reasons.append(f"runs tested {len(other)} other commit(s) than the record's "
+        reasons.append(f"runs tested {len(other)} other commit(s) than the product's "
                        f"({record_commit[:12]}): {', '.join(c[:12] for c in other)}")
     if record_dirty:
         reasons.append("the record has uncommitted changes")
@@ -280,13 +280,20 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
     } for req in declared]
 
     record_commit = head(root)[0] if root else None
-    # Uncommitted changes to the record itself: what the runs verified is in no commit.
     spec = load_spec(dhf_dir)
+    # The commit the runs must have tested: the product's, that of the repository the
+    # spec lives in (a submodule, another checkout), the record's own when they are one.
+    product_root = repo_root(spec.root) if spec is not None else None
+    if product_root is not None and root is not None and product_root.resolve() != Path(root).resolve():
+        product_commit = head(product_root)[0]
+    else:
+        product_commit = record_commit
+    # Uncommitted changes to the record itself: what the runs verified is in no commit.
     spec_files = sorted({str((spec.root / i.source.rsplit(":", 1)[0]).resolve()) for i in spec.items}) if spec else []
     record_paths = [str(dhf_dir.resolve())] + spec_files
     record_dirty = bool(root and git(root, "status", "--porcelain", "--", *record_paths))
     commits = sorted({run["commit"] for run in [*others, *(r for req in reqs for r in req["runs"])] if run["commit"]})
-    reasons, anomalies = _assess(reqs, others, commits, (record_commit, record_dirty), verification["orphans"],
+    reasons, anomalies = _assess(reqs, others, commits, (product_commit, record_dirty), verification["orphans"],
                                  unreadable)
     executor, environment = read_run_facts(results_dir)
     return {
@@ -294,6 +301,7 @@ def build_report(dhf_dir: Path, results_dir: Path, verification: dict | None = N
         "rdm_version": __version__,
         "repository": (repository_url(root) if root else None) or (root or dhf_dir.resolve()).name,
         "record_commit": record_commit,
+        "product_commit": product_commit,
         "commits": commits,
         "executor": executor,
         "environment": environment,

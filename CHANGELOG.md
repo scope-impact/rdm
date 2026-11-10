@@ -40,6 +40,12 @@
   - `rdm init` and `rdm adopt` lay down a spec skeleton the Löyly way
     (`.pi/plan/01-core`, `.pi/spec/core/`, `.pi/spec/event-storm.edn`); adopt
     only when the repository has no spec yet, so a plain-Gherkin spec is kept.
+  - The verification report compares runs with the product's commit (that of
+    the repository the spec lives in) and names it in the header; Clojure test
+    names are shortened like Python's; the traceability table gives the tests
+    more width. The Löyly example's CI job uploads its evidence bundle.
+  - The PDF template renders block quotes with any Pandoc (3.1.12 and before
+    wrote `#blockquote`).
   - Fixed: the adopt `.gitignore` template was missing from the package data,
     so `rdm adopt` from an installed wheel laid no `.gitignore`.
   - Removed the Part 11 example (`examples/github-document-control`): Löyly's

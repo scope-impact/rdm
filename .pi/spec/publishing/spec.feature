@@ -130,7 +130,7 @@ Feature: Publishing
       Given a record with requirements, risks and Allure results of passing, failing and skipped runs with steps and attachments
       When the verification report is written
       Then its header names the repository, the record's commit, the commits tested, the executor and environment, the RDM version and one SHA-256 over the result files
-      And the evidence is release-grade only when every requirement passed at the record's commit with a clean worktree; otherwise each reason is named
+      And the evidence is release-grade only when every requirement passed at the product's commit with a clean worktree; otherwise each reason is named
       And its anomalies list failed and skipped runs, requirements with no run, missing attachments and orphan tags
       And its traceability lists each requirement in spec order with its user needs, the risks it is a control for and its tests
       And each requirement is a baseline or a risk-based acceptance criterion, each risk shows its status and residual decision, and the register's state is summarised
@@ -145,3 +145,7 @@ Feature: Publishing
       And a result it cannot lay out leaves the reason in the bundle, not a crash
       And a symbolic link among the results is never read: its attachment is missing and its file unhashed
       And every run counts, tagged with a declared requirement or not; an unreadable or linked result, and uncommitted changes to the record, are each a reason it is not release-grade
+      Given a record whose spec lives in a repository of its own, and a passing run of that repository's commit
+      When the verification report is written
+      Then the product's commit is the spec repository's, the record's stays its own, and the header names both
+      And the run is release-grade evidence
