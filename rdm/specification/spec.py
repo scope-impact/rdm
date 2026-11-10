@@ -215,6 +215,7 @@ def read_spec(config: dict | str | Path, root: Path | None = None) -> Spec:
         reading, dirs = _read_globs(config, root, spec)
         plan = None
     spec.items, spec.unstamped = list(reading.items), list(reading.unstamped)
+    spec.problems += reading.problems
     needs = config.get("needs") or "feature"
     if needs == "allium":
         from rdm.specification import loyly

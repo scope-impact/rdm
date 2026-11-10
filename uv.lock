@@ -638,6 +638,18 @@ wheels = [
 ]
 
 [[package]]
+name = "gherkin-official"
+version = "32.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/27/90/396cb5c1eb3bfeeccffb29d90b050edb18e8c81bda1662946411d73c878b/gherkin_official-32.2.0.tar.gz", hash = "sha256:f535eea7246992fd8c62d2411f875f8b3411eb93b0e63aa0c65708fd10dd391d", size = 34141, upload-time = "2025-07-07T11:38:17.3Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/b9/4cdcdc532d87c8fe8f3fb6bb7e5d927bcee5986b26de028e0a7e0f0b64b7/gherkin_official-32.2.0-py3-none-any.whl", hash = "sha256:437117be2e5e3ac1c551621432fcfc37a466d64987bf60a2b3531bffd38decdc", size = 38807, upload-time = "2025-07-07T11:38:16.013Z" },
+]
+
+[[package]]
 name = "ghp-import"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1764,6 +1776,7 @@ name = "rdm"
 version = "2.0.0a0"
 source = { editable = "." }
 dependencies = [
+    { name = "gherkin-official" },
     { name = "gitpython" },
     { name = "jinja2" },
     { name = "pyyaml" },
@@ -1810,6 +1823,7 @@ requires-dist = [
     { name = "check-manifest", marker = "extra == 'dev'", specifier = "==0.51" },
     { name = "coverage", marker = "extra == 'dev'", specifier = "==7.16.2" },
     { name = "docutils", marker = "extra == 'dev'", specifier = "==0.23" },
+    { name = "gherkin-official", specifier = "==32.2.0" },
     { name = "gitpython", specifier = "==3.2.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "mcp", marker = "extra == 'dev'", specifier = "==2.2.0" },

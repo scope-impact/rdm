@@ -22,9 +22,7 @@ is built from these and nothing else.
 | task trackers (issues, project boards) | who does what, and when | a requirement, or an approval |
 
 - Work reaches the record only through git: a commit in a pull request. RDM
-  never reads a planning tool. (A slice's `plan.md` in the spec is not
-  planning in this sense: it is part of the spec, and RDM reads only its
-  `status:`.)
+  never reads a planning tool.
 - Never quote, link or screenshot a task or issue as evidence. Evidence
   comes from the design documents, the test results or git.
 

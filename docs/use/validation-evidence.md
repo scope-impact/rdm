@@ -8,7 +8,7 @@ user need.
 
 A person's validation judgment is a file in the record,
 `<dhf>/validation/<name>-validation.json`, with `user_need` (the need's id
-as the spec gives it: a screen such as `alarms/ward-board`, or a surface),
+as the spec gives it: a Feature's title, such as `Alarms sound`),
 `disposition: "approved"`, `reviewer` (required: a person makes the
 judgment) and `summary`. The release gate names every user need without one, as a warning: a machine cannot supply that
 judgment, but its absence is never silent.

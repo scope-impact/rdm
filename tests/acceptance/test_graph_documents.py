@@ -32,7 +32,8 @@ def _dhf(tmp_path: Path, architecture: str | None) -> Path:
     repo = tmp_path / "acme"
     docs = repo / "dhf" / "documents"
     docs.mkdir(parents=True)
-    write_spec(repo, (("item-01-001", "The device shall alarm.", []),), {}, {"01": "alarms", "02": "ui"})
+    write_spec(repo, (("item-01-001", "The device shall alarm.", []), ("item-02-001", "The screen shall show.", [])),
+               {}, {"01": "alarms", "02": "ui"})
     (docs / "vv.md").write_text("---\nid: VVP-1\n---\n")
     (docs / "control.md").write_text("---\nid: DC-1\ntitle: Document control\n---\nCovers [[STD:1]].\n")
     (docs / "traceability_matrix.md").write_text("---\nid: TM-1\n---\n{{ verification }}\n")

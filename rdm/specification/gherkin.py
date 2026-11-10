@@ -1,13 +1,14 @@
 """Gherkin, read: the scenarios of ``.feature`` files as requirements.
 
-A scenario is a requirement when one of its tags is an id: by default any
-tag shaped like ``<letters>-<number>`` with optional middle parts
-(``@item-02-001``, ``@REQ-12``, ``@alarm-3``), or the pattern the spec's
-configuration names. The last id tag before a ``Scenario`` is its id; a
-scenario without one is listed as unstamped. A ``Rule:`` sets the rule of
-the scenarios after it, reset per file; the ``Feature:`` title and the
-description lines under it are kept. Tags are read from lines whose
-stripped text starts with ``@``; comments (``#``) are ignored.
+Parsed with Cucumber's own parser (``gherkin-official``), so RDM reads a
+feature file exactly as Gherkin tools do. A scenario (or scenario outline)
+is a requirement when one of its tags is an id: by default any tag shaped
+like ``<letters>-<number>`` with optional middle parts (``@item-02-001``,
+``@REQ-12``, ``@alarm-3``), or the pattern the spec's configuration names.
+The last id tag of a scenario is its id; a scenario without one is listed
+as unstamped. Each requirement keeps its Feature, its Rule (if any), its
+title, its tags and its source line; each Feature keeps its description. A
+file that does not parse is a problem, never skipped quietly.
 """
 
 from __future__ import annotations
@@ -16,13 +17,12 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from gherkin.errors import CompositeParserException, ParserException
+from gherkin.parser import Parser
+from gherkin.token_scanner import TokenScanner
+
 # The default shape of a requirement id: letters, optional parts, a number.
 DEFAULT_ID = r"[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\d+"
-
-_SCENARIO = re.compile(r"^\s*Scenario(?: Outline)?:\s*(.+?)\s*$")
-_RULE = re.compile(r"^\s*Rule:\s*(.*?)\s*$")
-_FEATURE = re.compile(r"^\s*Feature:\s*(.*?)\s*$")
-_BLOCK = re.compile(r"^\s*(Background|Scenario|Scenario Outline|Rule|Examples|Given|When|Then|And|But)\b")
 
 
 @dataclass(frozen=True)
@@ -57,6 +57,11 @@ class Reading:
     items: list[Item] = field(default_factory=list)
     unstamped: list[tuple[str, str]] = field(default_factory=list)   # (source, title)
     features: list[Feature] = field(default_factory=list)
+    problems: list[str] = field(default_factory=list)                 # files that do not parse
+
+
+def _description(text: str | None) -> str:
+    return " ".join(line.strip() for line in (text or "").splitlines() if line.strip())
 
 
 def read_feature(path: Path, source: str, context: str, id_pattern: str = DEFAULT_ID,
@@ -65,34 +70,31 @@ def read_feature(path: Path, source: str, context: str, id_pattern: str = DEFAUL
     ``source`` is the file's path as it should be cited."""
     reading = reading if reading is not None else Reading()
     id_tag = re.compile(rf"^@({id_pattern})$")
-    feature: Feature | None = None
-    describing = False
-    rule, pending, tags = None, None, []
-    for number, line in enumerate(path.read_text(encoding="utf-8").split("\n"), start=1):
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            continue
-        if stripped.startswith("@"):
-            describing = False
-            for tag in stripped.split():
-                tags.append(tag)
-                if match := id_tag.match(tag):
-                    pending = match.group(1)
-        elif match := _FEATURE.match(line):
-            feature = Feature(match.group(1), "", context, f"{source}:{number}", tuple(tags))
-            reading.features.append(feature)
-            describing, tags = True, []
-        elif (match := _RULE.match(line)):
-            rule, describing = (match.group(1) or None), False
-        elif match := _SCENARIO.match(line):
-            describing = False
-            title = match.group(1)
-            if pending:
-                reading.items.append(Item(pending, context, title, rule, f"{source}:{number}",
-                                          feature.title if feature else "", tuple(tags)))
-            else:
-                reading.unstamped.append((f"{source}:{number}", title))
-            pending, tags = None, []
-        elif describing and feature is not None and stripped and not _BLOCK.match(line):
-            feature.description = f"{feature.description} {stripped}".strip()
+    try:
+        document = Parser().parse(TokenScanner(path.read_text(encoding="utf-8")))
+    except (CompositeParserException, ParserException, OSError, UnicodeDecodeError) as error:
+        reading.problems.append(f"{source}: {error}")
+        return reading
+    node = document.get("feature")
+    if not node:
+        return reading
+    feature = Feature(node["name"], _description(node.get("description")), context,
+                      f"{source}:{node['location']['line']}", tuple(t["name"] for t in node.get("tags") or []))
+    reading.features.append(feature)
+
+    def scenarios(children, rule):
+        for child in children:
+            if "rule" in child:
+                yield from scenarios(child["rule"].get("children") or [], child["rule"]["name"] or None)
+            elif "scenario" in child:
+                yield child["scenario"], rule
+
+    for scenario, rule in scenarios(node.get("children") or [], None):
+        tags = tuple(t["name"] for t in scenario.get("tags") or [])
+        ids = [m.group(1) for t in tags if (m := id_tag.match(t))]
+        where = f"{source}:{scenario['location']['line']}"
+        if ids:
+            reading.items.append(Item(ids[-1], context, scenario["name"], rule, where, feature.title, tags))
+        else:
+            reading.unstamped.append((where, scenario["name"]))
     return reading

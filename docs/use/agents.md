@@ -32,7 +32,7 @@ settings.
 
 | Tool | Answers |
 | --- | --- |
-| `trace` | a requirement (`item-NN-SSS`: its scenario, rule, context, source, user needs, the Allium obligations it covers, runs with steps and attachments, the source files they exercise, risks controlled), a user need (a screen id such as `alarms/ward-board`, or a surface: its actors, surfaces, rules, guarantees, storm events and requirements), or a risk (its chain, scores and controlling requirements, [risk register](risk-register.md)) |
+| `trace` | a requirement (by its id: its scenario, rule, context, source, user needs, runs with steps and attachments, the source files they exercise, risks controlled), a user need (by its id, a Feature's title: its text and requirements; with the Löyly adapter also its actors, surfaces, rules, guarantees and storm events), or a risk (its chain, scores and controlling requirements, [risk register](risk-register.md)) |
 | `query` | any read-only SPARQL (SELECT, ASK, CONSTRUCT, DESCRIBE), prefixes predeclared, capped at 200 rows by default with `truncated` saying when |
 | `schema` | the vocabulary and prefixes, so the agent can write its own queries |
 | `validate` | the gate shapes' results: violations and warnings |
@@ -47,5 +47,5 @@ It cannot change anything or reach the network. There is no write tool,
 `query` refuses `SERVICE` (a federated query would make the server send HTTP
 requests), `trace` takes only an id, and `query` refuses SPARQL
 Update. An agent that wants to change the record does what a person does:
-changes the spec in the factory, or edits the Markdown and tests and opens a
+changes the spec where it is kept, or edits the Markdown and tests and opens a
 pull request for review.

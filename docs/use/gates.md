@@ -29,19 +29,19 @@ It blocks, each one named, on:
 
 | Event | When |
 | --- | --- |
-| *No Spec* | no `.pi/plan` was found up to the repository root, and `dhf/config.yml` names no `spec:` |
-| *Unstamped Scenario* | a scenario of an accepted slice carries no `@item-NN-SSS` |
-| *Item Stamped Twice* | one item id is on more than one scenario |
-| *Unreadable Spec* | an event-model or event-storm file cannot be read |
-| *No Requirements* | the spec holds no stamped scenario: nothing to verify |
+| *No Spec* | no feature files were found (`spec/` or `features/` at the repository root, or a `.pi/plan`), and `dhf/config.yml` names no `spec:` |
+| *Unstamped Scenario* | a scenario carries no id tag |
+| *Item Stamped Twice* | one id is on more than one scenario |
+| *Unreadable Spec* | a file of the spec cannot be read (with the Löyly adapter: an event-model or event-storm file) |
+| *No Requirements* | the spec holds no tagged scenario: nothing to verify |
 | *Requirement Failed* / *Requirement Untested* | a run claiming the requirement failed or broke; or no run claiming it passed |
 | *Unreadable Result* | a result file it cannot read: it could hold a failed run |
-| *Need Unaddressed* | a user need no requirement addresses by covering one of its rules or guarantees |
+| *Need Unaddressed* | a user need no requirement addresses (a Feature with no tagged scenario; with the Löyly adapter, a need none of whose rules or guarantees a scenario covers) |
 | *Risk Finding* | a blocking finding of the [risk rules](risk-register.md) |
 
 It warns, never blocks, on a user need without an approved human validation
 record (a machine cannot supply that judgment, but its absence is never
-silent), on a proposed risk, and on an item tag that names no requirement.
+silent), on a proposed risk, and on a tag that looks like an id but names no requirement.
 
 ## Gap analysis
 
@@ -65,11 +65,11 @@ coded gates stay authoritative. It exits 1 on any violation.
 
 | Rule | Why |
 | --- | --- |
-| a user need no requirement addresses by covering its rules or guarantees | an unaddressed need |
+| a user need no requirement addresses | an unaddressed need |
 | a requirement with no passing test run, or with a failed or broken one | unverified |
 | a checklist clause no document references | a gap against the standard |
 | a clause without a key or a standard; a checklist member that is not a clause | malformed checklist data |
-| an item id stamped on more than one scenario | stamped once |
+| a requirement id on more than one scenario | one id, one scenario |
 | a risk with no id, hazard, situation, harm or category; a security risk with no STRIDE category; a risk id declared twice | an incomplete register |
 | a risk not evaluated against a risk policy; a recorded level the policy contradicts; controls with no residual score; a control or link naming nothing declared; an unknown status; a residual that does not allow release | the risk rules ([risk register](risk-register.md)) |
 | a document referencing a document the record does not hold | a dangling reference |

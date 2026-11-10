@@ -1,7 +1,7 @@
 # The record as a graph
 
 `rdm graph` projects the record into RDF — the spec (user needs, requirements,
-Allium rules, bounded contexts), controlled documents, test results, git
+bounded contexts), controlled documents, test results, git
 commits, the risk register, and the regulatory checklists your documents are
 held to — so you can query it with SPARQL, check it against the gate rules as
 SHACL shapes, browse it visually in
@@ -88,7 +88,7 @@ The endpoint's default graph is the union of all of them.
 
 | Graph | Holds |
 |---|---|
-| `urn:dhf:<project>:graph/record` | the spec — user needs, requirements, Allium rules, bounded contexts — and the controlled documents |
+| `urn:dhf:<project>:graph/record` | the spec — user needs, requirements, bounded contexts (and, with the Löyly adapter, Allium rules) — and the controlled documents |
 | `…graph/executions` | Allure results (only with `--allure-results`): each run's status, times, failure message and trace, parameters, steps and attachments, the requirements it claims and the source files it exercises |
 | `…graph/git` | each controlled document's latest commit and its author, the commit that landed it on the default branch (`rdm:landedIn`, `rdm:landedBy`), and the commit the record was built at |
 | `…graph/risks` | the risk register: each risk's chain, scores, computed levels, controls (`rdm:controlledBy`) and acceptance |
@@ -105,9 +105,10 @@ The vocabulary (`rdm/graph/ontology.ttl`) reuses standards where they exist:
 
 | Term | Meaning |
 |---|---|
-| `rdm:Requirement` | a stamped scenario of the spec, `item-NN-SSS`; a subclass of `oslc_rm:Requirement` (OSLC Requirements Management); `rdm:text` its title, `rdm:inRule` its Gherkin Rule, `rdm:source` its file and line, `rdm:covers` each Allium obligation it is tagged with, `rdm:coversRule` the `rdm:AlliumRule` |
-| `rdm:UserNeed` | a screen of the event model with its surfaces (or a surface): `rdm:facing` its actors, `rdm:surface`, `rdm:providesRule`, `rdm:guarantee`, `rdm:command`, `rdm:stormEvent` |
-| `rdm:AlliumRule`, `rdm:BoundedContext`, `rdm:Document` | the other record entities (`rdm:trigger`: the trigger a rule answers) |
+| `rdm:Requirement` | a tagged scenario of the spec, identified by its id tag; a subclass of `oslc_rm:Requirement` (OSLC Requirements Management); `rdm:text` its title, `rdm:inRule` its Gherkin Rule, `rdm:source` its file and line |
+| `rdm:UserNeed` | a user need: a Feature, its description `rdm:text` |
+| `rdm:BoundedContext`, `rdm:Document` | the other record entities |
+| Löyly adapter only | `rdm:covers` and `rdm:coversRule` (the Allium obligations a requirement's tags name), `rdm:AlliumRule` with `rdm:trigger`, and on a need `rdm:facing`, `rdm:surface`, `rdm:providesRule`, `rdm:guarantee`, `rdm:command`, `rdm:stormEvent` |
 | `rdm:tracesTo`, `rdm:ownedBy` | a requirement's needs, and the context of a requirement, need or rule |
 | `rdm:TestRun` `rdm:exercises`, `rdm:testedAt`, `rdm:status` | results: a run, the requirements it claims, at a commit |
 | `dcterms:identifier`, `dcterms:title`, `rdm:revision` | document metadata (Dublin Core) |
@@ -127,7 +128,7 @@ design controls:
 | --- | --- |
 | a result file | an `rdm:TestRun` (a `prov:Activity`) with `dcterms:identifier` (uuid), `rdm:fullName`, `rdm:status`, `prov:startedAtTime` / `prov:endedAtTime` |
 | `statusDetails` | `rdm:statusMessage`, `rdm:statusTrace` |
-| a `tag` label `item-NN-SSS` | `rdm:exercises` the requirement |
+| an id-shaped `tag` label | `rdm:exercises` the requirement |
 | a `commit` label (`rdm.pytest_plugin`, item-03-002) | `rdm:testedAt` that commit; `worktree=dirty` → `rdm:uncommittedChanges` (item-06-016) |
 | an `output` label (optional, a file path) | `rdm:exercisesOutput` an `rdm:SourceFile` — the code the run exercises |
 | `parameters` | `rdm:parameter`, each a name and a value |

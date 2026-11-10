@@ -4,8 +4,8 @@ Every change goes round the same loop. Start with *Changing the record*;
 the other guides go deeper on one part of it.
 
 ```
- the factory's spec ──► tag the tests ──► run the gates ──► review and merge
-   (stamped scenarios)    (record)          (gates)            (your forge)
+ the Gherkin spec ───► tag the tests ──► run the gates ──► review and merge
+   (tagged scenarios)     (record)          (gates)            (your forge)
         ▲                                                       │
         └──────── query the graph, render the documents ◄───────┘
 ```

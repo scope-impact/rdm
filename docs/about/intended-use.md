@@ -45,8 +45,8 @@ do not need RDF or SPARQL to use the gates.
 
 - **Not a medical device, and not a quality system on its own.** It keeps
   one part of your evidence straight.
-- **Not an author of your spec.** It reads the spec the factory writes and
-  never stamps or edits it.
+- **Not an author of your spec.** It reads the Gherkin and never assigns
+  ids or edits it.
 - **Not a judge of your evidence.** It shows that each requirement has a
   passing tagged test. Whether that test proves the requirement is your
   reviewer's call; whether the evidence is enough is your regulator's.

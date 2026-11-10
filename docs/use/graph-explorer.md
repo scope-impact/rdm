@@ -27,9 +27,8 @@ docker run --rm --network host \
 ```
 
 Open <http://localhost/explorer>, search for a requirement (for example
-`item-04-001`), add it, and expand its neighbors: its user needs, its
-context, the Allium rules it covers and the test runs that claim it appear
-as edges.
+`item-04-001`), add it, and expand its neighbors: its user need, its
+context and the test runs that claim it appear as edges.
 
 On macOS or Windows (Docker Desktop), drop `--network host`, add
 `-p 80:80`, and use `GRAPH_CONNECTION_URL=http://host.docker.internal:7878`.

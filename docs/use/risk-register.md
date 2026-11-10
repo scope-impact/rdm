@@ -28,7 +28,7 @@ risks:
     harm: "A health record is missing at a doctor's visit."
     severity: Serious                # from the harm
     probability: Possible            # from the situation, never the hazard
-    controls: [item-02-004, item-02-007]  # each control is a requirement of the spec
+    controls: [REQ-4, REQ-7]             # each control is a requirement of the spec
     residual: {probability: Rare}    # add severity: where a control limits the harm itself
     acceptance:                      # only where the policy says justify for the residual level
       by: "Jane Doe (QA lead)"       # who accepted it
@@ -43,8 +43,8 @@ risks:
 ---
 ```
 
-- **A control is a requirement** — a stamped scenario of the spec,
-  `item-NN-SSS`. That gives the control a stated acceptance criterion, a
+- **A control is a requirement** — a tagged scenario of the spec, named by
+  its id. That gives the control a stated acceptance criterion, a
   tagged test and a result.
 - **Levels are evaluated, not typed.** RDM looks them up in your risk
   policy. You may also write `level:`; the gate checks it matches.

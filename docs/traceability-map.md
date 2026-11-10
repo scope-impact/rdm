@@ -8,7 +8,7 @@ hide:
 
 RDM's own record, from its knowledge graph, rebuilt on every docs build from a
 live run of the acceptance tests. Each user need and risk traces through the
-requirements (the stamped scenarios of RDM's spec) that address it to the
+requirements (the tagged scenarios of RDM's spec, `spec/`) that address it to the
 tests that verify them; a dashed outline is a requirement no passing run
 verifies. Click a node, or a bounded
 context, to trace it.

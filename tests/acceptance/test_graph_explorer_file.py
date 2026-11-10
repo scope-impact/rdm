@@ -55,7 +55,7 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
     with verification_step("Every node of the record -- of every kind -- and nothing from the vocabulary"):
         vertices = set(graph["data"]["vertices"])
         for node in ("urn:dhf:acme:need/Alarm", "urn:dhf:acme:requirement/item-01-001", "urn:dhf:acme:context/alarms",
-                     "urn:dhf:acme:rule/SoundAlarm", "urn:dhf:acme:doc/SDS-ALM-001",
+                     "urn:dhf:acme:doc/SDS-ALM-001",
                      "urn:dhf:acme:run/r1-result", "urn:rdm:clause:STD:1", "urn:rdm:checklist:mini"):
             assert node in vertices, node
         assert any(v.startswith("urn:dhf:acme:commit/") for v in vertices)
