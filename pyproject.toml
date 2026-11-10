@@ -102,14 +102,12 @@ rdm = [
     "specification/adopt_files/.github/workflows/*",
     "specification/adopt_files/.githooks/*",
     "specification/adopt_files/dhf/*",
-    "specification/adopt_files/dhf/documents/*",
-    "specification/adopt_files/dhf/documents/design/*",
-    "specification/adopt_files/scripts/*"
+    "specification/adopt_files/dhf/documents/*"
 ]
 
 [tool.ruff]
 line-length = 120
-exclude = [".tox", "*.egg", "build", "data", ".venv"]
+exclude = [".tox", "*.egg", "build", "data", ".venv", "loyly"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F"]

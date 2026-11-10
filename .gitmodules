@@ -1,0 +1,4 @@
+[submodule "loyly"]
+	path = loyly
+	url = https://github.com/scope-impact/loyly.git
+	branch = spec-v2
