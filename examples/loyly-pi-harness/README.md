@@ -1,4 +1,4 @@
-# Example: RDM audits Löyly's pi harness
+# Example DHF: Löyly's pi harness
 
 [Löyly](https://github.com/scope-impact/loyly) is an agentic software factory:
 its spec is the source of truth and the code is regenerated from it. Its pi
@@ -12,7 +12,11 @@ Löyly knows nothing of RDM or Allure.
 |---|---|
 | `../../loyly/` | RDM's `loyly` submodule (`spec-v2`): the spec and the code under test |
 | `dhf/config.yml` | `spec: ../../../loyly/.pi/plan`: RDM reads Löyly's plan and its needs |
-| `dhf/documents/` | the V&V plan, and the traceability matrix template |
+| `dhf/documents/architecture.md` | the six contexts, one per slice of Löyly's plan, each with its code (SDS-HAR-001) |
+| `dhf/documents/risk/` | the risk policy and a register of four harness risks (a leaky clean room, an unapproved grader, a reused item identity, a moved golden), each controlled by Löyly requirements; both **proposed** |
+| `dhf/documents/verification_and_validation_plan.md` | how the harness is verified and validated |
+| `dhf/documents/traceability_matrix.md` | the matrix template, rendered from generated data |
+| `checklists/pi_harness.txt` | the IEC 62304 clauses the documents claim, for `rdm gap` and graph validation |
 | `bridge/user.clj` | clojure.test to Allure, loaded into each test JVM from outside |
 | `run-acceptance.sh` | runs the six suites unchanged, in a copy of the checkout, and writes `dhf/allure-results/` |
 
@@ -26,7 +30,8 @@ git submodule update --init loyly        # from RDM's root
 cd examples/loyly-pi-harness
 ./run-acceptance.sh
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
-rdm graph validate --dhf dhf --allure-results dhf/allure-results
+rdm gap checklists/pi_harness.txt dhf/documents/*.md dhf/documents/risk/*.md
+rdm graph validate --dhf dhf --allure-results dhf/allure-results --checklist checklists/pi_harness.txt
 rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
 ```
 

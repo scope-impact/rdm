@@ -26,10 +26,13 @@ controls for document control in git. Audit your own document-control
 procedure against it:
 
 ```bash
-rdm gap part11_document_control documents/document_control_procedure.md
+rdm gap part11_document_control dhf/documents/document_control.md
 ```
 
-RDM holds [its own](../dhf/documents/document_control.md) to the same checklist.
+RDM holds [its own document control](../dhf/documents/document_control.md) to
+the built-in `part11_document_control` checklist, and the
+[worked example](../reference/worked-example.md) holds its design history file
+to a checklist of its own (`checklists/pi_harness.txt`).
 
 ## Your own checklists
 
@@ -53,5 +56,5 @@ Run gap analysis as a required check, so a document set cannot merge with a
 clause no document references:
 
 ```yaml
-- run: rdm gap part11_document_control documents/document_control_procedure.md
+- run: rdm gap 62304_2015_class_b dhf/documents/*.md
 ```

@@ -1,0 +1,11 @@
+# The IEC 62304 (2015, class B) clauses this example DHF claims: what RDM
+# checks the documents against (rdm gap, and graph validation's clause shapes).
+62304:5.2.3 Include Risk Control Measures in Software Requirements
+62304:5.3.1 Transform software requirements into an architecture
+62304:5.3.2 Develop an architecture for the interfaces of software items
+62304:5.7.4.b Verify software system testing: trace to requirements
+62304:5.7.4.c Verify software system testing: verified
+62304:5.7.4.d Verify software system testing: all passed
+62304:7.1.1 Identity of software items that could contribute to a hazardous situation
+62304:7.2.1 Define risk control measures
+62304:7.3.1 Verify risk control measures

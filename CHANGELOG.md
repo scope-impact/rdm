@@ -40,6 +40,11 @@
   - `rdm init` and `rdm adopt` lay down a spec skeleton the Löyly way
     (`.pi/plan/01-core`, `.pi/spec/core/`, `.pi/spec/event-storm.edn`); adopt
     only when the repository has no spec yet, so a plain-Gherkin spec is kept.
+  - The Löyly pi harness example is a full example DHF in place of the Part 11
+    one: its architecture (six contexts, one per slice), a risk policy and a
+    register of four harness risks controlled by Löyly requirements, and a
+    checklist of the IEC 62304 clauses its documents claim, held to by
+    `rdm gap` and graph validation in CI.
   - The verification report compares runs with the product's commit (that of
     the repository the spec lives in) and names it in the header; Clojure test
     names are shortened like Python's; the traceability table gives the tests

@@ -20,8 +20,15 @@ Löyly knows nothing of RDM or Allure:
   bridge (`bridge/user.clj`) on the JVM's boot class path that writes each
   test as an Allure result, tagged with the requirement it claims and
   labelled with the Löyly commit it tested.
+- Its design history file holds the architecture (the six contexts, each a
+  slice with its code), a risk policy and a register of four harness risks
+  whose controls are Löyly requirements, the V&V plan and the traceability
+  matrix, checked against the IEC 62304 clauses they claim
+  (`checklists/pi_harness.txt`).
 - RDM's gates then hold the harness to its own spec: all 201 requirements
-  verified, every need addressed. CI runs it all on every change to RDM.
+  verified, every need addressed, every risk evaluated, every claimed clause
+  referenced; the evidence bundle carries the verification report. CI runs it
+  all on every change to RDM.
 
 Its README says how to run it. Its traceability, from its knowledge graph,
 the same way as [RDM's own](../traceability-map.md) (from the spec alone
