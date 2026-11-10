@@ -100,11 +100,11 @@ rdm:RiskShape a sh:NodeShape ;
         sh:select """SELECT $this ?finding WHERE { $this rdm:finding ?finding }""" ;
     ] .
 
-# An item id stamped on more than one scenario.
+# A requirement id tagged on more than one scenario.
 rdm:UniqueRequirementShape a sh:NodeShape ;
     sh:targetClass rdm:Requirement ;
     sh:property [ sh:path rdm:declarationCount ; sh:maxInclusive 1 ;
-                  sh:message "item id is stamped on more than one scenario of the spec" ] .
+                  sh:message "requirement id tags more than one scenario of the spec" ] .
 
 # DI-51: a design document whose latest change is not on the default branch.
 rdm:LandedShape a sh:NodeShape ;

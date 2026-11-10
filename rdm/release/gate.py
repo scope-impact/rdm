@@ -113,7 +113,8 @@ def derive(state: State) -> list[Event]:
     events += [Event(UNREADABLE_SPEC, f"spec file cannot be read: {problem}") for problem in state.problems]
     ids = {r["id"] for r in state.requirements}
     if not ids:
-        return events + [Event(NO_REQUIREMENTS, "the spec holds no scenario tagged with a requirement id (nothing to verify)")]
+        return events + [Event(NO_REQUIREMENTS,
+                               "the spec holds no scenario tagged with a requirement id (nothing to verify)")]
     results = result_events(state.report, ids)
     events += [e for e in results if e.blocking]
     events += [Event(RISK_FINDING if f.blocking else RISK_WARNING, f.message) for f in state.risk_findings]

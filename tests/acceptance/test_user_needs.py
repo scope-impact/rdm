@@ -1,5 +1,5 @@
 """Acceptance tests for the release gate and verification over the spec's
-requirements (see .pi/spec/release/spec.feature).
+requirements (see spec/release/).
 
 Each test claims the requirement it verifies with `@allure.tag("item-NN-SSS")`;
 its verification steps check what the requirement's text states. The spec of
@@ -51,7 +51,7 @@ NEEDS = {"Release": ("core", "Team", "A release is blocked until every requireme
 def _approved_dhf(tmp_path: Path, needs: list[str], items: list[tuple[str, list[str]]] | None = None) -> Path:
     """A committed repository with a DHF and a spec of context ``core``
     (slice 01). By default one requirement covers each named need; ``needs``
-    are the user needs (Allium surfaces) of the spec."""
+    are the user needs of the spec (each a Feature)."""
     if items is None:
         items = [(f"item-01-{i + 1:03d}", [n]) for i, n in enumerate(needs)]
     declared = {n: NEEDS.get(n, ("core", "User", f"The need {n}.")) for n in needs}
@@ -98,7 +98,7 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
         gate = run_release_gate(dhf, results)
         attach("release gate blocking", gate.blocking)
         assert gate.passed, gate.blocking
-    feature = dhf.parent / ".pi" / "spec" / "core" / "spec.feature"
+    feature = dhf.parent / "spec" / "core" / "Release.feature"
     passing = feature.read_text()
     with verification_step("a scenario with no @item id blocks: the spec is not read whole"):
         feature.write_text(passing + "\n  Scenario: an unstamped behaviour\n")
@@ -111,14 +111,13 @@ def test_release_gate_blocks_until_verified(tmp_path: Path) -> None:
         assert _blocking(gate) == [STAMPED_TWICE] and "item-01-001" in gate.blocking[0], gate.blocking
     with verification_step("a spec file that cannot be read blocks"):
         feature.write_text(passing)
-        model = feature.parent / "event-model"
-        model.mkdir()
-        (model / "area.edn").write_text("{:core {:screens ")
+        broken = feature.parent / "broken.feature"
+        broken.write_text("@a-tag-and-no-feature\n")  # Gherkin's own parser refuses it
         gate = run_release_gate(dhf, results)
-        assert _blocking(gate) == [UNREADABLE_SPEC] and "area.edn" in gate.blocking[0], gate.blocking
-        (model / "area.edn").unlink()
+        assert _blocking(gate) == [UNREADABLE_SPEC] and "broken.feature" in gate.blocking[0], gate.blocking
+        broken.unlink()
     with verification_step("a spec with no stamped scenario blocks: nothing to verify"):
-        feature.write_text("Feature: core\n")
+        feature.write_text("Feature: Release\n")
         gate = run_release_gate(dhf, results)
         assert _blocking(gate) == [NO_REQUIREMENTS], gate.blocking
     with verification_step("no spec found blocks"):

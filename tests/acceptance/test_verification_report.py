@@ -1,5 +1,5 @@
 """Acceptance test for the verification report (item-07-009,
-.pi/spec/publishing/spec.feature).
+spec/publishing/).
 
 A committed record and hand-written Allure
 results are rendered to PDF and read back: once clean (release-grade), once
@@ -40,7 +40,7 @@ from tests.util import git_run, write_spec  # noqa: E402
 
 OTHER = "f" * 40
 INJECTION = '#panic("injected") ] #set page(width: 1cm)'
-ITEM_1 = (("item-01-001", "The device shall sound an alarm.", ["Alarm", "Log"]),)
+ITEM_1 = (("item-01-001", "The device shall sound an alarm.", ["Alarm"]),)
 MORE = (("item-01-002", "The device shall silence on acknowledge.", ["Alarm"]),
         ("item-01-003", "The device shall show the time.", ["Alarm"]),
         ("item-01-010", "The device shall log every alarm.", ["Log"]))
@@ -207,7 +207,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
                            "for, and its tests"):
         assert [di["id"] for di in report["requirements"]] == ["item-01-001", "item-01-002", "item-01-003",
                                                               "item-01-010"]
-        assert by_id["item-01-001"]["traces_to"] == ["Alarm", "Log"] and by_id["item-01-001"]["context"] == "alarms"
+        assert by_id["item-01-001"]["traces_to"] == ["Alarm"] and by_id["item-01-001"]["context"] == "alarms"
         assert [r["id"] for r in by_id["item-01-001"]["control_for"]] == ["RISK-7"]
         assert by_id["item-01-003"]["control_for"] == []
     with verification_step("each requirement is a baseline or a risk-based acceptance criterion; each risk it is a "
@@ -353,7 +353,7 @@ def test_the_verification_report_is_written_for_an_auditor(tmp_path: Path, monke
             ("cut-result.json", "unreadable"), ("link-result.json", "unreadable")]
         (clean_results / "cut-result.json").unlink()
         (clean_results / "link-result.json").unlink()
-        feature = clean_dhf.parent / ".pi" / "spec" / "alarms" / "spec.feature"
+        feature = clean_dhf.parent / "spec" / "alarms" / "Alarm.feature"
         feature.write_text(feature.read_text().replace("sound an alarm", "sound AND flash an alarm"))
         report = build_report(clean_dhf, clean_results)
         assert report["reasons"] == ["the record has uncommitted changes"], report["reasons"]

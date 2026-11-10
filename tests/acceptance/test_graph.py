@@ -1,4 +1,4 @@
-"""Acceptance tests for the graph context's requirements (see .pi/spec/graph).
+"""Acceptance tests for the graph context's requirements (see spec/graph/).
 
 item-06-001 (the record projected into named RDF graphs) and item-06-002
 (Oxigraph store, SPARQL query, SPARQL endpoint), tagged `@allure.tag`, over
@@ -137,12 +137,14 @@ def test_record_projects_into_named_graphs(tmp_path: Path) -> None:
         dhf_l, _ = _record(tmp_path / "loyly", layout="loyly")
         sl = _store(project(dhf_l))
         assert _ask(sl, f'GRAPH {rec} {{ {alarm} a rdm:UserNeed ; rdm:facing "Nurse" ; rdm:surface "Alarm" ; '
-                        f'rdm:guarantee "Alarm" ; rdm:providesRule <urn:dhf:acme:rule/SoundAlarm> ; rdm:ownedBy {ctx} }}')
+                        f'rdm:guarantee "Alarm" ; rdm:providesRule <urn:dhf:acme:rule/SoundAlarm> ; '
+                        f'rdm:ownedBy {ctx} }}')
         assert _ask(sl, f'GRAPH {rec} {{ {req1} rdm:covers "guarantee.Alarm" ; '
                         f'rdm:coversRule <urn:dhf:acme:rule/SoundAlarm> ; rdm:addresses {alarm} ; '
                         f'rdm:source ".pi/plan/01-alarms/spec.feature:5" }}')
         assert _ask(sl, f'GRAPH {rec} {{ <urn:dhf:acme:rule/SoundAlarm> a rdm:AlliumRule ; '
-                        f'rdm:trigger "SoundAlarm" ; rdm:ownedBy {ctx} . <urn:dhf:acme:context/ui> a rdm:BoundedContext }}')
+                        f'rdm:trigger "SoundAlarm" ; rdm:ownedBy {ctx} . '
+                        f'<urn:dhf:acme:context/ui> a rdm:BoundedContext }}')
     with verification_step("Record graph: controlled documents"):
         assert _ask(s, f'GRAPH {rec} {{ <urn:dhf:acme:doc/SDS-ALM-001> a rdm:Document ; '
                        f'dcterms:identifier "SDS-ALM-001" ; dcterms:title "Alarms design" ; rdm:revision "3" }}')

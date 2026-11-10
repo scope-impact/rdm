@@ -47,7 +47,7 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
     requirement, user need or risk) and validate, each answering from a
     projection of the record as it is at that call."""
     dhf, results = _record(tmp_path)
-    spec = dhf.parent / ".pi" / "spec" / "alarms" / "spec.feature"
+    spec = dhf.parent / "spec" / "alarms" / "Alarm.feature"
 
     async def steps(client, call):
         names = sorted(t.name for t in (await client.list_tools()).tools)
@@ -81,16 +81,17 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
         error, req = out["trace_req"]
         req = req["requirement"]
         assert not error and req["id"] == "item-01-001" and req["text"] == "The device shall alarm."
-        assert req["context"] == "alarms" and req["source"] == ".pi/plan/01-alarms/spec.feature:5"
-        assert req["needs"] == ["Alarm"] and req["covers"] == ["guarantee.Alarm", "rule-success.SoundAlarm"]
+        assert req["context"] == "alarms" and req["source"] == "spec/alarms/Alarm.feature:5"
+        assert req["needs"] == ["Alarm"] and req["covers"] == []
         assert req["runs"] == [{"test": "test_alarm", "status": "passed", "steps": [], "attachments": []}]
 
-    with verification_step("trace a user need: what it faces, provides and guarantees, and its requirements"):
+    with verification_step("trace a user need (a Feature): its text, context and requirements; what an adapter "
+                           "adds (faces, provides, guarantees) is empty"):
         error, need = out["trace_need"]
         need = need["user_need"]
         assert not error and need["id"] == "Alarm" and need["text"] == "a need" and need["context"] == "alarms"
-        assert need["facing"] == ["Nurse"] and need["surfaces"] == ["Alarm"] and need["rules"] == ["SoundAlarm"]
-        assert need["guarantees"] == ["Alarm"] and [r["id"] for r in need["requirements"]] == ["item-01-001"]
+        assert need["facing"] == need["surfaces"] == need["rules"] == need["guarantees"] == []
+        assert [r["id"] for r in need["requirements"]] == ["item-01-001"]
 
     with verification_step("validate: the gate shapes' results (item-01-002 has no passing run)"):
         error, report = out["validate"]
