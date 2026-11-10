@@ -71,7 +71,9 @@ and Allure, and nothing else is fixed.**
 - Breaking for projects on the old model: their design inputs become tagged
   scenarios, their user needs Features, their story tags Allure `tag` labels.
 
-## Open
+## Evidence is Allure only
 
-Whether graded verdicts (Löyly's sealed graders) should become a second kind
-of evidence beside Allure runs.
+Graded verdicts (Löyly's sealed graders) are not evidence in RDM: they stay
+the spec owner's own check. A test run that verifies a requirement writes
+Allure results, and those alone count. A factory that wants a graded verdict
+counted turns it into an Allure result tagged with the requirement's id.

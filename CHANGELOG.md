@@ -24,6 +24,8 @@
     under the design history (one page per context); `loyly/` is a submodule
     (Löyly's `spec-v2`), checked out in CI so the adapter is tested against it.
   - The reusable gates workflow takes `submodules`, for a spec kept in one.
+  - Evidence is Allure results only: graded verdicts (Löyly's sealed graders)
+    are not counted (ADR 0002).
   - Removed: design inputs (`design_inputs:`), the user-need registry
     (`user_needs:`), `rdm story design-gate` and its CI step, `rdm hooks` and
     the git hooks, `rdm story new-input`, source scanning of test tags, the

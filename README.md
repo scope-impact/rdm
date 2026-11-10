@@ -146,8 +146,6 @@ analysis, and traceability and audit from the executed results
 
 Not built yet, in rough order:
 
-- Graded verdicts (such as Löyly's sealed graders') as a second kind of
-  evidence beside Allure runs.
 - Turning a regulation into a checklist mapped to its standard's clauses.
 - `rdm graph push` to an external graph database, with the vocabulary and gate
   shapes versioned so another store reads them the same way.

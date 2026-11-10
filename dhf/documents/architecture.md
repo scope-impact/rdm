@@ -116,8 +116,7 @@ live in their own tools, outside the record (see
 
 ## Not yet in scope
 
-In rough order: graded verdicts (such as Löyly's) as a second kind of
-evidence beside Allure runs; turning a regulation into a checklist mapped to
+In rough order: turning a regulation into a checklist mapped to
 its standard's clauses; pushing the graph to an external RDF store, with the
 vocabulary and gate shapes versioned; and several projects in one graph
 (clause identifiers are already project-independent). Each enters through a
