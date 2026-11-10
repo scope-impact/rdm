@@ -1,13 +1,13 @@
 ---
 id: TM-001
-revision: 1
+revision: 2
 title: Traceability Matrix and Verification Status
 ---
 
 # Purpose
 
-The verification status of each **requirement** of the spec (a stamped
-scenario), grouped under the **user need** it addresses, generated from the
+The verification status of each **requirement** of the spec (a Gherkin
+scenario tagged with its id), grouped under the **user need** it addresses, generated from the
 spec reconciled against executed Allure results. Do not edit by hand. Regenerate with:
 
 ```
@@ -25,7 +25,7 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 
 # Traceability matrix
 
-Each user need, with the requirements (stamped scenarios of the spec) that
+Each user need, with the requirements (tagged scenarios of the spec) that
 address it. Runs: passed / failed / skipped.
 
 {% for group in verification.groups %}

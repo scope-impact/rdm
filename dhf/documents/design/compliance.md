@@ -1,6 +1,6 @@
 ---
 id: SDS-GAP-001
-kind: design
+title: Compliance — software design
 context: compliance
 references: [DC-001]
 ---
@@ -74,8 +74,8 @@ and the class's base list; ISO 14971 2007 and 2019; FDA-SW 2005 and 2021
 21 CFR Part 11 document-control checklist (item-05-004).
 
 Gap analysis **resolves built-in names and follows includes in** the
-Checklists. The view also shows the knowledge graph's Projection, which
-**reads checklists and matches checklist references with** Gap analysis: it
+Checklists. The knowledge graph's Projection **reads checklists and
+matches checklist references with** Gap analysis: it
 uses the same reading and matching rules, so the graph's clauses and
 reference links cannot drift from what gap analysis reports. No component of
 this context uses another context's.
@@ -94,8 +94,7 @@ Assumptions and open questions:
 
 ## Dependencies
 
-Compliance is a leaf, at layer 1 of the dependency rule beside risk and
-architecture: it depends on no other context, not even the specification,
+Compliance is a leaf, at layer 1 of the dependency rule beside risk: it depends on no other context, not even the specification,
 since it works on any documents, not on requirements.
 
 Two parts depend on it, both as the rule allows: the composition root, for

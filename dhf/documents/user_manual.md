@@ -46,6 +46,6 @@ they ship with.
 - **Approval:** each change to a page is a reviewed pull request; the
   release tag fixes the version that ships.
 - **Requirements:** what the manual must hold is stated as requirements
-  of the publishing context (item-07-005, item-07-007, item-07-006), verified like any other.
+  of the publishing context (item-07-005, item-07-006, item-07-007), verified like any other.
 - **Changing this list:** adding or removing a page changes this document,
   so its revision is bumped.

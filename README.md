@@ -139,7 +139,7 @@ RDM audits a specification; it does not author one. Writing the spec and
 regenerating code from it belong to the factory that owns the spec (for
 example [Löyly](https://github.com/scope-impact/loyly)); RDM keeps gap
 analysis, and traceability and audit from the executed results
-([ADR 0002](dhf/decisions/adr-0002-spec-in-loyly-rdm-audits.md)).
+([ADR 0002](dhf/decisions/adr-0002-rdm-reads-gherkin-and-allure.md)).
 
 Not built yet, in rough order:
 

@@ -1,6 +1,6 @@
 ---
 id: SDS-REN-001
-kind: design
+title: Publishing — software design
 context: publishing
 ---
 
@@ -8,7 +8,7 @@ context: publishing
 
 ## Purpose
 
-Publishing renders the design record into controlled documents: a
+Publishing renders the record into controlled documents: a
 *template* (a controlled document's source, with placeholders) filled with
 *data* generated from the record, then post-processed Markdown, and from it
 PDF and DOCX. It owns the template engine and its filters, the Markdown
@@ -30,9 +30,9 @@ fed back into it.
 | DMR index | Writes one index entry per controlled document from its frontmatter | item-07-008 |
 | Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF | item-07-009 |
 | Report layout | Sets the report's pages, every value as text | item-07-009 |
-| Evidence bundle | Writes the retained release evidence, the verification report among it; refuses a record with no matrix template before writing anything | item-07-009; realises item-04-003 |
-| PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of item-04-004 |
-| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | item-07-005, item-07-007, item-07-006 |
+| Evidence bundle | Writes the retained release evidence, the verification report among it; refuses a record with no matrix template before writing anything | item-04-003, item-07-009 |
+| PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | item-04-004 |
+| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | item-07-005, item-07-006, item-07-007 |
 | Docs build hooks | Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual | — |
 
 The PDF action is reusable CI; the others run in the `rdm` command.
@@ -75,9 +75,9 @@ The rules a reviewer needs to judge the design:
   test that failed or broke; a test run with uncommitted changes, or with no
   commit; runs of another commit than the record's; a record with
   uncommitted changes; or a record whose commit is unknown. Every run
-  counts, tagged with a declared input or not. The anomalies are a design
-  input with no run, a run that did not pass, an unreadable result file, a
-  missing attachment and an orphan tag. With no Typst available the report is refused, and the
+  counts, whether it claims a requirement of the spec or not. The anomalies
+  are a requirement with no run, a run that did not pass, an unreadable result file, a
+  missing attachment and a tag that names no requirement. With no Typst available the report is refused, and the
   command says so, rather than written without its layout. Because the
   layout sets every value as text, never markup, nothing a test printed can
   change the document.
@@ -106,8 +106,7 @@ The relationships that matter, in the direction of the arrow:
   register (risk), and *lays out with* the Report layout.
 - The DMR index takes each document's frontmatter from the shared kernel.
 - The Evidence bundle *writes verification.yml with* the Verification data
-  (release), *finds the matrix template with* the spec reader
-  (specification), *renders the matrix with* the Renderer and *writes the
+  (release), *finds the matrix template in* the DHF, *renders the matrix with* the Renderer and *writes the
   report PDF with* the Verification report.
 - The Gates action (release) *writes the evidence bundle with* the Evidence
   bundle: the one arrow into publishing from another context.

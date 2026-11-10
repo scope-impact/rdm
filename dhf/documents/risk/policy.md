@@ -23,8 +23,8 @@ risk_policy:
 approves it by reviewing it and setting `status: approved`.
 
 The criteria RDM's own risks are evaluated against, set before any
-individual risk decision. The matrix is the risk-analysis skill's
-four-by-four. A Low risk is acceptable; a Medium or High risk is acceptable
+individual risk decision: a four-by-four matrix of severity and
+probability. A Low risk is acceptable; a Medium or High risk is acceptable
 only with a recorded justification (who accepted it, and why further
 reduction is not reasonably practicable); Block is never acceptable.
 

@@ -1,6 +1,6 @@
 ---
 id: SDS-RISK-001
-kind: design
+title: Risk — software design
 context: risk
 ---
 
@@ -8,7 +8,7 @@ context: risk
 
 ## Purpose
 
-This context owns the risk register as part of the design record, and the
+This context owns the risk register as part of the record, and the
 risk acceptability criteria the register is evaluated against. Its language
 is risk analysis and risk evaluation: a risk is a hazard, the hazardous
 situation it leads to and the harm that situation can cause — one harm
@@ -16,15 +16,13 @@ pathway per risk — with a severity from the harm and a probability from the
 situation; a safety risk or a STRIDE threat; the risk controls that reduce
 it, each a requirement; the initial risk and the residual risk, the same
 estimate before and after the controls; and a proposal, a rating or a policy
-no person has approved yet. The method is the requirements and risk-analysis
-skills' (user need → safety and STRIDE branches; hazard → situation → harm;
-evaluate, control, verify, evaluate again). This context keeps the register
-and checks what a machine can check.
+no person has approved yet. The method (hazard → situation → harm;
+evaluate, control, verify, evaluate again) is the team's; this context
+keeps the register and checks what a machine can check.
 
 ## Design Outputs
 
-Its one component, what it is responsible for, and how the components of
-other contexts use it:
+Its one component, and how the components of other contexts use it:
 
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
@@ -87,8 +85,8 @@ Relationships, in the direction of the arrow:
 
 - The **Release gate** (`release`) reports the risk findings of the Risk
   register: it adds the blocking findings to its blocking list and the
-  warnings to its warnings. That is the part of item-02-002 and item-02-003 the release
-  context.
+  warnings to its warnings: the part of item-02-002 and item-02-003 the
+  release context applies.
 - The **Projection** (`graph`) reads risks and findings with the Risk
   register — the policy, the register, each residual decision and the
   findings — into the risks named graph for its gate shapes (item-06-008, owned by
@@ -96,12 +94,10 @@ Relationships, in the direction of the arrow:
 - The **Verification report** (`publishing`) reads risk status and residual
   decisions with the Risk register, beside the requirements that control
   each risk.
-- The **pytest plugin** (`test_evidence`) finds the risks each requirement
-  controls with the Risk register, to label its test runs.
 
-The Risk register is handed the requirement ids and the verified
-ones; it reads nothing of the specification. It parses frontmatter with the
-shared kernel, which the specification's design document draws.
+The Risk register is handed the requirement ids and the verified ones; it
+reads nothing of the spec itself. It parses frontmatter with the shared
+kernel.
 
 Assumption: one harm pathway per risk, with one probability; no control
 effect is recorded apart — the residual is all the controls folded
@@ -112,7 +108,7 @@ without changing a register written to this format.
 
 Layer 1 of the dependency rule, a leaf: it depends only on the shared
 kernel, and on no other context. The contexts that use it sit above it:
-`test_evidence` (the pytest plugin), `release` (the release gate),
+`release` (the release gate),
 `publishing` (the verification report) and `graph` (the projection).
 
 ## Out of scope

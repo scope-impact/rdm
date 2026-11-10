@@ -1,68 +1,69 @@
 # RDM — Design History File
 
-This is RDM's own DHF: RDM's own record, checked by RDM's own gates. Every
-change lands through a reviewed pull request with the gates green. The method
-is the docs' *How RDM works* (`docs/about/how-rdm-works.md`); the direction,
-the spec read as Gherkin rather than authored here, is ADR 0002 (`decisions/`).
+This is RDM's own DHF: the record RDM keeps about itself, checked by RDM's own
+gates. Every change lands through a pull request that someone other than its
+author approves, with the gates green. How RDM works is in the docs
+(`docs/about/how-rdm-works.md`); why RDM reads a spec as Gherkin rather than
+authoring one is ADR 0002 (`decisions/`).
 
-Scope note: RDM is not a medical device, so this DHF deliberately implements
-the **design-controls slice** (requirements, verification, validation,
-traceability — the §820.30-shaped record) plus a register of RDM's own tool
-risks, and not the full IEC 62304 lifecycle document set (a complete risk
-management file, SOUP register, maintenance and problem-resolution plans, …).
-Running `rdm gap 62304_2015_class_b` over these documents is expected to
-report those items as missing.
+RDM is not a medical device, so this DHF holds the **design-controls slice**
+(requirements, verification, validation, traceability, tool risks), not the
+full IEC 62304 lifecycle set (a complete risk management file, SOUP register,
+maintenance and problem-resolution plans, …). `rdm gap 62304_2015_class_b`
+over these documents reports those items as missing, as expected.
 
-## Layout (the record)
+## What the record is
+
+| Part | Where | What it holds |
+|---|---|---|
+| **The spec** | `spec/<context>/<need>.feature` (outside `dhf/`) | RDM's requirements and user needs, in Gherkin: each Feature a user need, each scenario tagged `@item-NN-SSS` a requirement |
+| **The tests** | `tests/acceptance/` | each test claims the requirement it verifies with `@allure.tag("item-NN-SSS")` |
+| **This directory** | `dhf/` | the documents below, and generated evidence |
 
 ```
+config.yml                           render configuration
 documents/
-  verification_and_validation_plan.md the V&V approach
-  document_control.md                git/GitHub as this record's document control (Part 11-mapped)
-  architecture.md                    system design / bounded contexts (design only, no needs)
-  traceability_matrix.md             matrix TEMPLATE (rendered from generated data; never hand-edited)
-  design/                            one `kind: design` doc per bounded context:
-    <context>.md                       the design output (how) of one context
-  risk/
-    policy.md                          risk acceptability policy (RMP-001, proposed)
-    tool_risks.md                      `kind: risk` register of RDM's tool risks (RMF-001, proposed)
-decisions/                           ADR 0002: the spec lives with the factory; RDM audits it
+  verification_and_validation_plan.md how RDM is verified and validated
+  architecture.md                    the parts, the bounded contexts and the dependency rule
+  design/<context>.md                the design output of one bounded context
+  risk/policy.md                     risk acceptability policy (RMP-001, proposed)
+  risk/tool_risks.md                 register of RDM's tool risks (RMF-001, proposed)
+  document_control.md                git and GitHub as this record's document control (DC-001, Part 11-mapped)
+  user_manual.md                     the IFU: the docs site's pages, in reading order (IFU-001)
+  traceability_matrix.md             the matrix template, rendered from generated data, never hand-edited
+decisions/
+  adr-0002-…md                       RDM reads a spec as Gherkin and audits it
 ```
 
-RDM's requirements and user needs are its spec, outside this directory: plain
-Gherkin under `spec/<context>/<need>.feature`, each Feature a user need and
-each scenario tagged `@item-NN-SSS` a requirement. Trace any of them through
-the graph:
+Generated, never committed (gitignored): `dhf/allure-results/` (the
+acceptance run) and `dhf/data/` (the verification data the matrix renders
+from).
+
+Run the gates as CI does (`CLAUDE.md`):
 
 ```bash
-rdm graph query --dhf dhf '…'           # SPARQL; or the `trace` tool of `rdm graph mcp`
+uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
+uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
+uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
+uv run rdm graph validate --dhf dhf --allure-results dhf/allure-results
 ```
 
-The gates, as CI runs them, are in `CLAUDE.md`.
-`dhf/allure-results/` and `dhf/data/verification.yml` are generated
-(gitignored) by running the acceptance suite, never committed.
+Trace a requirement, user need or risk with the `trace` tool of
+`rdm graph mcp` (registered in `.mcp.json`), or query the record with
+`rdm graph query`.
 
 ## `docs/` and `dhf/`
 
-`docs/` explains RDM to its users; `dhf/` is the controlled record of how RDM
-itself is designed and verified. One explains, the other decides.
+`docs/` explains RDM to its users; `dhf/` is the record of how RDM itself is
+designed and verified.
 
 | | `docs/` | `dhf/` |
 |---|---|---|
-| **What it is** | RDM's user documentation, plus an API reference generated from the docstrings | RDM's own design history file: the regulated record RDM develops itself under |
+| **What it is** | RDM's instructions for use, plus an API reference generated from the docstrings | RDM's own design history file |
 | **Who it's for** | People and agents using RDM on their own product | Whoever governs RDM's development: authors, reviewers, an auditor, and RDM's gates |
-| **Controlled?** | No: ordinary docs, changed by a normal reviewed pull request | Yes: every change is a reviewed pull request; the release gate requires every requirement in it verified |
-| **Checked by** | `mkdocs build --strict` (links, navigation) | The release gate, `rdm graph validate`, and the tests tagged with its ids |
-| **Read by RDM's tools?** | No | Yes: the gates, `trace`, the graph, the verification report and the evidence bundle |
-| **Published** | As the docs site | On the same site, each document as a page and a PDF, with the traceability matrix and map generated from a live test run at each build |
+| **Controlled?** | Yes, as one document: IFU-001 lists its pages; each change is a reviewed pull request | Yes: each change is a reviewed pull request; the release gate requires every requirement verified |
+| **Checked by** | `mkdocs build --strict`, and the tests of the IFU's own requirements | The release gate, `rdm graph validate`, `rdm gap` |
+| **Published** | As the docs site, one copy per release | On the same site, each document as a page (and a PDF where Pandoc and Typst run), with the traceability matrix and map generated from a live test run |
 
-Nothing flows from `docs/` into the record. Where the docs would restate what
-the record decides, they link to it instead. A product that adopts RDM gets
-its own `dhf/` (`rdm adopt` or `rdm init`), not RDM's `docs/`.
-
-## Agents in this repository
-
-Agents working on RDM read the record through `rdm graph mcp`, registered in
-the repository's `.mcp.json`. A session's bootstrap script syncs
-dependencies; CI runs the same gates for an agent's change as for a
-person's.
+A product that adopts RDM gets its own `dhf/` (`rdm adopt` or `rdm init`), not
+RDM's.

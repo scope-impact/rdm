@@ -28,7 +28,7 @@ risks:
   - id: RISK-TOOL-005
     category: safety
     status: proposed
-    hazard: "A tagged test passes without checking everything its requirement requires."
+    hazard: "A test that claims a requirement passes without checking everything its scenario states."
     situation: "A test checks two of the three things a requirement requires, and the pull-request reviewer does not notice."
     harm: "The requirement is reported verified while one thing it requires is unchecked, and the gap ships."
     severity: Serious
@@ -36,7 +36,7 @@ risks:
     controls: []
     acceptance:
       by: "RDM maintainers, by approving the pull request that records this register"
-      rationale: "Whether a test proves its input is a reviewer's judgement, made in the pull-request review; in the factory, the sealed graders measure it independently. Monitored by reviewers reading each changed test against its input's text."
+      rationale: "Whether a test proves its requirement is a reviewer's judgement, made in the pull-request review; no gate can make it. Monitored by reviewers reading each changed test against its scenario's text."
   - id: RISK-TOOL-006
     category: security
     stride: Tampering
@@ -69,10 +69,11 @@ setting `status: approved` (or changing it).
 
 RDM is not a medical device. Teams use it to keep and check the evidence for
 one, so its risks are the ways it could misreport that evidence. Each control
-is a requirement of RDM's own record, verified by its tagged test; the
+is a requirement of RDM's own spec (`spec/`), verified by the tests that
+claim it; the
 release gate holds this register to the rules in `design/risk.md` (item-02-002).
 
 Evaluated against RDM's risk policy (`policy.md`, RMP-001):
 severity from the harm, probability from the situation, residual after the
-controls. RISK-TOOL-005 stays at Medium after its control and is accepted
-above, with the reason.
+controls. RISK-TOOL-005 has no control RDM can give it: it stays at Medium
+and is accepted above, with the reason.

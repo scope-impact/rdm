@@ -1,14 +1,13 @@
 ---
 id: DC-001
-revision: 3
+revision: 4
 title: "Document Control — git as the document control system for RDM's record"
 ---
 
 # Purpose
 
-States how RDM's own controlled records — this Design History File, the design
-documents, and the source that realises them — are
-controlled. RDM keeps its record **in git, with GitHub as the service
+States how RDM's own controlled records — this Design History File, RDM's
+spec (`spec/`), its tests and the source that meets them — are controlled. RDM keeps its record **in git, with GitHub as the service
 provider**; this statement maps each applicable 21 CFR Part 11 control to the
 mechanism that meets it, and it must pass gap analysis against RDM's own
 shipped `part11_document_control` checklist (item-05-004 — the same checklist any
@@ -25,10 +24,10 @@ are tags; the revision history is the git history itself. Planning artifacts
 # Controls
 
 - **Validation** [[P11:11.10a]] — the controls are enforced configuration and
-  code, exercised on every change: the design gate, the pre-commit hook
-  (`.githooks/`), and the CI pipeline (`design-controls.yml`) are RDM's own
-  features, verified by RDM's own tagged acceptance tests, with every change
-  independently reviewed on its pull request. Altered records are discernible
+  code, exercised on every change: the CI pipeline (`design-controls.yml`)
+  and the branch ruleset run RDM's own release gate and graph validation,
+  verified by RDM's own acceptance tests, with every change independently
+  reviewed on its pull request. Altered records are discernible
   by construction — any change produces a new SHA.
 - **Copies** [[P11:11.10b]] — accurate and complete copies in human-readable
   and electronic form: the rendered documentation site and the rendered
@@ -56,10 +55,10 @@ are tags; the revision history is the git history itself. Planning artifacts
   computer-generated, time-stamped, author-attributed on every action; a later
   change never obscures an earlier entry, and the trail lives exactly as long
   as the record it belongs to.
-- **Sequencing** [[P11:11.10f]] — the enforced order of steps is RDM's own
-  design-controls loop: the reviewer of each pull request checks the design
-  record was committed before the code it governs, and CI blocks merge until
-  the acceptance tests, verification and the release gate pass in order.
+- **Sequencing** [[P11:11.10f]] — the enforced order of steps: CI blocks
+  merge until the acceptance tests, verification, the release gate and graph
+  validation pass, in that order; the reviewer of each pull request checks a
+  requirement's scenario is in the spec before the code that meets it.
 - **Authority** [[P11:11.10g]] — only authorized reviewers can approve a pull
   request into the default branch, and the approver must not be the change's
   author (enforced by the ruleset's required review). The branch controls are configuration code in this repository —

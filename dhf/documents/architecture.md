@@ -24,24 +24,21 @@ references: [DC-001]
 
 # System Architecture
 
-RDM keeps the design record of regulated software as Markdown and tests in
-git, checks it, renders regulatory documents from it, and builds it into a
-read-only graph that people and agents query. This document holds **design
-only** — RDM's requirements and user needs are its spec (`spec/`, plain
-Gherkin), read like any project's.
+RDM audits the record of regulated software. It reads a spec as Gherkin
+(each scenario tagged with an id a requirement), takes the evidence of each
+requirement from Allure test runs, checks documents against the checklists of
+the standards that apply, decides whether a release may go ahead, renders
+regulatory documents, and builds it all into a read-only graph that people
+and agents query. It never authors the spec (ADR 0002).
 
-RDM audits a specification; it does not author one. Writing the
-specification and regenerating code from it belong to the factory that owns
-the spec (ADR 0002); RDM keeps gap analysis, and traceability and audit from
-the executed results. What RDM had for authoring is removed:
-the design gate and its git hooks, `rdm story new-input`, the C4
-architecture context, persona runs and the mutation probe.
+This document holds **design only**: RDM's own requirements and user needs
+are its spec, plain Gherkin under `spec/`, read like any project's.
 
 ## The four parts
 
 | Part | Responsibility | Writes to the record? |
 |------|----------------|-----------------------|
-| **Record** | read the record: the spec (needs, requirements), checklists, results, git | scaffolding only (`init`, `adopt`); every other change is a reviewed commit |
+| **Record** | read the record: the spec (Gherkin), the risk register, validation records, checklists, test results, git | scaffolding only (`init`, `adopt`); every other change is a reviewed commit |
 | **Gates** | pass/block decisions on the record | no |
 | **Graph** | the knowledge graph: the record as RDF, queried and validated; agents read it over MCP (`rdm graph mcp`) | no — rebuilt from the record, never edited |
 | **Documents** | regulatory documents rendered from the record | no |
@@ -63,22 +60,22 @@ project's test runner, and, to render PDFs, on Pandoc and Typst.
 ## Bounded contexts (one design document each), by part
 
 A bounded context is drawn where the language changes, not where the workflow
-does (`CONTEXT.md`): the stages of a requirement's life (declared, approved,
-verified, released) are not contexts. The code
-of each context is in the frontmatter (`code`).
+does (`CONTEXT.md`): the stages of a requirement's life (written, verified,
+released) are not contexts. The code of each context is in the frontmatter
+(`code`).
 
 | Part | Context | Design document | Its language | Package |
 |------|---------|-----------------|--------------|---------|
-| Record | `specification` (core) | `design/specification.md` | spec, user need, requirement | `rdm/specification/`: the spec reader, `init`, `adopt`, validation records |
+| Record | `specification` (core) | `design/specification.md` | spec, Feature, scenario, requirement, user need | `rdm/specification/`: the Gherkin reader, the spec's configuration, the Löyly adapter, `init`, `adopt`, validation records |
 | Record | `risk` | `design/risk.md` | hazard, harm, severity, probability, control, residual | `rdm/risk/` |
-| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment; Allure's words stop here | `rdm/evidence/`: Allure results; and `rdm/pytest_plugin.py` |
-| Gates | `release` | `design/release.md` | verified, release gate | `rdm/release/`: the release gate, the verification data; and the reusable CI |
+| Record | `test_evidence` | `design/test_evidence.md` | test run, executor, step, attachment, tag; Allure's words stop here | `rdm/evidence/`: Allure results; and `rdm/pytest_plugin.py` |
+| Gates | `release` | `design/release.md` | verified, release gate, finding | `rdm/release/`: the release gate, the verification data; and the reusable CI |
 | Gates | `compliance` | `design/compliance.md` | standard, checklist, checklist clause, gap, coverage | `rdm/compliance/` |
-| Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule, derived relation | `rdm/graph/` |
+| Graph | `graph` | `design/graph.md` | knowledge graph, projection, vocabulary, gate rule | `rdm/graph/`: the projection, the shapes, the SPARQL endpoint and the MCP server |
 | Documents | `publishing` | `design/publishing.md` | template, data, rendered document, evidence bundle | `rdm/publishing/`: render, snippets, DMR index, the verification report, the evidence bundle; and `rdm/md_extensions/` and the PDF action |
 
 Not contexts: the **shared kernel** (`rdm/kernel/`: YAML and file helpers,
-ids, git, frontmatter, the reconcile helpers), below every context; and the
+EDN, ids, git, frontmatter, the reconcile helpers), below every context; and the
 **composition root** (`rdm/main.py`), which wires the command line to every
 context. Onboarding (`init`, `adopt`) is the specification's application
 layer. Three paths users name stay where they are: `rdm/main.py` (the `rdm`
@@ -96,10 +93,10 @@ rule, and on any module no context's code holds
 ```
  5  publishing · graph              read models: read every context, feed none back
  4  release                         decides: verified status, risk and validation → release
- 3  test_evidence                   translates test results into runs of the record's tests
- 2  specification                   the core: the spec read, needs, requirements
+ 3  test_evidence                   translates Allure results into runs of the spec's requirements
+ 2  specification                   the core: the spec read as Gherkin, needs, requirements
  1  risk · compliance               leaves: their own languages, nothing but the kernel
- 0  shared kernel                   util · ids · git · frontmatter · reconcile
+ 0  shared kernel                   util · edn · ids · git · frontmatter · reconcile
 ```
 
 The leaves sit below the core because the core uses them and they use
@@ -109,9 +106,9 @@ report, so it is publishing's, and realises release's item-04-003.
 
 ## Flow
 
-Specification → its evidence and risks → Release decides (the release gate
-before release; gap analysis against checklists) → the knowledge graph and
-the documents are derived from the same record. Agent skills (how to author
+The spec → its evidence (Allure runs) and its risks → the release gate
+decides, and gap analysis holds the documents to their checklists → the
+knowledge graph and the documents are derived from the same record. Agent skills (how to author
 requirements, test-first, risk analysis) are maintained outside RDM, in
 `scope-impact/agent-skills`. RDM ships no planning tooling: tasks and issues
 live in their own tools, outside the record (see
@@ -119,8 +116,9 @@ live in their own tools, outside the record (see
 
 ## Not yet in scope
 
-In rough order: turning a regulation into a checklist mapped to its
-standard's clauses; pushing the graph to an external RDF store, with the
+In rough order: graded verdicts (such as Löyly's) as a second kind of
+evidence beside Allure runs; turning a regulation into a checklist mapped to
+its standard's clauses; pushing the graph to an external RDF store, with the
 vocabulary and gate shapes versioned; and several projects in one graph
 (clause identifiers are already project-independent). Each enters through a
 user need and requirements in the spec before any code.
