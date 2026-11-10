@@ -51,6 +51,7 @@ code. RDM reads the spec, never writes it, and audits it.** RDM keeps two jobs:
 2. **Traceability and audit from Allure.** Stamped item → test run (Allure) → result →
    commit. RDM reads the factory's spec as it finds it and turns it into evidence: the
    matrix, the release gate, the risk view, the graph, the report and the bundle.
+   A stamped scenario verifies the user need its `Feature:` states.
 
 ### What RDM reads instead of design inputs
 
@@ -96,14 +97,26 @@ worktree facts), rendering and Pandoc/Typst, the graph's document, commit and ch
 parts, C4 component labels, the mutation probe, unit coverage, validation and persona
 records, and the pull-request review as independent verification.
 
-### User needs
+### User needs: the Gherkin story
 
-Löyly has no user-need registry. A slice's `plan.md` cites the wiki pages it rests on, and
-each wiki page cites `raw/`. **Proposed:** RDM reads the citation chain as the validation
-anchor. That chain is item → slice `plan.md` → the wiki pages it cites → `raw/` sources. A
-slice that cites nothing is a finding (Löyly's INV-1 / minimum reference rule, audited from
-outside). The V&V plan's `user_needs:` becomes optional: a project that keeps them maps
-each to slices, not to design inputs. See question 2.
+**Decided (product owner, 2026-11-10): the user need is the Gherkin story.** Each slice's
+`spec.feature` holds one `Feature:` with its narrative, which is the user need. Its stamped
+scenarios are the requirements that verify it. RDM keeps no user-need registry of its own.
+
+- **Identity.** The user need is identified by its slice (`NN`, from the slice directory,
+  read as the stamper reads it). Its text is the `Feature:` title and description. A
+  scenario's need is the Feature it sits in. No `traces_to` is written, because the file
+  states the link.
+- **The V&V plan's `user_needs:` goes.** The release gate's NEED_UNADDRESSED becomes "an
+  accepted slice's Feature has no stamped scenario", and NO_DESIGN_INPUTS becomes "no
+  accepted slice holds a stamped scenario".
+- **Validation stays against the user need** (21 CFR 820.30(g)), keyed by slice.
+  Validation records (`<dhf>/validation/<slice>-validation.json`) and persona runs name the
+  slice. The release gate still warns, and never blocks, on a Feature with no approved
+  validation record.
+- **Provenance is audited, never required.** Where a slice's `plan.md` cites wiki pages and
+  those pages cite `raw/` (Löyly's minimum reference rule), the graph carries that chain.
+  A slice whose `plan.md` cites nothing is a finding.
 
 ## Consequences
 
@@ -144,14 +157,12 @@ each to slices, not to design inputs. See question 2.
 1. **Trace key on the Allure side.** Should a run claim an item by an Allure `tag` label
    `item-NN-SSS` (proposed; Gherkin runners emit it with no glue), or by a dedicated
    `allure.label("item", "01-003")`?
-2. **User needs.** Should the citation chain item → slice plan → wiki → raw replace RDM's
-   user-need registry (proposed), or should projects keep `user_needs:` mapped to slices?
-3. **RDM's own record.** Should RDM's DHF be converted to stamped Gherkin in one go, or
+2. **RDM's own record.** Should RDM's DHF be converted to stamped Gherkin in one go, or
    should a read-only `design_inputs:` path stay for one release while adopters migrate?
-4. **The factory's measurement as evidence.** Should RDM also ingest Löyly's filed
+3. **The factory's measurement as evidence.** Should RDM also ingest Löyly's filed
    measurement (graded verdicts per item, the scoreboard) as a second, independent kind of
    verification evidence beside the Allure runs, or keep the instrument out of the record
    as Löyly does (the score reports to a person, never into the loop)?
-5. **Allium and the Event Model.** Should RDM project Allium rules and invariants (and the
+4. **Allium and the Event Model.** Should RDM project Allium rules and invariants (and the
    `@allium-*` tags on scenarios) into the graph so an auditor can see rule → scenario →
    run, or stop at the scenario?
