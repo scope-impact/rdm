@@ -24,9 +24,11 @@ _VERSION_TOKEN = "{rdm_version}"
 
 NEXT_STEPS = """\
 Next steps:
-  1. Point RDM at your spec: a Löyly-shaped spec at .pi/plan, or `spec:` in dhf/config.yml
-  2. Claim each requirement in its acceptance test with @allure.tag("item-NN-SSS")
-  3. Set acceptance-tests and release-gate to true in
+  1. Point RDM at your spec: spec/ or features/ (Gherkin), a Löyly-shaped spec at .pi/plan,
+     or `spec:` in dhf/config.yml
+  2. Have each acceptance test claim its requirement with an Allure `tag` label of its id
+     (a Gherkin runner writes a scenario's tags as such labels; in pytest, @allure.tag("<id>"))
+  3. Set test-command, acceptance-tests and release-gate in
      .github/workflows/design-controls.yml once the first claimed test passes\
 """
 
