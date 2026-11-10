@@ -20,6 +20,10 @@ once, in the RDM image, and hands them to the docs build as an artifact:
 -- and are otherwise built here when ``pandoc`` and ``typst`` are on PATH;
 without either the pages carry no link.
 
+RDM's own spec (``spec/<context>/*.feature``, outside ``dhf/``) is published
+beside it as ``dhf/spec/<context>.md``: each Feature, a user need, with its
+text, a table of the requirements under it, and the Gherkin as written.
+
 The traceability matrix template is left out: the site draws traceability
 from the graph (``docs/_hooks/traceability.py``). Nothing here changes the record.
 """
@@ -43,6 +47,7 @@ from rdm.md_extensions.code import fenced
 
 ROOT = Path(__file__).resolve().parents[2]
 DHF = ROOT / "dhf"
+SPEC = ROOT / "spec"
 TEMPLATES = ROOT / "rdm" / "specification" / "init_files"
 log = logging.getLogger("mkdocs.hooks.dhf")
 SKIP = {"documents/traceability_matrix.md"}  # a template; the site has the generated matrix
@@ -218,6 +223,33 @@ def prebuilt(documents: dict[str, Path], directory: Path) -> dict[str, Path]:
     return pdfs
 
 
+def spec_pages() -> dict[str, str]:
+    """RDM's spec, one page per context, by its path on the site."""
+    from rdm.specification.spec import read_spec
+
+    spec = read_spec({"features": [str(SPEC / "**" / "*.feature")]}, ROOT)
+    pages = {}
+    for _, context in spec.contexts:
+        lines = [f"# Spec — {context.replace('_', ' ')}", "",
+                 f"The user needs and requirements of the `{context}` context, read from "
+                 f"`spec/{context}/` as the release gate reads them. Each Feature is a user need; "
+                 "each scenario tagged with an id is a requirement.", ""]
+        for path in sorted((SPEC / context).glob("*.feature")):
+            source = path.relative_to(ROOT).as_posix()
+            needs = [n for n in spec.needs if n.source.startswith(source + ":")]
+            items = [i for i in spec.items if i.source.startswith(source + ":")]
+            for need in needs:
+                lines += [f"## {need.id}", "", need.text, ""]
+            lines += ["| Requirement | Scenario | Source |", "|---|---|---|"]
+            lines += [f"| `{i.id}` | {_value(i.title)} | `{i.source}` |" for i in items]
+            gherkin = path.read_text(encoding="utf-8").rstrip()
+            lines += ["", f'??? note "{path.name}"', "", "    ```gherkin"]
+            lines += [f"    {line}" if line else "" for line in gherkin.splitlines()]
+            lines += ["    ```", ""]
+        pages[f"dhf/spec/{context}.md"] = "\n".join(lines) + "\n"
+    return pages
+
+
 def on_files(files, config):
     from mkdocs.structure.files import File
 
@@ -233,6 +265,8 @@ def on_files(files, config):
                                                                        pdf and name.name)))
         if pdf:
             files.append(File.generated(config, f"dhf/{name.as_posix()}", abs_src_path=str(pdf)))
+    for path, content in spec_pages().items():
+        files.append(File.generated(config, path, content=content))
     return files
 
 

@@ -22,5 +22,6 @@ jobs:
       # One install: the synced environment is RDM at this commit, so the
       # workflow does not install it a second time.
       install-rdm: false
+      submodules: 'true'   # loyly: the adapter is checked against Löyly's own spec
       install-command: uv sync --all-extras && echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
       test-command: uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results

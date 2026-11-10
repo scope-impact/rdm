@@ -20,8 +20,10 @@
     verification report work on requirements and needs.
   - Löyly's layout, with user needs from its event model, Allium and event
     storm, is an optional adapter (`layout: loyly`, `needs: allium`).
-  - RDM's own spec is plain Gherkin under `spec/`; `loyly/` is a submodule
-    (Löyly's `spec-v2`).
+  - RDM's own spec is plain Gherkin under `spec/`, published on the docs site
+    under the design history (one page per context); `loyly/` is a submodule
+    (Löyly's `spec-v2`), checked out in CI so the adapter is tested against it.
+  - The reusable gates workflow takes `submodules`, for a spec kept in one.
   - Removed: design inputs (`design_inputs:`), the user-need registry
     (`user_needs:`), `rdm story design-gate` and its CI step, `rdm hooks` and
     the git hooks, `rdm story new-input`, source scanning of test tags, the

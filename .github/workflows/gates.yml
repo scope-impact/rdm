@@ -38,6 +38,10 @@ on:
         description: "Installs the caller's own dependencies before the tests (RDM, pytest and allure-pytest already are)"
         type: string
         default: ''
+      submodules:
+        description: "Check out the repository's submodules (true, or recursive), for a spec or tests kept in one"
+        type: string
+        default: 'false'
       acceptance-tests:
         description: 'false until the repository has its first tagged acceptance test'
         type: boolean
@@ -80,6 +84,7 @@ jobs:
         with:
           fetch-depth: 0   # the graph reads the history
           persist-credentials: false
+          submodules: ${{ inputs.submodules }}
 
       - name: Check out RDM at the pinned revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

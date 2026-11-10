@@ -56,6 +56,7 @@ environment variables, never spliced into the script text.
 | `dhf` | `dhf` | the design history file |
 | `install-rdm` | `true` | installs RDM, `pytest` and `allure-pytest` from `rdm-ref`; `false` when `install-command` already does |
 | `install-command` | none | installs your dependencies before the tests |
+| `submodules` | `false` | `true` (or `recursive`) checks out your submodules, for a spec kept in one |
 | `acceptance-tests` | `true` | `false` until you have a tagged acceptance test |
 | `test-command` | `pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results` | |
 | `allure-results` | `dhf/allure-results` | where `test-command` writes its results |
@@ -77,8 +78,8 @@ A freshly adopted repository may have no spec and no tagged tests yet. The
 workflow `rdm adopt` lays down sets `acceptance-tests: false` and
 `release-gate: false`, so the release gate waits. Set both to `true` when
 the spec is in place and your first tagged test lands. If the spec is a
-submodule, check it out (`submodules: true` on the checkout) and name its
-plan directory as `spec:` in `dhf/config.yml`.
+submodule, set `submodules: 'true'` (or `submodules: true` on the
+checkout in a workflow of your own) and name its plan directory as `spec:` in `dhf/config.yml`.
 
 ## The gates action, in a workflow of your own
 

@@ -63,7 +63,7 @@ designed and verified.
 | **Who it's for** | People and agents using RDM on their own product | Whoever governs RDM's development: authors, reviewers, an auditor, and RDM's gates |
 | **Controlled?** | Yes, as one document: IFU-001 lists its pages; each change is a reviewed pull request | Yes: each change is a reviewed pull request; the release gate requires every requirement verified |
 | **Checked by** | `mkdocs build --strict`, and the tests of the IFU's own requirements | The release gate, `rdm graph validate`, `rdm gap` |
-| **Published** | As the docs site, one copy per release | On the same site, each document as a page (and a PDF where Pandoc and Typst run), with the traceability matrix and map generated from a live test run |
+| **Published** | As the docs site, one copy per release | On the same site, each document as a page (and a PDF where Pandoc and Typst run), the spec one page per context, with the traceability matrix and map generated from a live test run |
 
 A product that adopts RDM gets its own `dhf/` (`rdm adopt` or `rdm init`), not
 RDM's.

@@ -61,6 +61,7 @@ plugins:
 
 markdown_extensions:
   - admonition
+  - pymdownx.details
   - toc:
       permalink: true
   - pymdownx.highlight:
@@ -120,7 +121,15 @@ nav:
   - Design history (RDM on RDM):
       - Overview: dhf/README.md
       - Traceability (from the graph): traceability-map.md
-      - V&V plan and user needs: dhf/documents/verification_and_validation_plan.md
+      - Spec (user needs and requirements):
+          - Compliance: dhf/spec/compliance.md
+          - Knowledge graph: dhf/spec/graph.md
+          - Publishing: dhf/spec/publishing.md
+          - Release: dhf/spec/release.md
+          - Risk: dhf/spec/risk.md
+          - Specification: dhf/spec/specification.md
+          - Test evidence: dhf/spec/test_evidence.md
+      - V&V plan: dhf/documents/verification_and_validation_plan.md
       - System architecture: dhf/documents/architecture.md
       - Software design:
               - Compliance: dhf/documents/design/compliance.md
