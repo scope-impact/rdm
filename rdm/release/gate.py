@@ -106,19 +106,18 @@ def derive(state: State) -> list[Event]:
     if not state.spec_found:
         return [Event(NO_SPEC, "no spec found: name its plan directory as `spec` in the DHF's config.yml, "
                                "or keep it at .pi/plan in the repository")]
-    events = [Event(UNSTAMPED, f"scenario {title!r} at {source} carries no @item id: stamp it")
+    events = [Event(UNSTAMPED, f"scenario {title!r} at {source} carries no requirement id tag")
               for source, title in state.unstamped]
-    events += [Event(STAMPED_TWICE, f"{ident} is stamped on more than one scenario: {', '.join(sources)}")
+    events += [Event(STAMPED_TWICE, f"{ident} tags more than one scenario: {', '.join(sources)}")
                for ident, sources in sorted(state.duplicates.items())]
     events += [Event(UNREADABLE_SPEC, f"spec file cannot be read: {problem}") for problem in state.problems]
     ids = {r["id"] for r in state.requirements}
     if not ids:
-        return events + [Event(NO_REQUIREMENTS, "the spec holds no stamped scenario (nothing to verify)")]
+        return events + [Event(NO_REQUIREMENTS, "the spec holds no scenario tagged with a requirement id (nothing to verify)")]
     results = result_events(state.report, ids)
     events += [e for e in results if e.blocking]
     events += [Event(RISK_FINDING if f.blocking else RISK_WARNING, f.message) for f in state.risk_findings]
-    events += [Event(NEED_UNADDRESSED, f"user need {need} is addressed by no requirement covering its rules or "
-                                       "guarantees")
+    events += [Event(NEED_UNADDRESSED, f"user need {need} is addressed by no requirement")
                for need, covering in state.needs.items() if not covering]
     events += [Event(NEED_UNVALIDATED, f"user need {un} has no approved validation record "
                                        f"(add {state.dhf_name}/validation/<name>-validation.json "

@@ -26,15 +26,20 @@ from rdm.graph.validate import validate, validate_command  # noqa: E402
 
 
 def _dhf(tmp_path: Path, *, needs=("Need1", "Need2"),
-         inputs=(("item-01-001", "Need1"), ("item-01-002", "Need2"))) -> Path:
+         inputs=(("item-01-001", "Need1"), ("item-01-002", "Need2")), layout: str = "gherkin") -> Path:
     """A committed repository whose spec (context ``core``, slice 01) holds the
     user needs ``needs`` and the requirements ``inputs``, ``(item id, the need
-    it covers or None)``; and controlled documents. Returns its DHF."""
+    it addresses or None)``; and controlled documents. Returns its DHF. In
+    plain Gherkin (the default) each need is a Feature, one with no
+    requirement an empty one; ``layout="loyly"`` makes each an Allium surface."""
     repo = tmp_path / "proj"
     docs = repo / "dhf" / "documents"
     (docs / "design").mkdir(parents=True)
     write_spec(repo, tuple((ident, f"{ident} text", [need] if need else []) for ident, need in inputs),
-               {n: ("core", "User", n) for n in needs}, {"01": "core"})
+               {n: ("core", "User", n) for n in needs}, {"01": "core"}, layout=layout)
+    if layout == "gherkin":
+        for need in set(needs) - {need for _, need in inputs}:
+            (repo / "spec" / "core" / f"{need}.feature").write_text(f"Feature: {need}\n  {need}\n")
     (docs / "vv.md").write_text("---\nid: VVP-1\n---\n# Plan\n")
     (docs / "design" / "core.md").write_text("---\nid: SDS-1\n---\n# Core\n")
     (docs / "design_review.md").write_text("---\nid: DR-1\n---\n# Review\nApproved.\n")
@@ -95,8 +100,7 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
         dhf = _dhf(tmp_path / "msgs", needs=("Need1", "Need2", "Need3"))
         results = _results(tmp_path / "msgs", {"item-01-001": ["failed"]})
         found = {(r.severity, r.label, r.message) for r in validate(project(dhf, results))}
-        assert ("Violation", "Need3",
-                "user need is addressed by no requirement covering its rules or guarantees") in found
+        assert ("Violation", "Need3", "user need is addressed by no requirement") in found
         assert ("Violation", "item-01-001", "requirement has a failed or broken test run") in found
         assert ("Violation", "item-01-002", "requirement is not verified by any passing test run") in found
 
@@ -116,7 +120,9 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
                 "clause needs a standard (skos:inScheme a skos:ConceptScheme)") in found
 
     with verification_step("A requirement addressing no user need, and a run claiming no requirement, are warnings"):
-        wdhf = _dhf(tmp_path / "warn", needs=(), inputs=(("item-01-001", None),))
+        # Only a needs adapter can leave a requirement addressing no need: under plain Gherkin each sits
+        # under a Feature.
+        wdhf = _dhf(tmp_path / "warn", needs=(), inputs=(("item-01-001", None),), layout="loyly")
         wresults = _results(tmp_path / "warn", {"item-01-001": ["passed"], "item-09-001": ["passed"]})
         warnings = {(r.label, r.message) for r in validate(project(wdhf, wresults)) if r.severity == "Warning"}
         assert ("item-01-001", "requirement addresses no user need") in warnings
@@ -127,17 +133,17 @@ def test_gate_shapes_agree_with_the_release_gate(tmp_path: Path) -> None:
         git_run(dhf.parent, "commit", "-qm", "change")
 
     def no_inputs(dhf):
-        feature = dhf.parent / ".pi" / "spec" / "core" / "spec.feature"
-        feature.write_text("Feature: core\n")
+        for feature in (dhf.parent / "spec" / "core").glob("*.feature"):
+            feature.write_text(f"Feature: {feature.stem}\n")
         commit(dhf)
 
     def unstamped(dhf):
-        feature = dhf.parent / ".pi" / "spec" / "core" / "spec.feature"
+        feature = dhf.parent / "spec" / "core" / "Need1.feature"
         feature.write_text(feature.read_text() + "\n  Scenario: nobody stamped me\n")
         commit(dhf)
 
     def stamped_twice(dhf):
-        feature = dhf.parent / ".pi" / "spec" / "core" / "spec.feature"
+        feature = dhf.parent / "spec" / "core" / "Need1.feature"
         feature.write_text(feature.read_text() + "\n  @item-01-001\n  Scenario: a second claim on one id\n")
         commit(dhf)
 
@@ -187,7 +193,7 @@ def test_graph_validate_reports_and_exits_on_violations(tmp_path: Path, capsys) 
         assert "Graph validation PASSED" in capsys.readouterr().out
         assert validate_command(dhf_dir=dhf, allure_results_dir=results) == 1
         out = capsys.readouterr().out
-        assert "[VIOLATION] Need3: user need is addressed by no requirement covering its rules or guarantees" in out
+        assert "[VIOLATION] Need3: user need is addressed by no requirement" in out
 
     with verification_step("User-supplied shapes add rules as data"):
         extra = tmp_path / "team.ttl"

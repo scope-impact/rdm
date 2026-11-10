@@ -69,7 +69,7 @@ def test_orphan_tag_warns_and_permits() -> None:
 def test_unaddressed_need_blocks() -> None:
     events = derive(_state(needs={"Alarm": ["item-01-001"], "Log": []}))
     assert [(e.name, e.message) for e in events] == [
-        (NEED_UNADDRESSED, "user need Log is addressed by no requirement covering its rules or guarantees")]
+        (NEED_UNADDRESSED, "user need Log is addressed by no requirement")]
 
 
 def test_command_requires_allure_results(tmp_path: Path) -> None:
