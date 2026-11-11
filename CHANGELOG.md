@@ -3,6 +3,114 @@
 <!-- --8<-- [start:history] -->
 ## Unreleased
 
+- **Breaking: RDM reads the spec as Gherkin and audits it with Allure; it no
+  longer authors requirements** (ADR 0002).
+  - A requirement is a Gherkin scenario tagged with an id (any id-shaped tag,
+    or the pattern `spec:` in `dhf/config.yml` names), parsed with Cucumber's
+    parser (`gherkin-official`); a user need is, by default, a Feature. RDM
+    finds the feature files by `spec:` (globs, exclusions, id pattern, needs
+    source), else under `spec/` or `features/`.
+  - A test run claims a requirement with an Allure `tag` label of its id
+    (Gherkin runners write them from scenario tags; plain tests use
+    `@allure.tag("<id>")`).
+  - The release gate blocks on no spec, a scenario with no id, an id on two
+    scenarios, a spec file that does not parse, an unverified requirement or
+    an unaddressed need; risk `controls:` name requirement ids; validation
+    records name need ids. The graph, its MCP `trace`, the matrix and the
+    verification report work on requirements and needs.
+  - Löyly's layout, with user needs from its event model, Allium and event
+    storm, is an optional adapter (`layout: loyly`, `needs: allium`).
+  - RDM's own spec is plain Gherkin under `spec/`, published on the docs site
+    under the design history (one page per context); `loyly/` is a submodule
+    (Löyly's `spec-v2`), checked out in CI so the adapter is tested against it.
+  - The reusable gates workflow takes `submodules`, for a spec kept in one.
+  - New example, `examples/loyly-pi-harness`: RDM audits Löyly's pi harness
+    (201 requirements) from outside; a clojure.test-to-Allure bridge, loaded
+    from the boot class path, runs the harness's suites unchanged. Its own CI
+    job runs the suites and RDM's gates.
+  - `rdm adopt` and `rdm init` templates describe a Gherkin spec, not only a
+    Löyly one.
+  - RDM's own spec is written the Löyly way in `.pi/` (was plain Gherkin under
+    `spec/`): seven slices, one per bounded context, each with its accepted
+    scenarios as concrete Given/When/Then examples stamped `@item-NN-SSS` and
+    tagged with the Allium rule or guarantee they cover, an Allium model, and
+    an event model whose screens are the user needs; an event storm behind
+    them. The 44 requirement ids are unchanged, and each addresses the same
+    need as before; needs are now named by screen (`release/release-blocked`).
+  - `rdm init` and `rdm adopt` lay down a spec skeleton the Löyly way
+    (`.pi/plan/01-core`, `.pi/spec/core/`, `.pi/spec/event-storm.edn`); adopt
+    only when the repository has no spec yet, so a plain-Gherkin spec is kept.
+  - One final document each, rendered from the record: RDM's CSV-001 and the
+    Löyly pi harness's CSV-HAR-001 (computer software validation with the
+    architecture, the risk policy and risks, the whole spec and each
+    requirement's verification), and DC-001 for Part 11 (one statement for
+    both records, which share RDM's repository). The Löyly example replaces
+    the Part 11 one; RDM's separate risk policy and register move into
+    CSV-001; the example's separate documents are gone.
+  - Readable risks and scenarios, the Markdown still the source: the render
+    filters mark structure with Pandoc's own attributes (`::: {.risk-card}`,
+    `::: {.scenario-card}`, `[High]{.level}`), and the templates draw it: the
+    PDF's `cards.lua` and `template.typ` as cards and chips, the docs site as
+    HTML with CSS. Risks: a table of every risk at a glance (before, after,
+    decision), then a card per risk with its rating worked out and its
+    controls by title with their verification. Scenarios: a card each, led by
+    its id and status, steps in a keyword column, its Allium tags in words.
+  - Architecture diagrams: RDM's context map (its parts, contexts and their
+    dependencies in the code) and the Löyly harness's (its contexts and the
+    events each hands to another) as Mermaid, in the documents' palette; the
+    docs site draws them, and the PDF build draws each as a PNG with `mmdc`.
+  - New render filters `include` (a file as written, frontmatter left out),
+    `glob` (matching paths, sorted) and `gherkin` (a feature file written back
+    as a highlighted `gherkin` block: Feature, Rule, scenario and steps
+    indented by level, tags and id above each scenario, aligned tables,
+    comments left out); the PDF template highlights Gherkin in the document's
+    palette and wraps a long line under its own text, so a document carries its spec's
+    feature files; item-07-002 states them. A document that holds Jinja is
+    rendered with the DHF's config and generated data before it is published
+    or made a PDF (`docs/_hooks/dhf.py`, `--dhf` for another project).
+  - New built-in checklist `csv_tool_validation`: computer software validation
+    of a tool used in production or the quality system, after FDA's Computer
+    Software Assurance guidance (3 Feb 2026) and ISO 13485 4.1.6 and 7.5.6,
+    each item citing its source PDF, section and page.
+  - RDM is validated as a tool: CSV-001 (proposed) records its intended use,
+    high process risk, assurance (its 44 verified requirements, the Löyly
+    example on every change), record and change control; DC-001's §11.10(a)
+    validation points to it. RDM's CI holds its record to
+    `part11_document_control` and `csv_tool_validation` (100% each).
+  - Risk analysis by CSA factor: RDM's register gains RISK-TOOL-008 (the spec
+    read short), -009 (evidence not retrievable) and -010 (a decision on other
+    results); each CSV document maps the guidance's six factors to its risks.
+  - A slice of a Löyly plan with no spec.feature now blocks release (it was
+    skipped quietly: a link to a folder git never received dropped its
+    requirements). item-04-001 states it.
+  - Checklists cite their sources: each item of `part11_document_control`
+    and of the example's CSV checklist names the source PDF (with its link),
+    the section and the printed and PDF page.
+  - The verification report compares runs with the product's commit (that of
+    the repository the spec lives in) and names it in the header; Clojure test
+    names are shortened like Python's; the traceability table gives the tests
+    more width. The Löyly example's CI job uploads its evidence bundle.
+  - The PDF template renders block quotes with any Pandoc (3.1.12 and before
+    wrote `#blockquote`).
+  - Fixed: the adopt `.gitignore` template was missing from the package data,
+    so `rdm adopt` from an installed wheel laid no `.gitignore`.
+  - Removed the Part 11 example (`examples/github-document-control`): Löyly's
+    pi harness is the worked example, on the docs site and in CI.
+  - The last design-input leftovers are gone: a requirement's user needs are
+    `addresses` (was `traces_to`) in `requirements()`, the verification data
+    and the verification report; the traceability map's requirement nodes are
+    kind `requirement` (was `input`).
+  - Evidence is Allure results only: graded verdicts (Löyly's sealed graders)
+    are not counted (ADR 0002).
+  - Removed: design inputs (`design_inputs:`), the user-need registry
+    (`user_needs:`), `rdm story design-gate` and its CI step, `rdm hooks` and
+    the git hooks, `rdm story new-input`, source scanning of test tags, the
+    tests graph, `rdm c4 draw` and the C4 architecture context, `--unit-coverage`,
+    `rdm story persona` and the `validation` extra, `rdm story mutation-probe`,
+    `rdm translate`, `rdm story trace` (use the graph's `trace`), `--infer`
+    and the graph's rules, the user manual in the graph, the pytest plugin's
+    labels from the record, and Backlog.md. `rdm adopt` lays down the DHF
+    skeleton and the CI workflow only.
 - **The docs are RDM's instructions for use** (Design Review 69, DI-80, DI-81):
   one manual in IFU order (cover, intended use, how RDM works, safety and
   limitations with each residual risk, installation, getting started,

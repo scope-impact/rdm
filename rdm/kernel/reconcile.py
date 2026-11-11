@@ -3,9 +3,8 @@ Generic reconciliation core: given declared user-need IDs and observations
 keyed by ID, bucket the observations per ID, derive a status per bucket, and
 report the orphan IDs (referenced but not declared).
 
-Both the Allure verification reconciler (``rdm.evidence.allure``) and the persona
-formative reconciler (``rdm.specification.persona``) are this one shape with a different
-aggregate type and status policy. Dependency-free (no pydantic)
+The Allure verification reconciler (``rdm.evidence.allure``) is this shape
+with its own aggregate type and status policy. Dependency-free (no pydantic)
 so it stays usable from the lightweight record layer.
 """
 
@@ -23,7 +22,7 @@ def load_json_records(directory: Path, suffix: str, build: Callable[[dict, str],
     """Load ``*<suffix>`` JSON files from a directory into records.
 
     Centralizes the glob + safe-decode + dict-check skeleton shared by every
-    record ingester (Allure results, persona runs, validation records). For
+    record ingester (Allure results, validation records). For
     each well-formed object, ``build(data, filename)`` returns a record (or
     ``None`` to skip it). A missing directory yields an empty list. The name of
     each file that is not a JSON object is added to ``unreadable`` when given,
@@ -59,8 +58,8 @@ def aggregate_by_id(
     """Bucket ``observations`` by declared ID and derive a status per bucket.
 
     Args:
-        declared_ids: the IDs to aggregate (e.g. the user-need registry).
-        observations: the items to fold in (test results, persona runs, ...).
+        declared_ids: the IDs to aggregate (e.g. the spec's requirement ids).
+        observations: the items to fold in (test results, ...).
         ids_of: the ID(s) an observation references.
         new: build a fresh aggregate for an ID (called as ``new(uid)``).
         fold: mutate an aggregate with one observation it references.
@@ -84,8 +83,8 @@ def aggregate_by_id(
 
 class StatusReportMixin:
     """Provides ``_ids_with`` for reports whose ``by_id`` maps declared IDs to
-    aggregates carrying a ``status`` attribute. The IDs may be user needs, design
-    inputs, etc. -- the mixin is agnostic."""
+    aggregates carrying a ``status`` attribute. The IDs may be user needs,
+    requirements, etc. -- the mixin is agnostic."""
 
     by_id: dict
 

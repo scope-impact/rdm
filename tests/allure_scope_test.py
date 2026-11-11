@@ -1,9 +1,9 @@
 """Allure belongs to the acceptance tests only.
 
 Acceptance (end-to-end) tests under ``tests/acceptance/`` are the evidence of
-record: they carry ``@allure.story`` tags, steps and attachments. Unit tests
+record: they carry ``@allure.tag`` item tags, steps and attachments. Unit tests
 carry none, so nothing but an acceptance test can be counted as verifying a
-design input. Read from the syntax tree, so fixture strings do not count.
+requirement. Read from the syntax tree, so fixture strings do not count.
 """
 
 import ast
@@ -33,6 +33,6 @@ def test_unit_tests_carry_no_allure():
 
 def test_the_guard_sees_a_real_use(tmp_path):
     sample = tmp_path / "sample_test.py"
-    sample.write_text('import allure\n\nDOC = "@allure.story(\\"DI-1\\")"\n\n'
-                      '@allure.story("DI-1")\ndef test_x():\n    pass\n')
-    assert [u.split(" ", 1)[1] for u in _allure_uses(sample, tmp_path)] == ["import allure", "allure.story"]
+    sample.write_text('import allure\n\nDOC = "@allure.tag(\\"item-01-001\\")"\n\n'
+                      '@allure.tag("item-01-001")\ndef test_x():\n    pass\n')
+    assert [u.split(" ", 1)[1] for u in _allure_uses(sample, tmp_path)] == ["import allure", "allure.tag"]

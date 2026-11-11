@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rdm"
 version = "2.0.0-alpha"
-description = "The design record of regulated software as Markdown and tests in git: gated, rendered, and queryable as a graph"
+description = "Audit the record of regulated software: a Gherkin spec traced to Allure evidence, gap analysis against compliance checklists, release gates, regulatory documents and a queryable graph"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -28,21 +28,18 @@ requires-python = ">=3.10"
 dependencies = [
     "jinja2==3.1.6",
     "pyyaml==6.0.3",
-    "gitpython==3.2.0"
+    "gitpython==3.2.0",
+    "gherkin-official==32.2.0",
 ]
 
 [project.optional-dependencies]
-# Playwright for the usability-persona skill (AI-persona usability validation).
-# Browsers are provided by the environment; if the preinstalled browser version
-# differs, launch with executable_path.
-validation = ["playwright==1.63.0"]
-# The design record as a linked-data graph (DI-35/36): an embedded RDF store
+# The design record as a linked-data graph (item-06-001, item-06-002): an embedded RDF store
 # (pyoxigraph), which RDM also serves as a read-only SPARQL endpoint for
 # graph browsers such as AWS Graph Explorer; pyshacl runs the gate shapes
-# (DI-38); mcp serves it to agents, read-only (DI-41/42). Optional: the record core keeps
+# (item-06-004); mcp serves it to agents, read-only (item-06-006, item-06-007). Optional: the record core keeps
 # no RDF dependency.
 graph = ["pyoxigraph==0.5.11", "pyshacl==0.40.1", "mcp==2.2.0"]
-# The verification report as PDF (DI-64): Typst compiled in-process, so CI
+# The verification report as PDF (item-07-009): Typst compiled in-process, so CI
 # needs no Pandoc. Without it, a `typst` executable on PATH is used.
 report = ["typst==0.15.0"]
 # Documentation site (Markdown prose under docs/ + an API reference generated
@@ -53,7 +50,7 @@ docs = [
     "mkdocs==1.6.1",
     "mkdocs-material==9.7.7",
     "mkdocstrings[python]==1.0.6",
-    "mike==2.1.3",  # one copy of the docs per release (DI-82)
+    "mike==2.1.3",  # one copy of the docs per release (item-07-006)
     "ruff==0.16.10",  # mkdocstrings uses it to format rendered signatures
 ]
 dev = [
@@ -72,7 +69,7 @@ dev = [
     "pyshacl==0.40.1",
     "mcp==2.2.0",
     "typst==0.15.0",
-    "pypdf==6.19.0",  # the DI-64 test reads the rendered report back
+    "pypdf==6.19.0",  # the item-07-009 test reads the rendered report back
 ]
 
 [project.scripts]
@@ -101,19 +98,19 @@ rdm = [
     "specification/init_files/images/uimockups/*",
     "specification/init_files/documents/*",
     "specification/init_files/documents/510k/*",
-    "specification/hook_files/*",
-    "specification/adopt_files/.claude/*",
+    "specification/adopt_files/gitignore",
     "specification/adopt_files/.github/workflows/*",
-    "specification/adopt_files/.githooks/*",
     "specification/adopt_files/dhf/*",
     "specification/adopt_files/dhf/documents/*",
-    "specification/adopt_files/dhf/documents/design/*",
-    "specification/adopt_files/scripts/*"
+    "specification/spec_files/spec/*",
+    "specification/spec_files/spec/core/*",
+    "specification/spec_files/spec/core/allium/*",
+    "specification/spec_files/spec/core/event-model/*"
 ]
 
 [tool.ruff]
 line-length = 120
-exclude = [".tox", "*.egg", "build", "data", ".venv"]
+exclude = [".tox", "*.egg", "build", "data", ".venv", "loyly"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F"]

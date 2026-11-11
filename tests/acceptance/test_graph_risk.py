@@ -1,6 +1,6 @@
-"""Acceptance test for the risk register in the graph (DI-45, see dhf/).
+"""Acceptance test for the risk register in the graph (item-06-008).
 
-Tagged `@allure.story("DI-45")`, over the real projection, the shipped
+Tagged `@allure.tag("item-06-008")`, over the real projection, the shipped
 shapes, the real release gate (for agreement) and the agent's trace. Skips
 cleanly if allure-pytest or the `graph` extra is not installed.
 """
@@ -32,22 +32,22 @@ def _decision(quads, risk_id: str) -> str:
                 and q.predicate.value == RDM + "residualDecision")
 
 
-@allure.story("DI-45")
+@allure.tag("item-06-008")
 @allure.label("output", "rdm/graph/project.py")
 def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
-    """DI-45: each risk with its branch, links, chain, scores, levels,
+    """item-06-008: each risk with its branch, links, chain, scores, levels,
     residual decision, status, controls and acceptance in a risks graph;
     shapes blocking exactly the risks the release gate blocks; trace by risk
-    id, and a design input's trace listing the risks it controls."""
+    id, and a requirement's trace listing the risks it controls."""
     dhf = _dhf(tmp_path / "facts")
     _policy(dhf)
     _register(dhf, [
         _risk("RISK-F-1", category="security", stride="Spoofing", linked=["RISK-F-2"], hazard="Hz", situation="Si",
-              harm="Ha", level="High", controls=["DI-1", "DI-2"], residual={"probability": "Unlikely"},
+              harm="Ha", level="High", controls=["item-01-001", "item-01-002"], residual={"probability": "Unlikely"},
               acceptance=ACCEPT, status="proposed"),
         _risk("RISK-F-2", residual={"severity": "Minor", "probability": "Rare"}),
     ])
-    results = _results(tmp_path / "facts", {"DI-1": ["passed"], "DI-2": ["passed"]})
+    results = _results(tmp_path / "facts", {"item-01-001": ["passed"], "item-01-002": ["passed"]})
     quads = project(dhf, results)
     with verification_step("Each risk's facts in the risks graph"):
         risk = "urn:dhf:proj:risk/RISK-F-1"
@@ -58,7 +58,8 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
                      ("probability", "Possible"), ("level", "High"), ("recordedLevel", "High"),
                      ("residualProbability", "Unlikely"), ("residualLevel", "Medium"), ("residualDecision", "accepted"),
                      ("acceptedBy", "QA lead"), ("acceptanceRationale", "ALARP"), ("riskStatus", "proposed"),
-                     ("controlledBy", "urn:dhf:proj:input/DI-1"), ("controlledBy", "urn:dhf:proj:input/DI-2"),
+                     ("controlledBy", "urn:dhf:proj:requirement/item-01-001"),
+                     ("controlledBy", "urn:dhf:proj:requirement/item-01-002"),
                      ("declaredIn", "urn:dhf:proj:doc/RMF-risks"),
                      ("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", RDM + "Risk")):
             assert fact in facts, fact
@@ -73,24 +74,24 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
 
     with verification_step("The residual decision is \"not evaluated\" until every control has a passing test"):
         (tmp_path / "facts-red").mkdir()
-        assert _decision(project(dhf, _results(tmp_path / "facts-red", {"DI-1": ["passed"], "DI-2": ["failed"]})),
-                         "RISK-F-1") == "not evaluated"
+        red = _results(tmp_path / "facts-red", {"item-01-001": ["passed"], "item-01-002": ["failed"]})
+        assert _decision(project(dhf, red), "RISK-F-1") == "not evaluated"
         assert _decision(project(dhf), "RISK-F-1") == "not evaluated"   # no results at all
 
-    # Trace: a risk by id (case-insensitive) with each controlling input, and
-    # a design input with the risks it controls.
-    with verification_step("Trace: a risk by id (case-insensitive) with each controlling input, and a design input "
-                           "with the…"):
+    with verification_step("Trace: a risk by id with each controlling requirement, and a requirement with the risks "
+                           "it controls"):
         record = Record(dhf, results)
-        traced = trace(record, "risk-f-1")["risk"]
+        traced = trace(record, "RISK-F-1")["risk"]
         assert (traced["id"], traced["category"], traced["stride"], traced["linked"]) == (
             "RISK-F-1", "security", "Spoofing", ["RISK-F-2"])
         assert (traced["level"], traced["residualLevel"], traced["residualDecision"], traced["riskStatus"]) == (
             "High", "Medium", "accepted", "proposed")
-        assert [c["id"] for c in traced["controls"]] == ["DI-1", "DI-2"] and traced["undeclared_controls"] == []
-        assert traced["controls"][0]["runs"] == [{"test": "DI-1-0", "status": "passed", "steps": [], "attachments": []}]
-        assert trace(record, "DI-2")["design_input"]["risks"] == ["RISK-F-1"]
-        with pytest.raises(ValueError, match="RISK-NOPE-1 is not a declared"):
+        assert [c["id"] for c in traced["controls"]] == ["item-01-001", "item-01-002"]
+        assert traced["undeclared_controls"] == []
+        assert traced["controls"][0]["runs"] == [
+            {"test": "item-01-001-0", "status": "passed", "steps": [], "attachments": []}]
+        assert trace(record, "item-01-002")["requirement"]["risks"] == ["RISK-F-1"]
+        with pytest.raises(ValueError, match="RISK-NOPE-1 is not a requirement, user need or risk"):
             trace(record, "RISK-NOPE-1")
 
     with verification_step("The shapes block exactly the risks the release gate blocks, case by case"):
@@ -118,7 +119,8 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
                    if r.severity == "Violation" and r.message == "a risk in dhf/documents/risk/risks.md has no id"]
         assert [r.label for r in flagged] == ["risk with no id #1 in dhf/documents/risk/risks.md"]
         undeclared = trace(Record(tmp_path / "agree" / "undeclared-control" / "proj" / "dhf"), "RISK-U-2")["risk"]
-        assert [c["id"] for c in undeclared["controls"]] == ["DI-1"] and undeclared["undeclared_controls"] == ["DI-77"]
+        assert [c["id"] for c in undeclared["controls"]] == ["item-01-001"]
+        assert undeclared["undeclared_controls"] == ["item-01-077"]
     with verification_step("A finding about the register with no risk to carry it: the gate blocks, and so do "
                            "the shapes, on a stand-in node for the register"):
         for name, write in (("register-mapping", lambda d: _register(d, {"RISK-X-1": {}})),
@@ -131,7 +133,7 @@ def test_risks_in_the_graph_agree_with_the_release_gate(tmp_path: Path) -> None:
                 _policy(case_dhf)
             write(case_dhf)
             _commit(case_dhf)
-            results = _results(tmp_path / "agree" / name, {"DI-1": ["passed"], "DI-2": ["passed"]})
+            results = _results(tmp_path / "agree" / name, {"item-01-001": ["passed"], "item-01-002": ["passed"]})
             gate = run_release_gate(case_dhf, results)
             blocked = {m for m in gate.blocking if "risk" in m}
             assert blocked, (name, gate.blocking)

@@ -1,17 +1,20 @@
 ---
 id: DC-001
-revision: 2
+revision: 5
 title: "Document Control — git as the document control system for RDM's record"
 ---
 
 # Purpose
 
-States how RDM's own controlled records — this Design History File, the design
-documents, and the source that realises them — are
-controlled. RDM keeps its record **in git, with GitHub as the service
+States how the controlled records in RDM's repository are controlled: RDM's
+own — this Design History File, its computer software validation (CSV-001),
+its spec (`.pi/spec/`), its tests and the source that meets them — and the
+worked example's, the computer software validation of Löyly's pi harness
+(`examples/loyly-pi-harness/`, CSV-HAR-001). This is the one Part 11 document
+for both: they share this repository, its history and its review. RDM keeps its record **in git, with GitHub as the service
 provider**; this statement maps each applicable 21 CFR Part 11 control to the
 mechanism that meets it, and it must pass gap analysis against RDM's own
-shipped `part11_document_control` checklist (DI-25 — the same checklist any
+shipped `part11_document_control` checklist (item-05-004 — the same checklist any
 downstream project audits with is the one this record is held to).
 
 # The system
@@ -19,16 +22,18 @@ downstream project audits with is the one this record is held to).
 The master copy of every controlled record is the repository's default branch.
 Drafts are branches; review and approval happen on the pull request; releases
 are tags; the revision history is the git history itself. Planning artifacts
-(Backlog.md tasks, issues) are coordination, never part of the record
+(tasks, issues) are coordination, never part of the record
 (`docs/about/plan-vs-record.md`).
 
 # Controls
 
-- **Validation** [[P11:11.10a]] — the controls are enforced configuration and
-  code, exercised on every change: the design gate, the pre-commit hook
-  (`.githooks/`), and the CI pipeline (`design-controls.yml`) are RDM's own
-  features, verified by RDM's own tagged acceptance tests, with every change
-  independently reviewed on its pull request. Altered records are discernible
+- **Validation** [[P11:11.10a]] — RDM and this record system are validated
+  as CSV-001 records (computer software assurance, on a documented risk
+  assessment). The controls are enforced configuration and code, exercised
+  on every change: the CI pipeline (`design-controls.yml`)
+  and the branch ruleset run RDM's own release gate and graph validation,
+  verified by RDM's own acceptance tests, with every change independently
+  reviewed on its pull request. Altered records are discernible
   by construction — any change produces a new SHA.
 - **Copies** [[P11:11.10b]] — accurate and complete copies in human-readable
   and electronic form: the rendered documentation site and the rendered
@@ -48,7 +53,7 @@ are tags; the revision history is the git history itself. Planning artifacts
   2FA-protected account); anonymous or unauthenticated input cannot reach the
   record.
 - **Signature accountability** [[P11:11.10j]] — the contributor policy
-  (`dhf/AGENT_WORKFLOW.md` and this statement, both controlled documents)
+  (`AGENTS.md` and this statement, both controlled documents)
   states that a pull-request approval is the approver's electronic signature
   and that the approver is accountable for what it approves; the approver is
   named on the pull request.
@@ -56,10 +61,10 @@ are tags; the revision history is the git history itself. Planning artifacts
   computer-generated, time-stamped, author-attributed on every action; a later
   change never obscures an earlier entry, and the trail lives exactly as long
   as the record it belongs to.
-- **Sequencing** [[P11:11.10f]] — the enforced order of steps is RDM's own
-  design-controls loop: the pre-commit hook blocks implementation before
-  design approval, and CI blocks merge until design-gate, acceptance tests,
-  verification, and release-gate pass in order.
+- **Sequencing** [[P11:11.10f]] — the enforced order of steps: CI blocks
+  merge until the acceptance tests, verification, the release gate and graph
+  validation pass, in that order; the reviewer of each pull request checks a
+  requirement's scenario is in the spec before the code that meets it.
 - **Authority** [[P11:11.10g]] — only authorized reviewers can approve a pull
   request into the default branch, and the approver must not be the change's
   author (enforced by the ruleset's required review). The branch controls are configuration code in this repository —
@@ -68,10 +73,10 @@ are tags; the revision history is the git history itself. Planning artifacts
   `repo-settings.json` — applied and drift-checked with
   `scripts/apply-repo-controls.sh [--check]`.
 - **Training** [[P11:11.10i]] — contributors (human or agent) are directed
-  through `dhf/AGENT_WORKFLOW.md` before changing the record; agent sessions
-  load it automatically at session start.
+  through `AGENTS.md` and `CLAUDE.md` before changing the record; agent
+  sessions load them at session start.
 - **Systems documentation control** [[P11:11.10k]] — this statement, the
-  runbook, the hook, and the CI workflow are themselves version-controlled in
+  contributor guide and the CI workflow are themselves version-controlled in
   this repository and change only through the same approved path they
   describe.
 - **Signature manifestation** [[P11:11.50]] — the pull-request review records
@@ -87,5 +92,5 @@ are tags; the revision history is the git history itself. Planning artifacts
 # Verification
 
 `rdm gap part11_document_control dhf/documents/document_control.md` must exit
-zero; the DI-25 acceptance test executes exactly that, so this statement can
+zero; the item-05-004 acceptance test executes exactly that, so this statement can
 never silently drop a control.

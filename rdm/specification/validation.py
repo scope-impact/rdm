@@ -1,12 +1,12 @@
 """
-Summative validation records (DI-33): per-user-need, human-evidenced.
+Summative validation records (item-01-004): per-user-need, human-evidenced.
 
 Verification is machine-executed; validation is a human judgment that the
 product meets the user need. This module gives that judgment a place in the
-record — ``<dhf>/validation/UN-…-validation.json``:
+record — ``<dhf>/validation/<name>-validation.json``:
 
     {
-      "user_need": "UN-001",
+      "user_need": "measurement/instrument-desk",
       "disposition": "approved",       // only "approved", with a reviewer, counts
       "reviewer": "name (role)",
       "summary": "what was reviewed, against what"
@@ -22,7 +22,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rdm.kernel.reconcile import load_json_records
-from rdm.specification.sdd import registry_user_needs
+from rdm.specification.sdd import user_need_ids
 
 APPROVED = "approved"
 
@@ -54,4 +54,4 @@ def unvalidated_user_needs(dhf_dir: Path, needs: set[str] | None = None) -> list
     an approved validation record, sorted."""
     records = parse_validation_records(validation_dir_for(dhf_dir))
     approved = {un for un, record in records.items() if record["disposition"] == APPROVED and record["reviewer"]}
-    return sorted((registry_user_needs(Path(dhf_dir)) if needs is None else needs) - approved)
+    return sorted((user_need_ids(Path(dhf_dir)) if needs is None else needs) - approved)

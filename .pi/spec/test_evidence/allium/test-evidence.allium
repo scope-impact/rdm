@@ -1,0 +1,96 @@
+-- allium: 3
+-- .pi/spec/test_evidence/allium/test-evidence.allium
+--
+-- Scope: the test evidence context: executed Allure results read as test runs, and what
+-- an acceptance run records about itself (rdm.pytest_plugin). This context is home to no
+-- need and declares no surface: its requirements address release/trace-verification
+-- through guarantees declared on release's TraceVerification surface
+-- (../../release/allium/release.allium).
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- The spec RDM reads (specification): the ids a run may claim.
+external entity Spec {}
+
+-- The repository whose commit a run tested.
+external entity Repository {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+-- One execution of a test, at one commit, by one executor.
+entity TestRun {
+    name: String
+    test: String
+    status: passed | failed | broken | skipped
+    claims: List<String>
+    commit: String
+    worktree: clean | dirty | unknown
+    steps: List<Step>
+    attachments: List<Attachment>
+}
+
+-- A verification step of a run, with its own result; steps nest.
+entity Step {
+    name: String
+    status: passed | failed | broken | skipped
+    steps: List<Step>
+}
+
+-- What a run kept: a file named in the result.
+entity Attachment {
+    name: String
+    type: String
+    source: String
+}
+
+-- Who or what ran the tests, and where.
+entity Executor {
+    name: String
+    type: String
+    build_name: String
+    build_url: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Read one Allure result file as a test run. What cannot be read is unreadable, never
+-- skipped: it could hold a failed run.
+rule ReadAllureResult {
+    when: ReadAllureResult(file)
+    -- 1. the file is UTF-8 JSON (a byte-order mark is allowed), an object, not too deep
+    requires: is_json_object(file)
+    -- 2. it is a regular file, not a symbolic link
+    requires: not is_link(file)
+    -- 3. its status is one Allure writes
+    requires: file.status in [passed, failed, broken, skipped, unknown]
+    -- 4. its labels are name and value text
+    requires: for label in file.labels: is_text(label.name) and is_text(label.value)
+    ensures:
+        TestRun.created(name: file.name, status: worst(file.status, file.steps),
+                        claims: tag_labels(file))
+        ResultRead(file: file)
+}
+
+-- Label a run of a test that claims a requirement of the spec with the commit under test.
+rule LabelRun {
+    when: LabelRun(run, repository)
+    requires: run.claims intersects spec.requirements
+    ensures:
+        run.commit = repository.head
+        run.worktree = if repository.has_uncommitted_changes then dirty else clean
+        RunLabelled(run: run)
+}
+
+-- Record, once per acceptance run, its executor and its environment.
+rule RecordRunEnvironment {
+    when: RecordRunEnvironment(results, repository)
+    ensures:
+        Executor.created(name: ci_or_local(), build_name: build_name(), build_url: build_url())
+        RunEnvironmentRecorded(results: results)
+}

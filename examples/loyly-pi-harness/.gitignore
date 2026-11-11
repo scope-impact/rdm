@@ -1,0 +1,8 @@
+# What RDM generates (rdm adopt): never committed, rebuilt by every run.
+allure-results/
+dhf/allure-results/
+dhf/data/
+.rdm/
+release-evidence/
+__pycache__/
+*.pyc

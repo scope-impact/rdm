@@ -1,0 +1,59 @@
+-- allium: 3
+-- .pi/spec/core/allium/core.allium
+--
+-- Scope: TODO the shared language of this context. Its surfaces are the user needs
+-- (event-model/area.edn links each screen to one); a requirement addresses a need
+-- through the rule or guarantee its @allium tag names.
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- TODO the person who uses the product.
+external entity UserAccount {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+entity Thing {
+    thing_id: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- TODO what the user does, and what it ensures.
+rule DoSomething {
+    when: DoSomething(user, thing_id)
+    -- 1. TODO a condition under which it is refused
+    requires: not exists Thing{thing_id: thing_id}
+    ensures:
+        Thing.created(thing_id: thing_id)
+        SomethingDone(thing_id: thing_id)
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor User {
+    identified_by: UserAccount where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+-- TODO the user need: who can do what, in the user's words.
+surface Desk {
+    facing user: User
+    context thing: Thing
+
+    provides:
+        DoSomething(user, thing_id)
+
+    @guarantee TodoGuarantee
+        -- TODO what always holds for the user here.
+}

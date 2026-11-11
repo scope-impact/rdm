@@ -1,6 +1,6 @@
-"""Acceptance tests for the read-only agent interface (DI-41, DI-42, see dhf/).
+"""Acceptance tests for the read-only agent interface (item-06-006, item-06-007).
 
-Tagged `@allure.story`, over a real `rdm graph mcp` subprocess spoken to by
+Tagged `@allure.tag`, over a real `rdm graph mcp` subprocess spoken to by
 the official MCP client over stdio. Skips cleanly if allure-pytest or the
 `graph` extra is not installed.
 """
@@ -40,27 +40,28 @@ def _session(dhf: Path, results: Path, steps):
     return asyncio.run(asyncio.wait_for(run(), 60))
 
 
-@allure.story("DI-41")
+@allure.tag("item-06-006")
 @allure.label("output", "rdm/graph/agent.py")
 def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
-    """DI-41: an MCP stdio server with schema, query, trace and validate, each
-    answering from a projection of the record as it is at that call."""
+    """item-06-006: an MCP stdio server with schema, query, trace (a
+    requirement, user need or risk) and validate, each answering from a
+    projection of the record as it is at that call."""
     dhf, results = _record(tmp_path)
-    design = dhf / "documents" / "design" / "alarms.md"
+    spec = dhf.parent / "spec" / "alarms" / "Alarm.feature"
 
     async def steps(client, call):
         names = sorted(t.name for t in (await client.list_tools()).tools)
         out = {"names": names}
         out["schema"] = await call("schema")
-        out["query"] = await call("query", {"sparql": "SELECT ?id WHERE { ?i a rdm:DesignInput ; "
+        out["query"] = await call("query", {"sparql": "SELECT ?id WHERE { ?i a rdm:Requirement ; "
                                                       "dcterms:identifier ?id } ORDER BY ?id"})
-        out["trace_di"] = await call("trace", {"id": "DI-1"})
-        out["trace_un"] = await call("trace", {"id": "un-001"})
+        out["trace_req"] = await call("trace", {"id": "item-01-001"})
+        out["trace_need"] = await call("trace", {"id": "Alarm"})
         out["validate"] = await call("validate")
-        # The record changes mid-session; the next call sees it.
-        design.write_text(design.read_text().replace("The device shall alarm.", "The device shall alarm loudly."))
-        out["after_edit"] = await call("trace", {"id": "DI-1"})
-        out["unknown"] = await call("trace", {"id": "DI-99"})
+        # The spec changes mid-session; the next call sees it.
+        spec.write_text(spec.read_text().replace("The device shall alarm.", "The device shall alarm loudly."))
+        out["after_edit"] = await call("trace", {"id": "item-01-001"})
+        out["unknown"] = await call("trace", {"id": "item-01-099"})
         return out
 
     out = _session(dhf, results, steps)
@@ -68,45 +69,46 @@ def test_agent_server_answers_from_the_current_record(tmp_path: Path) -> None:
     with verification_step("Exactly four tools; schema: the vocabulary and the predeclared prefixes"):
         assert out["names"] == ["query", "schema", "trace", "validate"]
         error, schema = out["schema"]
-        assert not error and "rdm:DesignInput" in schema["ontology"]
+        assert not error and "rdm:Requirement" in schema["ontology"]
         assert schema["prefixes"]["rdm"] == "https://github.com/scope-impact/rdm/ns#"
 
     with verification_step("query: SPARQL with the prefixes predeclared"):
         error, rows = out["query"]
-        assert not error and [r["id"] for r in rows["rows"]] == ["DI-1", "DI-2"] and rows["truncated"] is False
+        assert not error and [r["id"] for r in rows["rows"]] == ["item-01-001", "item-01-002"]
+        assert rows["truncated"] is False
 
-    with verification_step("trace a design input: its text, need, contexts, document, tagged test file and run"):
-        error, di = out["trace_di"]
-        di = di["design_input"]
-        assert not error and di["id"] == "DI-1" and di["text"] == "The device shall alarm."
-        assert di["needs"] == ["UN-001"] and di["context"] == "alarms" and di["realised_by"] == ["ui"]
-        assert di["document"]["id"] == "SDS-ALM-001" and di["document"]["path"] == "dhf/documents/design/alarms.md"
-        assert di["document"]["last_commit"].endswith("approve design")
-        assert di["tests"] == ["tests/test_alarms.py::test_alarm"]
-        assert di["runs"] == [{"test": "test_alarm", "status": "passed", "steps": [], "attachments": []}]
+    with verification_step("trace a requirement: its scenario, context, source, needs, coverage and runs"):
+        error, req = out["trace_req"]
+        req = req["requirement"]
+        assert not error and req["id"] == "item-01-001" and req["text"] == "The device shall alarm."
+        assert req["context"] == "alarms" and req["source"] == "spec/alarms/Alarm.feature:5"
+        assert req["needs"] == ["Alarm"] and req["covers"] == []
+        assert req["runs"] == [{"test": "test_alarm", "status": "passed", "steps": [], "attachments": []}]
 
-    with verification_step("trace a user need (id case-insensitive): its text, contexts and inputs"):
-        error, un = out["trace_un"]
-        un = un["user_need"]
-        assert not error and un["id"] == "UN-001" and un["text"] == "a need"
-        assert un["contexts"] == ["alarms", "ui"] and [d["id"] for d in un["design_inputs"]] == ["DI-1"]
+    with verification_step("trace a user need (a Feature): its text, context and requirements; what an adapter "
+                           "adds (faces, provides, guarantees) is empty"):
+        error, need = out["trace_need"]
+        need = need["user_need"]
+        assert not error and need["id"] == "Alarm" and need["text"] == "a need" and need["context"] == "alarms"
+        assert need["facing"] == need["surfaces"] == need["rules"] == need["guarantees"] == []
+        assert [r["id"] for r in need["requirements"]] == ["item-01-001"]
 
-    with verification_step("validate: the gate shapes' results (DI-2 has no passing run)"):
+    with verification_step("validate: the gate shapes' results (item-01-002 has no passing run)"):
         error, report = out["validate"]
         assert not error and report["violations"] >= 1
-        assert {"severity": "Violation", "focus": "DI-2",
-                "message": "design input is not verified by any passing test run"} in report["results"]
+        assert {"severity": "Violation", "focus": "item-01-002",
+                "message": "requirement is not verified by any passing test run"} in report["results"]
 
     with verification_step("Fresh per call: the edit made during the session is what the next call reads"):
-        assert out["after_edit"][1]["design_input"]["text"] == "The device shall alarm loudly."
+        assert out["after_edit"][1]["requirement"]["text"] == "The device shall alarm loudly."
         error, message = out["unknown"]
-        assert error and "DI-99 is not declared in the record" in message
+        assert error and "item-01-099 is not a requirement, user need or risk of the record" in message
 
 
-@allure.story("DI-42")
+@allure.tag("item-06-007")
 @allure.label("output", "rdm/graph/agent.py")
 def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
-    """DI-42: no write tool; query takes SELECT/ASK/CONSTRUCT/DESCRIBE, rejects
+    """item-06-007: no write tool; query takes SELECT/ASK/CONSTRUCT/DESCRIBE, rejects
     SPARQL Update and SERVICE; trace takes only ids; rows capped, the cut reported."""
     dhf, results = _record(tmp_path)
     before = {p: p.read_bytes() for p in dhf.rglob("*") if p.is_file()}
@@ -129,12 +131,12 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
             "SELECT * WHERE { # a comment ended by a carriage return\rSERVICE <http://127.0.0.1:9/x> { ?s ?p ?o }\n}",
         )]
         out["service_word"] = await call("query", {"sparql": 'ASK { ?s ?p ?o FILTER(?o != "SERVICE") }'})
-        out["bad_ids"] = [await call("trace", {"id": i}) for i in ('DI-1" } UNION { ?s ?p ?o', "DI 1", "")]
+        out["bad_ids"] = [await call("trace", {"id": i}) for i in ('item-01-001" } UNION { ?s ?p ?o', "item 01", "")]
         out["n1"] = await call("query", {"sparql": count})
-        out["ask"] = await call("query", {"sparql": "ASK { ?s a rdm:DesignInput }"})
+        out["ask"] = await call("query", {"sparql": "ASK { ?s a rdm:Requirement }"})
         out["construct"] = await call(
             "query", {"sparql": "CONSTRUCT { ?s a rdm:UserNeed } WHERE { ?s a rdm:UserNeed }"})
-        out["describe"] = await call("query", {"sparql": "DESCRIBE <urn:dhf:acme:need/UN-001>"})
+        out["describe"] = await call("query", {"sparql": "DESCRIBE <urn:dhf:acme:need/Alarm>"})
         out["capped"] = await call("query", {"sparql": "SELECT ?s ?p ?o WHERE { ?s ?p ?o }", "limit": 3})
         return out
 
@@ -160,21 +162,19 @@ def test_agent_server_cannot_change_anything(tmp_path: Path) -> None:
         assert out["n0"][1]["rows"] == out["n1"][1]["rows"]
         assert {p: p.read_bytes() for p in dhf.rglob("*") if p.is_file()} == before
 
-    with verification_step("trace answers any id the record declares, whatever its shape and case"):
+    with verification_step("trace answers an id the record declares whatever its shape (a user need's name), and "
+                           "nothing built from it"):
         from rdm.graph.agent import trace
-        from tests.acceptance.test_graph_shapes import _dhf as _shaped
 
-        odd = _shaped(tmp_path / "odd", inputs=(("DI-1", "UN-1"), ("DI-2a", "UN-2")), tagged=("DI-1", "DI-2a"))
-        traced = trace(Record(odd), "di-2a")["design_input"]
-        assert traced["id"] == "DI-2a" and traced["tests"], traced
+        assert trace(Record(dhf, results), "Logging")["user_need"]["id"] == "Logging"
         with pytest.raises(ValueError, match="is not an id"):
-            trace(Record(odd), 'DI-2a" } UNION { ?s ?p ?o')
+            trace(Record(dhf, results), 'Logging" } UNION { ?s ?p ?o')
 
     with verification_step("The read forms all work"):
         assert out["ask"][1] == {"boolean": True}
         assert sorted(t[0] for t in out["construct"][1]["triples"]) == [
-            "urn:dhf:acme:need/UN-001", "urn:dhf:acme:need/UN-002"]
-        assert any(t[0] == "urn:dhf:acme:need/UN-001" for t in out["describe"][1]["triples"])
+            "urn:dhf:acme:need/Alarm", "urn:dhf:acme:need/Logging"]
+        assert any(t[0] == "urn:dhf:acme:need/Alarm" for t in out["describe"][1]["triples"])
 
     with verification_step("Rows are capped and the cut is reported; under the cap, nothing is flagged"):
         capped = out["capped"][1]

@@ -2,24 +2,29 @@
 
 ## One idea
 
-**The record is the only thing anyone writes.** Everything else — gate
-verdicts, the graph, the rendered documents, the traceability matrix, the
-release evidence bundle — is derived from it by a tool, and none of it is ever
-edited by hand or fed back in.
+**RDM audits a record; it does not author it.** The spec is Gherkin,
+written by you or by a factory that also regenerates code from it. RDM's
+contract with it is small: a requirement is a scenario tagged with an id, and
+a test run claims it with an Allure `tag` label of that id. The rest of the
+record —
+risks, checklists, controlled documents, validation records — is Markdown in
+git. Test results and history are recorded by the tools that make them.
+Everything RDM produces — gate verdicts, the graph, the rendered documents,
+the traceability matrix, the release evidence bundle — is derived from them,
+never edited by hand or fed back in.
 
-The record is Markdown frontmatter and tests in git. It changes only through
-a pull request that someone other than the author reviews; that review is the
-approval, and the merge records it. That holds for people and for agents alike: an agent that wants to
-change the record edits the Markdown and the tests and opens a pull request,
-the same as a person.
+The record changes only through review: the spec in its own
+process, the rest by a pull request that someone other than the author
+approves; that review is the approval, and the merge records it. An agent
+that wants to change the record opens a pull request, the same as a person.
 
 | Written (the record) | Derived (by RDM) |
 | --- | --- |
-| user needs, in the V&V plan | gate verdicts (design gate, release gate, gap analysis) |
-| design inputs, in one design document per bounded context | the RDF graph, its SHACL validation, the agent server's answers |
-| the risk policy and risk register | the traceability matrix and verification data |
-| checklists, and `[[KEY]]` references in documents | rendered regulatory documents (PDF / DOCX) |
-| acceptance tests tagged `@allure.story("DI-n")` | the evidence bundle kept with a release |
+| the spec: Gherkin feature files, each scenario tagged with an id | gate verdicts (release gate, gap analysis) |
+| the risk policy and risk register | the RDF graph, its SHACL validation, the agent server's answers |
+| checklists, and `[[KEY]]` references in documents | the traceability matrix and verification data |
+| validation records of the user needs | rendered regulatory documents (PDF / DOCX) |
+| acceptance tests tagged `@allure.tag("<id>")` | the evidence bundle kept with a release |
 | — | test results (Allure), recorded by running the tests |
 | — | approval and change history, recorded by git and the forge |
 
@@ -29,29 +34,26 @@ what passed, and who changed what, when. RDM reads them; nobody writes them.
 ## The data model
 
 Every entity is declared **once**, in one place, with one id. Every link is
-either **written** in a reviewed pull request or **derived** by RDM; a fact
-that can be derived is never also written, because two copies of one fact
-drift. The words are the [glossary](../reference/glossary.md)'s.
+either **written** or **derived** by RDM; a fact that can be derived is never
+also written, because two copies of one fact drift. The words are the
+[glossary](../reference/glossary.md)'s.
 
 ```mermaid
 flowchart LR
-    UN["User need<br>UN-nnn"]
-    DI["Design input<br>DI-n"]
+    UN["User need<br>a Feature"]
+    R["Requirement<br>a tagged scenario"]
     CTX["Bounded context"]
     DOC["Controlled document"]
     RISK["Risk"]
     CL["Checklist clause"]
-    T["Test<br>(function)"]
     RUN["Test run"]
     C["Commit"]
     SRC["Source file"]
 
-    DI -- "traces_to ✎" --> UN
-    DI -- "owned by" --> CTX
-    CTX -- "realises ✎" --> DI
-    RISK -- "controls ✎" --> DI
-    T -- "verifies ✎" --> DI
-    RUN -- "run of" --> T
+    R -- "under ✎" --> UN
+    R -- "owned by" --> CTX
+    RISK -- "controls ✎" --> R
+    RUN -- "claims ✎ (tag)" --> R
     RUN -- "tested at" --> C
     RUN -- "exercises output ✎" --> SRC
     DOC -- "references ✎" --> CL
@@ -63,68 +65,65 @@ flowchart LR
 
 | Entity | Declared in | Id | Written there |
 | --- | --- | --- | --- |
-| **User need** | the V&V plan, `user_needs:` | `UN-nnn` | its text |
-| **Bounded context** | its design document (`kind: design`, `context:`); listed with its part in the architecture's `contexts:` | the context name | — |
-| **Design input** | the design document of the context that owns it, `design_inputs:` | `DI-n` | its text, and the needs it `traces_to` |
+| **Bounded context** | a slice of the plan (`.pi/plan/01-alarms`, linking `.pi/spec/alarms/`) | the context's directory name | its `spec.feature`, Allium and event model |
+| **Requirement** | an accepted scenario of a context's `spec.feature`, stamped with an id | the id tag (`item-02-001`) | its Given/When/Then, its title, its `Rule:`, its `@allium-…` tags |
+| **User need** | a screen of a context's event model, linked to its Allium surface (in plain Gherkin, a `Feature`; see [user needs](../use/spec-and-tests.md#user-needs-screens-and-surfaces)) | the screen's key (`alarms/monitor`) | its description: the need's text; the surface's actor, rules and guarantees |
 | **Controlled document** | any Markdown file in the DHF with a frontmatter `id` | its `id` | `title`, `revision`, `references:` (documents it relies on), checklist references (`[[KEY]]`) |
-| **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (design inputs), residual, acceptance |
+| **Risk** | a `kind: risk` document, `risks:` | its `id` | hazard, situation, harm, category, scores, `controls:` (requirement ids), residual, acceptance |
 | **Risk policy** | a document's `risk_policy:` | — | severities, probabilities, levels, acceptability |
 | **Checklist, clause** | a checklist file (text or RDF) | the clause key, e.g. `62304:5.2.2` | each clause's description; includes |
-| **Test** | an acceptance test function, `@allure.story("DI-n")` | `tests/x.py::test_y` | the design inputs it verifies; `@allure.label("component", …)` for the C4 component it exercises; optionally `@allure.label("output", …)`, a file path |
-| **Test run** | an Allure result, written by running the tests | its uuid | nothing — it is recorded |
+| **Test run** | an Allure result, written by running the tests | its uuid | its `tag` labels, the requirements it claims; optionally `output` labels |
 | **Commit** | git | its sha | nothing — it is recorded |
 
 Derived, never declared:
 
 | Fact | Derived from |
 | --- | --- |
-| a design input's owning context | the design document that declares it |
-| the user needs a context serves (`rdm:serves`) | its design inputs' `traces_to`, and those it `realises` |
-| the components a run reaches (`rdm:reaches`) | the components it names, and the C4 model's declared relationships |
-| the tests a file defines | the tagged functions in it |
-| which test a run ran | the run's full name, matched to the test function |
+| a requirement's context | the directory its feature file sits in |
+| the user need a requirement addresses | the Feature it sits under |
 | the commit a run tested | the `commit` label `rdm.pytest_plugin` writes at run time |
-| epic, feature and links in the Allure report | the record, at run time (`rdm.pytest_plugin`) |
 | a document's latest commit, and the commit that landed it | git history |
-| whether a design input is verified | the results of its tests' runs |
+| whether a requirement is verified | the results of the runs that claim it |
 | a risk's level and residual decision | its scores against the risk policy, and whether its controls are verified |
-| the traceability matrix | design inputs, user needs and test results |
+| the traceability matrix | requirements, user needs and test results |
 
-The order of a change (design input, approval, implementation, test, review)
-is the runbook: [Changing the record](../use/changing-the-record.md).
+How a change reaches the record: [Changing the record](../use/changing-the-record.md);
+how the spec is laid out: [The spec and its tests](../use/spec-and-tests.md).
 
-## A record-first repository
+## An audited repository
 
 ```mermaid
 flowchart TD
     subgraph repo["your product's repository"]
-        subgraph record["the record — controlled"]
-            VVP["V&V plan<br>user_needs"]
-            DESIGN["design/*.md<br>design_inputs"]
-            RISKS["risk/*.md<br>risk policy, register"]
-            TESTS["tests/acceptance<br>@allure.story"]
+        subgraph spec["the spec — the Löyly way, by you or a factory"]
+            PLAN[".pi/spec/&lt;context&gt;/<br>stamped scenarios · Allium · event model"]
+        end
+        subgraph record["the rest of the record — controlled"]
+            RISKS["dhf/ risk policy, register"]
+            DOCS["dhf/ documents, validation records"]
+            TESTS["tests/acceptance<br>@allure.tag(id)"]
         end
         subgraph enforce["enforcement — on by default"]
-            HOOK[".githooks/pre-commit<br>design gate before implementation"]
             CI["CI workflow<br>the gates on every push"]
-            RUNBOOK["dhf/AGENT_WORKFLOW.md<br>the procedure"]
         end
         subgraph plan["planning — never evidence"]
-            PM["Backlog.md, issues, boards"]
+            PM["issues, task boards"]
         end
     end
     PM -. "only path in: a reviewed commit" .-> record
     style plan stroke-dasharray: 5 5
 ```
 
-`rdm adopt` lays down the record skeleton and the enforcement without
+`rdm adopt` lays down the record skeleton and the CI workflow without
 touching existing files ([get started](../install/getting-started.md)). Planning tools stay
 outside the record: [Plan vs. record](plan-vs-record.md).
 
 ## What RDM depends on
 
 1. a git repository;
-2. a design history file (`dhf/`) with the V&V plan and the design documents;
+2. a spec in Gherkin, written the Löyly way in `.pi/` (or plain feature
+   files under `spec/` or `features/`, or `spec:` in `dhf/config.yml`) and a
+   design history file (`dhf/`);
 3. Allure results from running the acceptance tests.
 
 Nothing about how the work was planned, which tracker is used, or who (or

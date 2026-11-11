@@ -53,39 +53,6 @@ the audit-note extension removes them: render the auditor's copy without it
 (the references show where each clause is met) and the engineers' copy with
 it, from two configuration files.
 
-## Architecture (C4)
-
-The architecture is one [Structurizr](https://docs.structurizr.com/dsl)
-workspace, `dhf/c4/workspace.dsl`: the C4 model (people, software systems,
-containers, and components grouped by bounded context) and its views (the
-system context and containers, and one component view per bounded context).
-Each component names its code with a `code` property, a file or a directory:
-
-```
-group "graph" {
-  projection = component "Projection" "The record into RDF" "Python" {
-    properties {
-      "code" "rdm/graph/"
-    }
-  }
-}
-```
-
-`rdm c4 draw` exports the model to `dhf/c4/workspace.json` (what RDM reads)
-and draws each view with Graphviz to `dhf/c4/views/<view>.svg`; every drawn
-file is stamped with the workspace's hash. Commit them with the workspace. A
-document shows its view as an ordinary image, so GitHub, the docs site and a
-rendered PDF all show the same picture:
-
-```markdown
-![Components: graph](../../c4/views/C3_graph.svg)
-```
-
-The design gate fails when a drawn view is stale or missing
-([the rules](../dhf/documents/design/architecture.md)). Drawing needs Java,
-Structurizr's CLI (`RDM_STRUCTURIZR`, or `structurizr.sh` on the PATH) and
-Graphviz; checking needs only the stamps.
-
 ## Template helpers
 
 | Helper | What it does |
@@ -107,17 +74,11 @@ Delimit snippets in any text file with `RDOC <name>` … `ENDRDOC`; each becomes
 a named entry you can render with `{{ snippets.<name> }}`. A name used twice,
 in one file or in two, is refused, naming where, and `rdm collect` exits 2.
 
-## Translating test output
+## Test results in documents
 
-Convert machine test reports into a YAML data file a document can render:
-
-```bash
-rdm translate auto results.xml data/test_results.yml   # formats: auto, gtest, qttest, xunit
-```
-
-(For verification evidence, prefer Allure results and
-[`rdm story verify`](design-inputs-and-tests.md): that path feeds the gates and the
-traceability matrix.)
+Verification evidence comes from Allure results through
+[`rdm story verify`](spec-and-tests.md): that path feeds the gates and
+the traceability matrix, which a document renders.
 
 ## Frontmatter conventions for controlled documents
 
@@ -131,9 +92,8 @@ title: "…"
 ---
 ```
 
-Design documents additionally carry `kind: design`, `context` and
-`design_inputs` (each with the needs it `traces_to`); see
-[Design inputs and tests](design-inputs-and-tests.md).
+Requirements and user needs are not in frontmatter: they are the spec RDM
+reads ([The spec and its tests](spec-and-tests.md)).
 
 ## PDF and Word
 

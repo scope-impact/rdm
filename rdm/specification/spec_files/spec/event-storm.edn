@@ -1,0 +1,16 @@
+;; Big Picture EventStorming board, as data: the events of the domain in order, each with
+;; what causes it. An event an actor causes, and that a screen's command produces, is shown
+;; with that user need.
+{:meta {:title "TODO: Big Picture EventStorming"
+        :date "TODO"
+        :participants []
+        :status "draft"}
+ :phases
+ [{:id :main
+   :name "TODO the main flow"
+   :events
+   [{:id :something-done :name "Something done"
+     :caused-by {:kind :actor :name "User"}
+     :pivotal? false :unhappy-of nil
+     :notes "TODO"
+     :hot-spots []}]}]}

@@ -1,7 +1,7 @@
 name: 'RDM gates'
 description: >-
-  Run RDM's design controls on a repository's record: design gate, verify,
-  release gate, graph validation and the release evidence bundle (DI-63).
+  Run RDM's gates on a repository's record: verify, release gate, graph
+  validation and the release evidence bundle (item-04-004).
   RDM is installed from the revision this action is pinned to, never by name
   from a package index.
 
@@ -12,11 +12,8 @@ inputs:
   allure-results:
     description: 'Allure results of the acceptance tests (run them before this action)'
     default: 'dhf/allure-results'
-  unit-coverage:
-    description: "The unit tests' code coverage, one Cobertura XML or LCOV report, for verify (optional; never acceptance evidence)"
-    default: ''
   release-gate:
-    description: 'Run the release gate (false while the record has no design input yet)'
+    description: 'Run the release gate (false while the spec has no requirement yet)'
     default: 'true'
   graph-validate:
     description: 'Run rdm graph validate (the gate rules as SHACL, with graph-only warnings)'
@@ -64,24 +61,15 @@ runs:
         if compgen -G "$RESULTS/*-result.json" > /dev/null; then found=true; else found=false; fi
         echo "found=$found" >> "$GITHUB_OUTPUT"
 
-    - name: Design gate
-      shell: bash
-      env:
-        DHF: ${{ inputs.dhf }}
-      run: rdm story design-gate --dhf "$DHF"
-
     - name: Verification data
       if: steps.results.outputs.found == 'true'
       shell: bash
       env:
         DHF: ${{ inputs.dhf }}
         RESULTS: ${{ inputs.allure-results }}
-        UNIT_COVERAGE: ${{ inputs.unit-coverage }}
       run: |
         mkdir -p "$DHF/data"
-        args=()
-        [ -n "$UNIT_COVERAGE" ] && args+=(--unit-coverage "$UNIT_COVERAGE")
-        rdm story verify --dhf "$DHF" --allure-results "$RESULTS" -o "$DHF/data/verification.yml" "${args[@]}"
+        rdm story verify --dhf "$DHF" --allure-results "$RESULTS" -o "$DHF/data/verification.yml"
 
     - name: Release gate
       if: inputs.release-gate == 'true'
@@ -111,11 +99,7 @@ runs:
       env:
         DHF: ${{ inputs.dhf }}
         RESULTS: ${{ inputs.allure-results }}
-        UNIT_COVERAGE: ${{ inputs.unit-coverage }}
-      run: |
-        args=()
-        [ -n "$UNIT_COVERAGE" ] && args+=(--unit-coverage "$UNIT_COVERAGE")
-        rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence" "${args[@]}"
+      run: rdm story evidence-bundle --dhf "$DHF" --allure-results "$RESULTS" -o "$RUNNER_TEMP/rdm-evidence"
 
     - name: Upload the evidence bundle
       if: inputs.evidence-bundle == 'true' && steps.results.outputs.found == 'true'

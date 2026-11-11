@@ -1,4 +1,5 @@
-"""`rdm graph build | query | serve | explorer-file` (DI-35, DI-36, DI-39); `validate` and `mcp` live in
+"""`rdm graph build | query | serve | explorer-file` (item-06-001, item-06-002, item-06-005);
+`validate` and `mcp` live in
 ``validate.py`` and ``agent.py``."""
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ DEFAULT_STORE = Path(".rdm/graph")
 def project_record(dhf_dir: Path | None, allure_results_dir: Path | None = None,
                    checklists: list[str] | None = None, **options) -> list | None:
     """The projection a command reads, or None after printing why (a missing
-    DHF, checklist or file, or a unit coverage report that cannot be read):
+    DHF, checklist or file):
     the command then exits 2."""
     from rdm.graph.project import project
 
@@ -23,7 +24,7 @@ def project_record(dhf_dir: Path | None, allure_results_dir: Path | None = None,
         return None
     try:
         return project(dhf, allure_results_dir, checklists=checklists, **options)
-    # SyntaxError: a checklist that is not RDF; ValueError: a unit coverage report that cannot be read
+    # SyntaxError: a checklist that is not RDF
     except (FileNotFoundError, SyntaxError, ValueError) as error:
         print(f"Error: {error}")
         return None
@@ -41,16 +42,13 @@ def graph_build_command(
     store: Path | None = None,
     project_name: str | None = None,
     checklists: list[str] | None = None,
-    infer: bool = False,
-    unit_coverage: Path | None = None,
 ) -> int:
     """Project the record; write sorted N-Quads and/or (re)build a store."""
     try:
         from rdm.graph.project import build_store, nquads
     except ImportError:
         return _missing_extra()
-    quads = project_record(dhf_dir, allure_results_dir, checklists, project_name=project_name, infer=infer,
-                           unit_coverage=unit_coverage)
+    quads = project_record(dhf_dir, allure_results_dir, checklists, project_name=project_name)
     if quads is None:
         return 2
     if output is None and store is None:
@@ -73,8 +71,6 @@ def graph_query_command(
     allure_results_dir: Path | None = None,
     fmt: str = "tsv",
     checklists: list[str] | None = None,
-    infer: bool = False,
-    unit_coverage: Path | None = None,
 ) -> int:
     """Answer a SPARQL query over a store, or over a fresh in-memory projection."""
     try:
@@ -85,13 +81,9 @@ def graph_query_command(
         if not Path(store).exists():
             print(f"Error: store not found: {store} (run `rdm graph build --store {store}` first)")
             return 2
-        if infer or unit_coverage is not None:
-            print("Error: --infer and --unit-coverage apply to the in-memory projection, not a store: "
-                  "leave out --store, or build the store with them (`rdm graph build --store ...`)")
-            return 2
         db = ox.Store.read_only(str(store))
     else:
-        quads = project_record(dhf_dir, allure_results_dir, checklists, infer=infer, unit_coverage=unit_coverage)
+        quads = project_record(dhf_dir, allure_results_dir, checklists)
         if quads is None:
             return 2
         db = ox.Store()
@@ -148,9 +140,8 @@ def graph_explorer_file_command(
     checklists: list[str] | None = None,
     endpoint: str | None = None,
     exclude: list[str] | None = None,
-    unit_coverage: Path | None = None,
 ) -> int:
-    """Write the whole record as a Graph Explorer graph file (DI-39)."""
+    """Write the whole record as a Graph Explorer graph file (item-06-005)."""
     try:
         import pyoxigraph as ox
 
@@ -161,13 +152,9 @@ def graph_explorer_file_command(
         if not Path(store).exists():
             print(f"Error: store not found: {store}")
             return 2
-        if unit_coverage is not None:
-            print("Error: --unit-coverage applies to the in-memory projection, not a store: "
-                  "leave out --store, or build the store with it (`rdm graph build --store ...`)")
-            return 2
         quads = list(ox.Store.read_only(str(store)))
     else:
-        quads = project_record(dhf_dir, allure_results_dir, checklists, unit_coverage=unit_coverage)
+        quads = project_record(dhf_dir, allure_results_dir, checklists)
         if quads is None:
             return 2
     try:

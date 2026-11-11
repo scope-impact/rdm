@@ -1,6 +1,6 @@
 """
 `rdm graph serve`: the store as a read-only SPARQL 1.1 endpoint for graph
-browsers such as AWS Graph Explorer (DI-36).
+browsers such as AWS Graph Explorer (item-06-002).
 
 The endpoint is RDM's own rather than Oxigraph's server, which runs federated
 SERVICE calls: with CORS open, any web page the user has open could have it

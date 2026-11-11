@@ -1,6 +1,6 @@
-"""Acceptance test for the Graph Explorer graph file (DI-39, see dhf/).
+"""Acceptance test for the Graph Explorer graph file (item-06-005).
 
-Tagged `@allure.story("DI-39")`, over the real projection and
+Tagged `@allure.tag("item-06-005")`, over the real projection and
 `rdm graph explorer-file`. Skips cleanly if allure-pytest or the `graph`
 extra is not installed.
 """
@@ -26,10 +26,10 @@ NS = "https://github.com/scope-impact/rdm/ns#"
 TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 
 
-@allure.story("DI-39")
+@allure.tag("item-06-005")
 @allure.label("output", "rdm/graph/explorer.py")
 def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
-    """DI-39: every record node and every link between them, no vocabulary or
+    """item-06-005: every record node and every link between them, no vocabulary or
     type statements, chosen classes left out on request, the endpoint as the
     connection, in Graph Explorer's graph-export envelope."""
     dhf, results = _record(tmp_path)
@@ -54,9 +54,8 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
 
     with verification_step("Every node of the record -- of every kind -- and nothing from the vocabulary"):
         vertices = set(graph["data"]["vertices"])
-        for node in ("urn:dhf:acme:need/UN-001", "urn:dhf:acme:input/DI-1", "urn:dhf:acme:context/alarms",
-                     "urn:dhf:acme:doc/SDS-ALM-001", "urn:dhf:acme:testfile/tests/test_alarms.py",
-                     "urn:dhf:acme:test/tests/test_alarms.py%3A%3Atest_alarm",
+        for node in ("urn:dhf:acme:need/Alarm", "urn:dhf:acme:requirement/item-01-001", "urn:dhf:acme:context/alarms",
+                     "urn:dhf:acme:doc/SDS-ALM-001",
                      "urn:dhf:acme:run/r1-result", "urn:rdm:clause:STD:1", "urn:rdm:checklist:mini"):
             assert node in vertices, node
         assert any(v.startswith("urn:dhf:acme:commit/") for v in vertices)
@@ -68,8 +67,8 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
     with verification_step("Every link between two record nodes, in Graph Explorer's edge-id form, and no rdf:type "
                            "statement"):
         edges = set(graph["data"]["edges"])
-        assert f"urn:dhf:acme:input/DI-1-[{NS}tracesTo]->urn:dhf:acme:need/UN-001" in edges
-        assert f"urn:dhf:acme:run/r1-result-[{NS}exercises]->urn:dhf:acme:input/DI-1" in edges
+        assert f"urn:dhf:acme:requirement/item-01-001-[{NS}tracesTo]->urn:dhf:acme:need/Alarm" in edges
+        assert f"urn:dhf:acme:run/r1-result-[{NS}exercises]->urn:dhf:acme:requirement/item-01-001" in edges
         assert "urn:rdm:checklist:mini-[http://www.w3.org/2004/02/skos/core#member]->urn:rdm:clause:STD:1" in edges
         assert ("urn:dhf:acme:doc/PLAN-1-[http://purl.org/dc/terms/references]->https://example.org/std/rdfx/2"
                 in edges)
@@ -93,11 +92,11 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
         assert len(run_details) == 2
         assert set(trimmed["vertices"]) == vertices - {"urn:dhf:acme:run/r1-result"} - run_details
         # a record node with no links at all is a record island, and stays
-        lone_need = ox.Quad(ox.NamedNode("urn:dhf:acme:need/UN-LONE"), ox.NamedNode(TYPE),
+        lone_need = ox.Quad(ox.NamedNode("urn:dhf:acme:need/Lone"), ox.NamedNode(TYPE),
                             ox.NamedNode(NS + "UserNeed"), ox.NamedNode("urn:dhf:acme:graph/record"))
         island = explorer_graph(quads + [lone_need], exclude=["TestRun"])["data"]
-        assert "urn:dhf:acme:need/UN-LONE" in island["vertices"]
-        # leaving out steps keeps the run: it links to the record (run -> design input)
+        assert "urn:dhf:acme:need/Lone" in island["vertices"]
+        # leaving out steps keeps the run: it links to the record (run -> requirement)
         assert "urn:dhf:acme:run/r1-result" in explorer_graph(quads, exclude=["Step"])["data"]["vertices"]
         # with nothing left out, nothing is pruned: a lone run detail stays
         lone = ox.Quad(ox.NamedNode("urn:dhf:acme:step/lone"), ox.NamedNode(TYPE), ox.NamedNode(NS + "Step"),
@@ -115,7 +114,6 @@ def test_whole_record_as_a_graph_explorer_file(tmp_path: Path) -> None:
         assert graph_cli.graph_explorer_file_command(out, store=store, exclude=["TestRun"]) == 0
         assert set(json.loads(out.read_text())["data"]["vertices"]) == set(trimmed["vertices"])
         assert graph_cli.graph_explorer_file_command(out, store=tmp_path / "missing") == 2
-        assert graph_cli.graph_explorer_file_command(out, store=store, unit_coverage=tmp_path / "cov.xml") == 2
     with verification_step("A class to leave out that the graph does not have is refused, naming the ones it has"):
         with pytest.raises(ValueError, match="TestRun"):
             explorer_graph(quads, exclude=["Testrun"])

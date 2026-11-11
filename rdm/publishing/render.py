@@ -1,6 +1,9 @@
 import collections
 import os
+import re
 from importlib import import_module
+
+from pathlib import Path
 
 import jinja2
 from jinja2.environment import TemplateStream
@@ -49,6 +52,143 @@ def join_to(foreign_keys, table, primary_key='id'):
             raise ValueError(f"join_to: no row with {primary_key} {foreign_key!r} in the table")
         joined.append(selected_row)
     return joined
+
+
+def include(path):
+    """A text file's content, its YAML frontmatter (if any) left out, so a
+    document can carry another file as written: a feature file of the spec,
+    another document. The path is relative to where ``rdm render`` runs (the
+    project's root); a file that is missing is refused, naming it."""
+    text = Path(path).read_text(encoding="utf-8")
+    if text.startswith("---\n"):
+        end = text.find("\n---\n", 4)
+        if end != -1:
+            text = text[end + 5:]
+    return text.strip("\n")
+
+
+_MD_SPECIAL = str.maketrans({c: "\\" + c for c in "\\`*_[]<>$|#"})
+_ID_TAG = re.compile(r"@[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\d+")
+_OBLIGATION = re.compile(r"@allium-([a-z]+)(?:-([a-z]+))?\.([A-Za-z0-9_]+)(?:\.(\d+))?")
+
+
+def _md(text):
+    """Text as Markdown shows it, its special characters escaped."""
+    return (text or "").translate(_MD_SPECIAL)
+
+
+def _md_table(rows):
+    cells = [[_md(c["value"]) for c in row["cells"]] for row in rows]
+    if not cells:
+        return []
+    lines = ["| " + " | ".join(cells[0]) + " |", "|" + "---|" * len(cells[0])]
+    return lines + ["| " + " | ".join(r) + " |" for r in cells[1:]]
+
+
+def _covers(tags):
+    """A scenario's Allium obligation tags in words: rule X (success), rule X
+    (refusal 2), guarantee Y, invariant Z; its other tags as they are."""
+    words = []
+    for tag in tags:
+        m = _OBLIGATION.fullmatch(tag)
+        if not m:
+            words.append(tag)
+        elif m.group(1) == "rule":
+            outcome = {"success": "success", "failure": "refusal"}.get(m.group(2) or "", m.group(2) or "")
+            words.append(f"rule {m.group(3)} ({outcome}{' ' + m.group(4) if m.group(4) else ''})")
+        else:
+            words.append(f"{m.group(1)} {m.group(3)}")
+    return " · ".join(words)
+
+
+def _status_of(requirement, verification):
+    for group in (verification or {}).get("groups") or []:
+        for row in group.get("requirements") or []:
+            if row.get("requirement") == requirement:
+                runs = (row.get("passed") or 0) + (row.get("failed") or 0) + (row.get("skipped") or 0)
+                return row.get("status"), runs, group.get("user_need")
+    return None, 0, None
+
+
+def gherkin(path, verification=None):
+    """A feature file as a document reads it: parsed with Cucumber's parser and
+    written as Markdown whose structure is marked for the templates (Pandoc's
+    fenced divs and bracketed spans): the Feature's description a paragraph,
+    each Rule a ``rule-line``, each scenario a ``scenario-card`` led by its id
+    (``.id``), its title and, given the verification data, its status
+    (``.verified``, ``.failed``, ``.untested``) and runs; its steps a
+    ``steps`` block, each keyword marked ``.kw``; a data table or an outline's
+    Examples a table; what its Allium tags cover, in words, last (``.covers``).
+    Comments are left out. The PDF template draws the marks as cards; the
+    text reads the same without them. The source as written stays the
+    ``include`` filter's."""
+    from gherkin.parser import Parser
+    from gherkin.token_scanner import TokenScanner
+
+    feature = Parser().parse(TokenScanner(Path(path).read_text(encoding="utf-8"))).get("feature") or {}
+    out = [f"**{_md(feature.get('keyword', 'Feature'))}: {_md(feature.get('name', ''))}**", ""]
+    description = " ".join(line.strip() for line in (feature.get("description") or "").splitlines() if line.strip())
+    if description:
+        out += [_md(description), ""]
+
+    def steps(block):
+        lines, run = [], []
+        for step in block.get("steps") or []:
+            run.append(f"[{_md(step['keyword'].strip())}]{{.kw}} {_md(step['text'])}  ")
+            extra = []
+            if step.get("dataTable"):
+                extra = _md_table(step["dataTable"]["rows"])
+            if step.get("docString"):
+                extra = ["```", step["docString"]["content"], "```"]
+            if extra:
+                lines += ["::: {.steps}", *run, ":::", "", *extra, ""]
+                run = []
+        if run:
+            lines += ["::: {.steps}", *run, ":::", ""]
+        return lines
+
+    def scenario(node):
+        tags = [t["name"] for t in node.get("tags") or []]
+        ids = [t for t in tags if _ID_TAG.fullmatch(t)]
+        requirement = ids[-1][1:] if ids else ""
+        status, runs, need = _status_of(requirement, verification)
+        head = f"[{requirement}]{{.id}} " if requirement else ""
+        if status:
+            mark = {"verified": "✓ verified", "failed": "✗ failed"}.get(status, status)
+            head += f"[{mark} · {runs} run{'s' if runs != 1 else ''}]{{.{status}}} "
+        head += f"**{_md(node['name'])}**"
+        lines = [f":::: {{.scenario-card status=\"{status or ''}\"}}", head, "", *steps(node)]
+        for examples in node.get("examples") or []:
+            title = f"{examples.get('keyword', 'Examples')}: {examples.get('name', '')}".rstrip(": ")
+            header = [examples["tableHeader"]] if examples.get("tableHeader") else []
+            lines += [f"*{_md(title)}*", "", *_md_table(header + (examples.get("tableBody") or [])), ""]
+        covers = _covers([t for t in tags if t not in ids[-1:]])
+        details = " · ".join(x for x in (covers, f"need {need}" if need else "") if x)
+        if details:
+            lines += [f"[Covers: {_md(details)}]{{.covers}}", ""]
+        return lines + ["::::", ""]
+
+    def children(nodes):
+        lines = []
+        for child in nodes or []:
+            if "background" in child:
+                lines += [f"*{_md(child['background']['keyword'])}*", "", *steps(child["background"])]
+            elif "scenario" in child:
+                lines += scenario(child["scenario"])
+            elif "rule" in child:
+                title = child["rule"]["name"].replace('"', "'")
+                lines += [f"::: {{.rule-line title=\"{title}\"}}", f"**Rule:** {_md(child['rule']['name'])}", ":::", ""]
+                lines += children(child["rule"].get("children"))
+        return lines
+
+    out += children(feature.get("children"))
+    return "\n".join(out).rstrip() + "\n"
+
+
+def glob(pattern):
+    """The paths matching ``pattern``, sorted, relative to where ``rdm render``
+    runs: every feature file of a spec, say, to ``include`` one by one."""
+    return sorted(str(path) for path in Path(".").glob(pattern))
 
 
 def md_indent(snippet, header_shift=0):
@@ -113,6 +253,9 @@ def _create_jinja_environment(config, loaders=None):
     environment.filters['invert_dependencies'] = invert_dependencies
     environment.filters['join_to'] = join_to
     environment.filters['md_indent'] = md_indent
+    environment.filters['include'] = include
+    environment.filters['glob'] = glob
+    environment.filters['gherkin'] = gherkin
 
     return environment
 

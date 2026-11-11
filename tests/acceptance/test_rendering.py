@@ -1,7 +1,7 @@
-"""Acceptance tests for the rendering context's design inputs (see dhf/).
+"""Acceptance tests for the rendering context's requirements (see spec/).
 
-Each test ("live BDD") verifies a rendering design input,
-tagged with `@allure.story` and its DI id. They exercise the real render engine / filters /
+Each test ("live BDD") verifies a rendering requirement,
+tagged with `@allure.tag` and its requirement id. They exercise the real render engine / filters /
 markdown extensions, so a passing tag is evidence the requirement is met.
 
     uv run pytest tests/acceptance --alluredir=dhf/allure-results
@@ -11,8 +11,6 @@ Skips cleanly if allure-pytest is not installed.
 
 from __future__ import annotations
 
-import json
-import sys
 from pathlib import Path
 
 import pytest
@@ -26,10 +24,10 @@ from tests.acceptance.evidence import attach, verification_step  # noqa: E402
 ROOT = Path(__file__).parents[2]
 
 
-@allure.story("DI-7")
+@allure.tag("item-07-001")
 @allure.label("output", "rdm/publishing/render.py")
 def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypatch) -> None:
-    """DI-7: a Markdown template file rendered with Jinja2 against the data
+    """item-07-001: a Markdown template file rendered with Jinja2 against the data
     files supplied, each under its file name; a value the data does not supply
     is refused, naming it."""
     from rdm.main import cli
@@ -55,11 +53,11 @@ def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypat
         assert "nope.md" in capsys.readouterr().err
 
 
-@allure.story("DI-8")
+@allure.tag("item-07-002")
 @allure.label("output", "rdm/publishing/render.py")
 def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
-    """DI-8: the invert_dependencies, join_to and md_indent filters, used from
-    a template."""
+    """item-07-002: the invert_dependencies, join_to, md_indent, glob, include and
+    gherkin filters, used from a template."""
     with verification_step("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
         out = render_from_string("{% for b, a in items | invert_dependencies('id', 'deps') %}{{ b }}<-{{ a | sort }}"
                                  "{% endfor %}", context={"items": [{"id": "A", "deps": ["B"]}]})
@@ -72,6 +70,42 @@ def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
     with verification_step("md_indent: shift headings deeper by header_shift"):
         out = render_from_string("{{ snippet | md_indent(header_shift=1) }}", context={"snippet": "# Title"})
         assert out.strip() == "## Title", out
+    with verification_step("glob and include: every feature file of a spec, carried into a document as "
+                           "written, a document's frontmatter left out, paths from where rdm render runs"):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "spec" / "b").mkdir(parents=True)
+        (tmp_path / "spec" / "a").mkdir(parents=True)
+        (tmp_path / "spec" / "b" / "spec.feature").write_text("Feature: B\n")
+        (tmp_path / "spec" / "a" / "spec.feature").write_text("Feature: A\n  Scenario: one\n")
+        (tmp_path / "arch.md").write_text("---\nid: SDS-1\n---\n# Architecture\n")
+        out = render_from_string("{% for f in 'spec/*/spec.feature' | glob %}[{{ f }}]{{ f | include }}{% endfor %}"
+                                 "|{{ 'arch.md' | include | md_indent(1) }}")
+        attach("rendered", out)
+        assert out.strip() == ("[spec/a/spec.feature]Feature: A\n  Scenario: one[spec/b/spec.feature]Feature: B"
+                               "|## Architecture"), out
+    with verification_step("gherkin: a feature file as Markdown marked for the templates: each Rule a rule-line, "
+                           "each scenario a scenario-card led by its id and status with its steps' keywords "
+                           "marked, an outline's Examples a table, what its tags cover in words, the Markdown's "
+                           "characters escaped, comments left out"):
+        (tmp_path / "f.feature").write_text(
+            "Feature: Alarms\n  A nurse is alerted.\n\n  Rule: Within 2 s\n\n"
+            "    # a comment, left out\n    @smoke @allium-rule-success.Raise @REQ-12\n    Scenario: Alarm raised\n"
+            "      Given the limit is $140\n      When a reading of <value> arrives\n      Then an alarm sounds\n\n"
+            "    @REQ-13\n    Scenario Outline: Quiet\n      Given <x>\n\n      Examples: values\n"
+            "        | x |\n        | a_b |\n")
+        verification = {"groups": [{"user_need": "Alarm", "requirements": [
+            {"requirement": "REQ-12", "status": "verified", "passed": 2, "failed": 0, "skipped": 0}]}]}
+        out = render_from_string("{{ 'f.feature' | gherkin(data) }}", context={"data": verification})
+        attach("rendered", out)
+        assert "**Feature: Alarms**" in out and "A nurse is alerted." in out
+        assert '::: {.rule-line title="Within 2 s"}' in out
+        assert ':::: {.scenario-card status="verified"}' in out
+        assert "[REQ-12]{.id} [✓ verified · 2 runs]{.verified} **Alarm raised**" in out
+        assert "::: {.steps}" in out and "[Given]{.kw} the limit is \\$140" in out
+        assert "[When]{.kw} a reading of \\<value\\> arrives" in out
+        assert "[Covers: @smoke · rule Raise (success) · need Alarm]{.covers}" in out
+        assert "[REQ-13]{.id} **Quiet**" in out and "*Examples: values*" in out and "| a\\_b |" in out
+        assert "a comment" not in out
     with verification_step("join_to refuses an id its table lacks, naming it: rdm render exits 2"):
         from rdm.main import cli
 
@@ -86,10 +120,10 @@ def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
         assert "r9" in err, err
 
 
-@allure.story("DI-9")
+@allure.tag("item-07-003")
 @allure.label("output", "rdm/md_extensions/")
 def test_markdown_post_processing() -> None:
-    """DI-9: section numbering, a second pass that gives a template the words
+    """item-07-003: section numbering, a second pass that gives a template the words
     its first render produced, and auditor-note exclusion."""
     with verification_step("sections are numbered"):
         numbered = render_from_string(
@@ -124,112 +158,3 @@ def test_markdown_post_processing() -> None:
         assert render_from_string(nested, config=both) == nested
     with verification_step("a note still open at the paragraph's end is kept as text"):
         assert render_from_string("Stray [[ here\n\nNext.", config=both) == "Stray [[ here\n\nNext.\n"
-
-
-FAKE_VIEWS = ("C1", "C3_core")
-FAKE_STRUCTURIZR = """
-import json, sys
-from pathlib import Path
-args = sys.argv[1:]
-workspace, fmt, out = (args[args.index(flag) + 1] for flag in ("-w", "-f", "-o"))
-if "BROKEN" in Path(workspace).read_text():
-    sys.exit("Error: unexpected token at line 3")
-views = %r
-Path(out).mkdir(parents=True)
-if fmt == "json":
-    Path(out, "workspace.json").write_text(json.dumps({
-        "name": "Device", "properties": {"structurizr.dsl": "d29ya3NwYWNl"},
-        "model": {"people": [{"id": "1", "name": "Clinician"}]},
-        "views": {"systemContextViews": [{"key": views[0]}], "componentViews": [{"key": views[1]}]}}))
-else:
-    for key in views:
-        Path(out, "structurizr-" + key + ".dot").write_text('digraph { 1 [label=<<font>Design, V&V and risk</font>>] }')
-""" % (FAKE_VIEWS,)
-
-FAKE_DOT = """
-import re, sys
-source = sys.stdin.read()
-if re.search(r"&(?!(?:[a-zA-Z]+|#[0-9]+);)", source):
-    sys.exit("Error: not well-formed (invalid token)")
-label = source.split("<font>")[1].split("</font>")[0]
-print('<?xml version="1.0" encoding="UTF-8"?>')
-print("<svg xmlns='http://www.w3.org/2000/svg'><text>" + label + "</text></svg>")
-"""
-
-
-def _tool(tmp_path: Path, name: str, source: str) -> Path:
-    tool = tmp_path / name
-    tool.write_text(f"#!{sys.executable}" + source)
-    tool.chmod(0o755)
-    return tool
-
-
-@allure.story("DI-70")
-@allure.label("output", "rdm/architecture/draw.py")
-@allure.label("output", "rdm/architecture/model.py")
-@allure.label("output", "rdm/specification/design_gate.py")
-def test_architecture_views_are_drawn_from_the_workspace_and_kept_current(tmp_path, monkeypatch) -> None:
-    """DI-70: each view of the architecture workspace is drawn to an image in
-    the record, stamped with the workspace it was drawn from, and the design
-    gate fails when the model or a view's image was not drawn from the current
-    workspace, or a view has no image."""
-    from rdm.architecture.draw import DrawError, draw
-    from rdm.architecture.model import stale
-    from rdm.architecture.model import workspace_digest as digest
-    from rdm.specification.design_gate import check_architecture_views, run_design_gate
-
-    dhf = tmp_path / "dhf"
-    (dhf / "c4" / "views").mkdir(parents=True)
-    (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n  }\n}\n')
-    (dhf / "c4" / "views" / "C3_retired.svg").write_text("<svg/>")
-    monkeypatch.setenv("RDM_STRUCTURIZR", str(_tool(tmp_path, "structurizr.sh", FAKE_STRUCTURIZR)))
-    monkeypatch.setenv("RDM_DOT", str(_tool(tmp_path, "dot", FAKE_DOT)))
-
-    with verification_step("rdm c4 draw writes the model and an image of each view, each stamped with the workspace"):
-        assert draw(dhf) == ["C3_core", "C1"]
-        model = json.loads((dhf / "c4" / "workspace.json").read_text())
-        attach("workspace.json", model)
-        assert model["rdm"]["workspace_sha256"] == digest(dhf)
-        assert "structurizr.dsl" not in model["properties"]  # not the workspace again, base64
-        for key in ("C1", "C3_core"):
-            svg = (dhf / "c4" / "views" / f"{key}.svg").read_text()
-            assert f"<!-- rdm c4 draw: view {key}, workspace sha256:{digest(dhf)} -->" in svg.splitlines()[1]
-    with verification_step("a bare & in Structurizr's DOT is escaped, so Graphviz draws the view"):
-        assert "Design, V&amp;V and risk" in (dhf / "c4" / "views" / "C1.svg").read_text()
-    with verification_step("the image of a view the workspace no longer has is removed"):
-        assert not (dhf / "c4" / "views" / "C3_retired.svg").exists()
-    with verification_step("drawn from the current workspace, nothing is stale and the gate's check passes"):
-        assert stale(dhf) == [] and check_architecture_views(dhf)[0].ok
-
-    with verification_step("a workspace changed and not redrawn fails the design gate"):
-        (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n    a = person "A"\n  }\n}\n')
-        reasons = stale(dhf)
-        attach("stale, workspace changed", reasons)
-        assert "c4/workspace.json was not drawn from the current workspace.dsl: run rdm c4 draw" in reasons
-        assert "view C1's image was not drawn from the current workspace.dsl: run rdm c4 draw" in reasons
-        assert not check_architecture_views(dhf)[0].ok
-        gate = {a.name: a for a in run_design_gate(dhf).artifacts}
-        assert not gate["Architecture views"].ok and gate["Architecture views"].reasons == reasons
-    with verification_step("a file the workspace includes, changed and not redrawn, fails the design gate"):
-        (dhf / "c4" / "model.dsl").write_text('a = person "A"\n')
-        (dhf / "c4" / "workspace.dsl").write_text('workspace "Device" {\n  model {\n    !include model.dsl\n  }\n}\n')
-        draw(dhf)
-        assert stale(dhf) == []
-        (dhf / "c4" / "model.dsl").write_text('a = person "B"\n')
-        assert "c4/workspace.json was not drawn from the current workspace.dsl: run rdm c4 draw" in stale(dhf)
-    with verification_step("a view with no image, or an image of no view, fails the design gate"):
-        draw(dhf)
-        (dhf / "c4" / "views" / "C1.svg").unlink()
-        (dhf / "c4" / "views" / "C9.svg").write_text("<svg/>")
-        reasons = stale(dhf)
-        attach("stale, images", reasons)
-        assert "view C1 has no image: run rdm c4 draw" in reasons
-        assert "c4/views/C9.svg is the image of no view: run rdm c4 draw" in reasons
-    with verification_step("a workspace Structurizr rejects is not drawn, and says why"):
-        (dhf / "c4" / "workspace.dsl").write_text("workspace {\n  BROKEN\n}\n")
-        with pytest.raises(DrawError, match="could not export json: Error: unexpected token at line 3"):
-            draw(dhf)
-
-    with verification_step("RDM's own model and views are drawn from its workspace as it is now"):
-        assert stale(ROOT / "dhf") == []
-        assert check_architecture_views(ROOT / "dhf")

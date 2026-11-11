@@ -1,0 +1,168 @@
+-- allium: 3
+-- .pi/spec/graph/allium/graph.allium
+--
+-- Scope: the graph context: the record projected into an RDF dataset (one named graph
+-- per source), stored, queried and served read-only, checked by SHACL shapes that
+-- express the gate rules, written as an AWS Graph Explorer file, and read by agents
+-- through a read-only MCP server. The graph is never edited: it is rebuilt from the
+-- record. The surfaces are the needs this context is home to: explore-graph and
+-- agent-reads-record (event-model/area.edn).
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- The record: the spec, the controlled documents, the risk register, git history.
+external entity Record {}
+
+-- Executed Allure results, when given.
+external entity Results {}
+
+-- A regulatory checklist, in rdm gap's text format or RDF.
+external entity Checklist {}
+
+-- The person who keeps and explores the record.
+external entity AuthorAccount {}
+
+-- An agent, in any harness, reading the record.
+external entity AgentSession {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+-- The projected dataset, in a store each build replaces.
+entity GraphStore {
+    location: String
+    named_graphs: List<String>
+}
+
+-- A result of the gate shapes: its severity, focus node and message.
+entity ShapeResult {
+    severity: Violation | Warning
+    focus: String
+    message: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Project the record into its named graphs and replace the store with them.
+rule GraphBuild {
+    when: GraphBuild(author, dhf, results, checklists)
+    ensures:
+        GraphStore.replaced(named_graphs: project(dhf, results, checklists))
+        GraphBuilt(dhf: dhf)
+}
+
+-- Validate the gate shapes, and any shapes the author supplies, over the projection.
+rule GraphValidate {
+    when: GraphValidate(author, dhf, results, checklists, shapes)
+    -- 1. every shapes file is RDF
+    requires: for file in shapes: is_rdf(file)
+    -- 2. every checklist file is a checklist rdm gap reads, or RDF
+    requires: for file in checklists: is_checklist(file)
+    ensures:
+        for result in shacl(project(dhf, results, checklists), shapes):
+            ShapeResult.created(severity: result.severity, focus: result.focus, message: result.message)
+        GraphValidated(dhf: dhf, violations: count(Violation))
+}
+
+-- Write the graph as an AWS Graph Explorer file, leaving out the classes asked.
+rule ExplorerFile {
+    when: ExplorerFile(author, dhf, results, leave_out)
+    -- 1. every class to leave out is a class the graph has
+    requires: for class in leave_out: class in classes(project(dhf, results))
+    ensures: ExplorerFileWritten(dhf: dhf)
+}
+
+-- Serve the record to an agent over stdio: schema, query, trace and validate, each
+-- answering from a projection rebuilt on that call.
+rule ServeAgent {
+    when: ServeAgent(agent, dhf, results)
+    ensures: AgentServed(dhf: dhf)
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor RegulatoryAuthor {
+    identified_by: AuthorAccount where true
+}
+
+actor Agent {
+    identified_by: AgentSession where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+-- A regulatory author can query and visually explore the record as a linked graph,
+-- without changing how the record is written.
+surface ExploreGraph {
+    facing author: RegulatoryAuthor
+    context record: Record
+
+    provides:
+        GraphBuild(author, dhf, results, checklists)
+        GraphValidate(author, dhf, results, checklists, shapes)
+        ExplorerFile(author, dhf, results, leave_out)
+
+    @guarantee RecordProjectedPerSource
+        -- One named graph per source (record, executions, git, ontology), every typed
+        -- node labelled, written as sorted N-Quads, byte-identical for an unchanged record.
+
+    @guarantee StoreQueriedAndServedReadOnly
+        -- Each build replaces the store; queries and the HTTP endpoint read it, over the
+        -- union of the named graphs, and refuse updates and SERVICE calls.
+
+    @guarantee ChecklistsAsSkos
+        -- A checklist joins the graph as a SKOS collection of its clauses, linking the
+        -- checklists it includes.
+
+    @guarantee GateRulesAsShapes
+        -- SHACL shapes block exactly what the release gate blocks, each result on its node.
+
+    @guarantee DocumentsLinkTheirClauses
+        -- A document links to the clauses its reference tags name, matched as rdm gap
+        -- matches, so an unreferenced clause is one rdm gap reports missing.
+
+    @guarantee LandingCommitRecorded
+        -- Each controlled document carries the commit that landed its latest change on the
+        -- default branch, with that commit's author.
+
+    @guarantee RiskLinkedToItsPolicy
+        -- Each risk links to the document holding the policy it was evaluated against.
+
+    @guarantee StepsAndAttachmentsCarried
+        -- A run carries its steps, nested and ordered, and its attachments.
+
+    @guarantee OnlyDesignControlFactsProjected
+        -- A result is projected in full, but not what the record already holds or what
+        -- claims nothing about design controls.
+
+    @guarantee ContextsLinkedToTheirDocuments
+        -- Each bounded context links to the document declaring it; each document to the
+        -- documents it references.
+
+    @guarantee EvidenceTiedToTheProductCommit
+        -- Each run links to the commit it tested; a run of another commit than the
+        -- product's is stale evidence.
+}
+
+-- An agent, in any harness, can read the record (query it, trace a requirement or need to
+-- its tests and results, check it against the gate rules) and cannot change it.
+surface AgentReadsRecord {
+    facing agent: Agent
+    context record: Record
+
+    provides:
+        ServeAgent(agent, dhf, results)
+
+    @guarantee AgentCannotChangeTheRecord
+        -- Four read-only tools: no SPARQL Update, no SERVICE call, trace only of ids, and
+        -- results capped with the cut reported.
+}

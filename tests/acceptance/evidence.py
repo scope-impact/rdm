@@ -7,10 +7,10 @@
 
 A verification step is one named check within a test (an Allure step), with
 its own result. It belongs to the test, never to the acceptance criterion: the
-design input the test is tagged with is accepted as a whole (CONTEXT.md). The
+requirement the test claims is accepted as a whole (CONTEXT.md). The
 step's name says what a failure was checking; an attachment keeps what the
-assertion looked at, in the Allure results the release bundle retains (DI-30)
-and the graph projects (DI-53).
+assertion looked at, in the Allure results the release bundle retains (item-04-003)
+and the graph projects (item-06-013).
 """
 
 from __future__ import annotations

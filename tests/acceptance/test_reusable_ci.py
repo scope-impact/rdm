@@ -1,6 +1,6 @@
-"""Acceptance test for RDM's gates as reusable CI (DI-63, see dhf/).
+"""Acceptance test for RDM's gates as reusable CI (item-04-004, see dhf/).
 
-Tagged `@allure.story("DI-63")`. The composite gates action is run step by
+Tagged `@allure.tag("item-04-004")`. The composite gates action is run step by
 step against a small committed record, the way a runner would; the reusable
 workflow, the PDF action and the workflow `rdm adopt` lays down are read as
 the YAML GitHub reads. Skips cleanly if allure-pytest is not installed.
@@ -25,7 +25,7 @@ from rdm.specification.adopt import adopt  # noqa: E402
 from rdm.main import parse_arguments  # noqa: E402
 from rdm.kernel.version import release_version  # noqa: E402
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
-from tests.util import git_run, write_allure_result  # noqa: E402
+from tests.util import git_run, write_allure_result, write_spec  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "gates.yml"
@@ -36,18 +36,14 @@ EXPR = re.compile(r"\$\{\{\s*(.*?)\s*\}\}")
 
 
 def _releasable(repo: Path) -> Path:
-    """A committed record that passes every gate: one need, one design input,
-    a review, and a passing run of the input's tagged test."""
+    """A committed record that passes every gate: a spec with one need and one
+    requirement, and a passing run of the test that claims it."""
     docs = repo / "dhf" / "documents"
-    (docs / "design").mkdir(parents=True)
-    (docs / "verification_and_validation_plan.md").write_text(
-        "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n---\n# Plan\n")
-    (docs / "design" / "alarms.md").write_text(
-        "---\nid: SDS-ALM-001\nkind: design\ncontext: alarms\ndesign_inputs:\n"
-        "  - {id: DI-1, text: 'The device shall alarm.', traces_to: [UN-001]}\n---\n# Alarms\n")
-    (docs / "design_review.md").write_text("---\nid: DR-001\n---\n# Review\nApproved.\n")
+    docs.mkdir(parents=True)
+    write_spec(repo, (("item-01-001", "The device alarms.", ["Alarm"]),),
+               {"Alarm": ("alarms", "Nurse", "A nurse is alerted.")}, {"01": "alarms"})
     (docs / "traceability_matrix.md").write_text("---\nid: TM-001\n---\n# Matrix\n")  # the bundle renders it
-    write_allure_result(repo / "dhf" / "allure-results", "r1", "passed", "DI-1")
+    write_allure_result(repo / "dhf" / "allure-results", "r1", "passed", "item-01-001")
     for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "r"]):
         git_run(repo, *args)
     return repo / "dhf"
@@ -126,14 +122,14 @@ def _rdm_commands(text: str) -> list[list[str]]:
     return commands
 
 
-@allure.story("DI-63")
+@allure.tag("item-04-004")
 @allure.label("output", ".github/workflows/gates.yml")
 @allure.label("output", "actions/gates/action.yml")
 @allure.label("output", "action.yml")
 @allure.label("output", "rdm/specification/adopt.py")
 @allure.label("output", "rdm/specification/adopt_files/.github/workflows/design-controls.yml")
 def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
-    """DI-63: a reusable workflow (tests, then the gates) and a composite gates
+    """item-04-004: a reusable workflow (tests, then the gates) and a composite gates
     action install RDM from the pinned revision; the PDF action renders with
     that revision's image; the workflow rdm adopt lays down calls the reusable
     workflow at the installed version, as RDM's own CI does."""
@@ -142,11 +138,11 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
     dhf = _releasable(repo)
     (tmp_path / "runner").mkdir()
 
-    with verification_step("the gates action runs the design gate, verify, the release gate, graph validation "
-                           "and the evidence bundle on a record, and uploads the bundle"):
+    with verification_step("the gates action runs verify, the release gate, graph validation and the evidence "
+                           "bundle on a record, and uploads the bundle"):
         ran = _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
         attach("steps run", ran)
-        assert ran == ["Find the Allure results", "Design gate", "Verification data", "Release gate",
+        assert ran == ["Find the Allure results", "Verification data", "Release gate",
                        "Graph validation", "Release evidence bundle", "actions/upload-artifact"]
         assert (dhf / "data" / "verification.yml").is_file()
         assert any((tmp_path / "runner" / "rdm-evidence").iterdir())
@@ -154,18 +150,18 @@ def test_the_gates_are_reusable_ci_pinned_by_revision(tmp_path: Path) -> None:
         with pytest.raises(AssertionError, match=r"Graph validation:(?s:.*)P11:11\.10a: checklist clause"):
             _run_action(action, {"install-rdm": "false", "checklists": "part11_document_control"},
                         repo, tmp_path / "runner")
-    with verification_step("with the release gate off and no results yet, only the design gate runs"):
+    with verification_step("a gate that fails fails the action"):
+        write_allure_result(dhf / "allure-results", "r2", "failed", "item-01-001")
+        with pytest.raises(AssertionError, match="Release gate"):
+            _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
+    with verification_step("with the release gate off and no results yet, no gate runs"):
         shutil.rmtree(dhf / "allure-results")
         assert _run_action(action, {"install-rdm": "false", "release-gate": "false", "graph-validate": "false"},
-                           repo, tmp_path / "runner") == ["Find the Allure results", "Design gate"]
-    with verification_step("a gate that fails fails the action"):
-        (dhf / "documents" / "design_review.md").unlink()
-        with pytest.raises(AssertionError, match="Design gate"):
-            _run_action(action, {"install-rdm": "false"}, repo, tmp_path / "runner")
+                           repo, tmp_path / "runner") == ["Find the Allure results"]
     with verification_step("every rdm command the workflow and the actions run is one RDM's CLI accepts"):
         commands = [c for path in (GATES, WORKFLOW, PDF_ACTION) for c in _rdm_commands(path.read_text())]
         attach("rdm commands", [" ".join(c) for c in commands])
-        assert {tuple(c[:2]) for c in commands} >= {("story", "design-gate"), ("story", "verify"),
+        assert {tuple(c[:2]) for c in commands} >= {("story", "verify"),
                                                     ("story", "release-gate"), ("graph", "validate"),
                                                     ("story", "evidence-bundle")}
         for command in commands:

@@ -1,6 +1,6 @@
-"""Acceptance test for checklists and reference tags in the graph (DI-37, see dhf/).
+"""Acceptance test for checklists and reference tags in the graph (item-06-003, item-06-009).
 
-Tagged `@allure.story("DI-37")`, over the real projection and `rdm gap`'s own
+Tagged `@allure.tag`, over the real projection and `rdm gap`'s own
 reader and matcher. Skips cleanly if allure-pytest or the `graph` extra is
 not installed.
 """
@@ -36,7 +36,7 @@ def _fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
     dhf = tmp_path / "proj" / "dhf"
     (dhf / "documents" / "design").mkdir(parents=True)
     (dhf / "documents" / "design" / "core.md").write_text(
-        "---\nid: SDS-1\nkind: design\ncontext: core\ndesign_inputs: []\n---\n# Core\n")
+        "---\nid: SDS-1\n---\n# Core\n")
     (dhf / "documents" / "plan.md").write_text(
         "---\nid: PLAN-1\n---\n# Plan\n"
         "Covers [[STD:1.2.a]], [[RDFX:1: a pointer note]] and [[RDFX:2]].\n"
@@ -75,10 +75,10 @@ def _ask(store, body: str) -> bool:
     return bool(store.query(PREFIXES + "ASK { " + body + " }", use_default_graph_as_union=True))
 
 
-@allure.story("DI-37")
+@allure.tag("item-06-003")
 @allure.label("output", "rdm/graph/checklists.py")
 def test_checklists_are_data(tmp_path: Path) -> None:
-    """DI-37: checklists (text or RDF, includes resolved, built-ins by name)
+    """item-06-003: checklists (text or RDF, includes resolved, built-ins by name)
     become SKOS collections of clauses in a checklists graph."""
     dhf, text_list, rdf_list = _fixture(tmp_path)
     quads = project(dhf, checklists=[str(text_list), str(rdf_list), "part11_document_control"])
@@ -121,10 +121,10 @@ def test_checklists_are_data(tmp_path: Path) -> None:
                        f'<urn:rdm:checklist:native> rdfs:label "native" }}')
 
 
-@allure.story("DI-48")
+@allure.tag("item-06-009")
 @allure.label("output", "rdm/graph/checklists.py")
 def test_reference_tags_become_links_matched_as_rdm_gap_matches(tmp_path: Path) -> None:
-    """DI-48: documents' [[…]] tags become dcterms:references in a references
+    """item-06-009: documents' [[…]] tags become dcterms:references in a references
     graph, matched as rdm gap matches; unreferenced clauses are exactly what
     rdm gap reports missing."""
     dhf, text_list, rdf_list = _fixture(tmp_path)

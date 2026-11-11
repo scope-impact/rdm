@@ -1,0 +1,14 @@
+;; .pi/spec/publishing/event-model/area.edn
+;; Publishing: the design history file compiled from the record, and RDM's own user
+;; manual. Allium: ../allium/publishing.allium.
+{:publishing
+ {:description "Publishing: templates and data to Markdown (filters, post-processing, snippets), the user manual, and the generated release documents."
+  :screens
+  {:publishing/compile-dhf
+   {:description "A regulatory author can compile a design history file from the system of record: the spec, the executed tests and git."
+    :grain/allium [{:spec ".pi/spec/publishing/allium/publishing.allium" :kind :surface :name "CompileDhf"}]
+    :commands #{:publishing/render :publishing/collect}}
+   :publishing/user-manual
+   {:description "A user learns from RDM's user manual, a controlled document of each release, how to keep the record the way that release's gates enforce."
+    :grain/allium [{:spec ".pi/spec/publishing/allium/publishing.allium" :kind :surface :name "UserManual"}]
+    :commands #{}}}}}

@@ -27,6 +27,10 @@ resource-path:
 # Template
 template: template.typ
 
+# The record's Markdown decorated for the template: cards, chips, steps (cards.lua).
+filters:
+  - cards.lua
+
 # Output settings
 number-sections: true
 

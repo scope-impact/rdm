@@ -1,6 +1,6 @@
-"""Acceptance test for the run's executor and environment (DI-65, see dhf/).
+"""Acceptance test for the run's executor and environment (see .pi/spec/test_evidence).
 
-Tagged `@allure.story("DI-65")`. A real pytest session runs a tagged test
+A real pytest session runs a test claiming a requirement of the spec
 against a committed record with `rdm.pytest_plugin`, once as GitHub Actions
 would and once locally, and the Allure results are read back. Skips cleanly
 if allure-pytest is not installed.
@@ -24,7 +24,7 @@ import pytest
 allure = pytest.importorskip("allure")
 
 from tests.acceptance.evidence import attach, verification_step  # noqa: E402
-from tests.util import git_run  # noqa: E402
+from tests.util import git_run, write_spec  # noqa: E402
 
 GITHUB = {"GITHUB_ACTIONS": "true", "GITHUB_SERVER_URL": "https://github.com", "GITHUB_REPOSITORY": "acme/device",
           "GITHUB_RUN_ID": "7001", "GITHUB_RUN_ATTEMPT": "2", "GITHUB_RUN_NUMBER": "42",
@@ -34,14 +34,12 @@ GITHUB = {"GITHUB_ACTIONS": "true", "GITHUB_SERVER_URL": "https://github.com", "
 
 def _project(tmp_path: Path) -> tuple[Path, str]:
     repo = tmp_path / "device"
-    (repo / "dhf" / "documents" / "design").mkdir(parents=True)
-    (repo / "dhf" / "documents" / "verification_and_validation_plan.md").write_text(
-        "---\nid: VVP-001\nuser_needs:\n  - {id: UN-001, text: 'a need'}\n---\n")
-    (repo / "dhf" / "documents" / "design" / "alarms.md").write_text(
-        "---\nid: SDS-1\nkind: design\ncontext: alarms\ndesign_inputs:\n"
-        "  - {id: DI-1, text: 'The device shall alarm.', traces_to: [UN-001]}\n---\n")
-    (repo / "test_alarm.py").write_text('import allure\n\n\n@allure.story("DI-1")\ndef test_alarm():\n    pass\n\n\n'
-                                        '@allure.story("DI-1")\ndef test_alarm_again():\n    pass\n')
+    (repo / "dhf").mkdir(parents=True)
+    write_spec(repo, (("item-01-001", "The device alarms.", ["Alarm"]),),
+               {"Alarm": ("alarms", "Nurse", "A nurse is alerted.")}, {"01": "alarms"})
+    (repo / "test_alarm.py").write_text(
+        'import allure\n\n\n@allure.tag("item-01-001")\ndef test_alarm():\n    pass\n\n\n'
+        '@allure.tag("item-01-001")\ndef test_alarm_again():\n    pass\n')
     for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "r"]):
         git_run(repo, *args)
     return repo, git_run(repo, "rev-parse", "HEAD")
@@ -59,10 +57,10 @@ def _run(repo: Path, results: Path, env: dict[str, str]) -> tuple[dict, dict[str
     return executor, properties
 
 
-@allure.story("DI-65")
+@allure.tag("item-03-003")
 @allure.label("output", "rdm/pytest_plugin.py")
 def test_the_results_record_who_ran_the_tests_and_where(tmp_path: Path) -> None:
-    """DI-65: executor.json names the CI run and its URL, or a local run's user
+    """executor.json names the CI run and its URL, or a local run's user
     and host; environment.properties records the OS, tool versions, commit,
     worktree state, and the CI actor and workflow."""
     repo, head = _project(tmp_path)

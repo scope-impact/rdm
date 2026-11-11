@@ -1,5 +1,5 @@
 """
-Run the gate shapes over the projected graph (DI-38).
+Run the gate shapes over the projected graph (item-06-004).
 
 ``shapes.ttl`` states the gate rules as SHACL; teams add their own rules as
 more shape files. The coded gates (`rdm story release-gate`, `rdm gap`) stay
@@ -76,7 +76,6 @@ def validate_command(
     allure_results_dir: Path | None = None,
     checklists: list[str] | None = None,
     extra_shapes: list[Path] | None = None,
-    unit_coverage: Path | None = None,
 ) -> int:
     """Run `rdm graph validate`: print each result; exit 1 on any violation."""
     from rdm.graph.cli import project_record
@@ -92,7 +91,7 @@ def validate_command(
         except Exception as error:  # rdflib raises a parser's own error for each format
             print(f"Error: shapes file {path} is not RDF: {error}")
             return 2
-    quads = project_record(dhf_dir, allure_results_dir, checklists, unit_coverage=unit_coverage)
+    quads = project_record(dhf_dir, allure_results_dir, checklists)
     if quads is None:
         return 2
     results = validate(quads, extra_shapes)

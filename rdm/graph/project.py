@@ -1,25 +1,22 @@
 """
-Project the design record into an RDF dataset (DI-35) and load, query and
-serve it (DI-36).
+Project the design record into an RDF dataset (item-06-001) and load, query and
+serve it (item-06-002).
 
 The Markdown record stays the only authored source: this module reads what
 the gates already read and states it as quads, one named graph per source, so
 a query can always tell where a fact came from:
 
-- ``record``     — user needs, bounded contexts, design inputs, controlled documents
-- ``tests``      — verification tags found in test sources
+- ``record``     — the spec (user needs, requirements, Allium rules, bounded
+                   contexts) and the controlled documents
 - ``executions`` — Allure results, when given
 - ``git``        — each design document's latest commit
-- ``architecture`` — the C4 model of the architecture workspace (DI-67)
-- ``code``       — Python imports between components' code (DI-67)
-- ``checklists`` — requested regulatory checklists, as data (DI-37)
+- ``checklists`` — requested regulatory checklists, as data (item-06-003)
 - ``references`` — documents' ``[[…]]`` tags linked to the clauses they name
-- ``manual``     — the user manual's pages, the design inputs they name, their test examples (DI-77)
 - ``ontology``   — RDM's vocabulary (``ontology.ttl``), so browsers can label things
 
 Open world: the graph asserts only what the record says. A missing
-``rdm:verifies`` edge means no tag was found — never "unverified"; pass/fail
-judgments stay in the gates.
+``rdm:exercises`` edge means no run claimed the requirement — never
+"unverified"; pass/fail judgments stay in the gates.
 """
 
 from __future__ import annotations
@@ -31,26 +28,11 @@ from urllib.parse import quote
 
 import pyoxigraph as ox
 
-from rdm.graph.c4 import project_architecture
-from rdm.graph.manual import project_manual
 from rdm.graph.ns import DCTERMS, PROV, RDF, RDFS, RDM, XSD
-from rdm.evidence.allure import full_name, reconcile
-from rdm.specification.tags import find_tests_dir, scan_source_tests
+from rdm.evidence.allure import reconcile
 from rdm.kernel.frontmatter import frontmatter_of
 from rdm.kernel.git import git, repo_root
-from rdm.kernel.ids import is_id, relevant_orphans
-from rdm.specification.sdd import (
-    MATRIX_DOC,
-    context_of,
-    declarations,
-    design_input_ids,
-    design_inputs,
-    find_dhf_doc,
-    find_design_docs,
-    realises_by_context,
-    registry_user_needs,
-    user_need_texts,
-)
+from rdm.specification.sdd import MATRIX_DOC, find_dhf_doc, load_spec
 
 
 NS = RDM
@@ -82,7 +64,6 @@ class _Dataset:
     def __init__(self, project: str):
         self.base = f"urn:dhf:{_slug(project)}:"
         self.quads: list[ox.Quad] = []
-        self.component_labels: list[tuple[ox.NamedNode, str]] = []  # (run, key): resolved against the C4 model
 
     def node(self, kind: str, local: str) -> ox.NamedNode:
         return _term(self.base + kind + "/" + quote(local, safe="/-._~"))
@@ -112,7 +93,7 @@ def controlled_documents(dhf: Path, root: Path) -> list[dict]:
     """Every Markdown file under the DHF with a frontmatter ``id``: its id,
     title, revision, repository-relative path and frontmatter, sorted by id.
     The traceability-matrix template is left out: it is an output, rendered
-    from the record, not part of it (DI-58)."""
+    from the record, not part of it (item-06-015)."""
     matrix = find_dhf_doc(Path(dhf), MATRIX_DOC)
     entries = []
     for md in sorted(Path(dhf).rglob("*.md")):
@@ -142,55 +123,65 @@ def _record(ds: _Dataset, dhf: Path, root: Path) -> None:
         doc_by_path[entry["path"]] = doc
         _document_links(ds, doc, entry["front"], g)
 
-    texts = user_need_texts(dhf)
-    declared = declarations(dhf)
+    spec = load_spec(dhf)
+    if spec is None:
+        return
+    for _, context in spec.contexts:
+        ds.thing(ds.node("context", context), rdm("BoundedContext"), context, g)
 
-    def declaring(ident):  # DI-52: the document that declares an id (the first, if several)
-        first = declared.get(ident, [])[:1]
-        return doc_by_path.get(_rel(dhf / first[0], root)) if first else None
+    def source(node, where):  # the spec file and line a fact is read from
+        if where:
+            ds.add(node, rdm("source"), where, g)
 
-    def count(node, ident):  # DI-46: how many times the record declares this id
+    for need in spec.needs:  # a screen of the event model and the surfaces it links
+        node = ds.thing(ds.node("need", need.id), rdm("UserNeed"), need.id, g)
+        ds.add(node, _term(_DCT + "identifier"), need.id, g)
+        if need.text:
+            ds.add(node, rdm("text"), need.text, g)
+        ds.add(node, rdm("ownedBy"), ds.node("context", need.context), g)
+        source(node, need.source)
+        for actor in need.actors:
+            ds.add(node, rdm("facing"), actor, g)
+        for surface in need.surfaces:
+            ds.add(node, rdm("surface"), surface, g)
+        for rule in need.rules:
+            ds.add(node, rdm("providesRule"), ds.node("rule", rule), g)
+        for guarantee in need.guarantees:
+            ds.add(node, rdm("guarantee"), guarantee, g)
+        for command in need.commands:
+            ds.add(node, rdm("command"), command, g)
+        for event in need.storm_events:
+            ds.add(node, rdm("stormEvent"), event, g)
+    for rule, (context, trigger) in sorted(spec.rules.items()):
+        node = ds.thing(ds.node("rule", rule), rdm("AlliumRule"), rule, g)
+        ds.add(node, rdm("ownedBy"), ds.node("context", context), g)
+        ds.add(node, rdm("trigger"), trigger, g)
+
+    counts: dict[str, int] = {}
+    for item in spec.items:
+        counts[item.requirement] = counts.get(item.requirement, 0) + 1
+    for item in spec.items:
+        node = ds.thing(ds.node("requirement", item.requirement), rdm("Requirement"), item.requirement, g)
+        ds.add(node, _term(_DCT + "identifier"), item.requirement, g)
         ds.add(node, rdm("declarationCount"),
-               ox.Literal(str(len(declared.get(ident, [])) or 1), datatype=_term(_XSD + "integer")), g)
+               ox.Literal(str(counts[item.requirement]), datatype=_term(_XSD + "integer")), g)
+        ds.add(node, rdm("text"), item.title, g)
+        if item.rule:
+            ds.add(node, rdm("inRule"), item.rule, g)
+        ds.add(node, rdm("ownedBy"), ds.node("context", item.context), g)
+        source(node, item.source)
+        for need in spec.needs_of(item):
+            ds.add(node, rdm("tracesTo"), ds.node("need", need), g)
+        for need in spec.addresses.get(item.requirement, []):  # linked directly by the spec's needs source
+            ds.add(node, rdm("addresses"), ds.node("need", need), g)
+        for kind, name in item.obligations:
+            ds.add(node, rdm("covers"), f"{kind}.{name}", g)
+            if kind.startswith("rule-") and name in spec.rules:
+                ds.add(node, rdm("coversRule"), ds.node("rule", name), g)
 
-    for un in sorted(registry_user_needs(dhf)):
-        need = ds.thing(ds.node("need", un), rdm("UserNeed"), un, g)
-        ds.add(need, _term(_DCT + "identifier"), un, g)
-        count(need, un)
-        if declaring(un) is not None:
-            ds.add(need, rdm("declaredIn"), declaring(un), g)
-        if un in texts:
-            ds.add(need, rdm("text"), texts[un], g)
-
-    for path in find_design_docs(dhf):
-        context = context_of(path)
-        ctx = ds.thing(ds.node("context", context), rdm("BoundedContext"), context, g)
-        doc = doc_by_path.get(_rel(path, root))
-        if doc is not None:
-            ds.add(doc, rdm("describes"), ctx, g)
-            for view in sorted(set(_VIEW_IMAGE.findall(path.read_text(encoding="utf-8", errors="ignore")))):
-                ds.add(doc, rdm("showsView"), view, g)  # DI-68: does it show its component view
-    for path, refs in realises_by_context(dhf).items():
-        for ref in sorted(refs):
-            ds.add(ds.node("context", context_of(path)), rdm("realises"), ds.node("input", ref), g)
-
-    for di in design_inputs(dhf):
-        node = ds.thing(ds.node("input", di["id"]), rdm("DesignInput"), di["id"], g)
-        ds.add(node, _term(_DCT + "identifier"), di["id"], g)
-        count(node, di["id"])
-        ds.add(node, rdm("text"), di["text"], g)
-        ds.add(node, rdm("ownedBy"), ds.node("context", di["context"]), g)
-        for un in di["traces_to"]:
-            ds.add(node, rdm("tracesTo"), ds.node("need", un), g)
-        if declaring(di["id"]) is not None:
-            ds.add(node, rdm("declaredIn"), declaring(di["id"]), g)
-
-
-# The image of an architecture view a document shows: c4/views/<key>.svg.
-_VIEW_IMAGE = re.compile(r"c4/views/([A-Za-z0-9_-]+)\.svg")
 
 def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> None:
-    """DI-58: the bounded contexts a document's ``contexts`` frontmatter
+    """item-06-015: the bounded contexts a document's ``contexts`` frontmatter
     declares (each with its part), and the controlled documents its
     ``references`` frontmatter names."""
     for item in front.get("contexts") or []:
@@ -207,47 +198,16 @@ def _document_links(ds: _Dataset, doc: ox.NamedNode, front: dict, g: str) -> Non
             ds.add(doc, _term(_DCT + "references"), ds.node("doc", str(ref).strip()), g)
 
 
-def _tests(ds: _Dataset, dhf: Path, root: Path) -> dict[str, ox.NamedNode]:
-    """Each tagged test, defined in its file and verifying its design inputs
-    (DI-61). Returns the Python tests keyed by the full name Allure gives
-    their runs (``tests.x.TestClass#test_y``), so a run can find its test:
-    from the repository root, and from the project (the DHF's parent), where
-    pytest runs when the project is nested in its repository."""
-    tests_dir = find_tests_dir(dhf)
-    by_full_name: dict[str, ox.NamedNode] = {}
-    if tests_dir is None:
-        return by_full_name
-    declared = design_input_ids(dhf)
-    for file, name, tags in scan_source_tests(tests_dir):
-        tags = [tag for tag in tags if is_id(tag) or tag in declared]  # a declared id, whatever its shape
-        if not tags:
-            continue
-        rel = _rel(Path(file), root)
-        test_file = ds.thing(ds.node("testfile", rel), rdm("TestFile"), rel, "tests")
-        ds.add(test_file, rdm("path"), rel, "tests")
-        ident = f"{rel}::{name}" if name else rel
-        test = ds.thing(ds.node("test", ident), rdm("Test"), ident, "tests")
-        ds.add(test, rdm("definedIn"), test_file, "tests")
-        for tag in tags:
-            ds.add(test, rdm("verifies"), ds.node("input", tag), "tests")
-        for tag in relevant_orphans(tags, declared):  # as the design gate reports them
-            ds.add(test, rdm("undeclaredTag"), tag, "tests")
-        for path in {rel, _rel(Path(file), dhf.parent)}:
-            if (key := full_name(path, name)) is not None:
-                by_full_name[key] = test
-    return by_full_name
-
-
-def _executions(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
+def _executions(ds: _Dataset, results_dir: Path) -> None:
     from rdm.graph.allure import project_results
 
-    project_results(ds, Path(results_dir), tests, declared)
+    project_results(ds, Path(results_dir))
 
 
 def _record_findings(ds: _Dataset, dhf: Path, results: Path | None) -> None:
     """What the release gate blocks about the whole record (a design control
-    not met, no design input, a result file that cannot be read), on the
-    record's node as the gate words it, for the shapes to block (DI-38)."""
+    not met, no requirement, a result file that cannot be read), on the
+    record's node as the gate words it, for the shapes to block (item-06-004)."""
     from rdm.release.gate import record_findings
 
     findings = record_findings(dhf, results)
@@ -293,7 +253,7 @@ def _commit(ds: _Dataset, root: Path, sha: str, g: str) -> tuple[ox.NamedNode, o
 
 
 def _landing(root: Path, sha: str, branch: str, first_parent: set[str]) -> str | None:
-    """The first-parent commit of ``branch`` that brought ``sha`` in (DI-51):
+    """The first-parent commit of ``branch`` that brought ``sha`` in (item-06-011):
     ``sha`` itself when it is on that line (a direct or squash commit), else
     the oldest first-parent commit descending from it (the merge). Descent is
     walked through every parent: walked through first parents only, a merge
@@ -322,12 +282,22 @@ def _latest_commits(root: Path, paths: list[str]) -> dict[str, str]:
 def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
     g = "git"
     head = git(root, "rev-parse", "HEAD")
-    if head:  # DI-60: the commit the record was built at
+    if head:  # item-06-016: the commit the record was built at
         record = ds.thing(_term(ds.base + "record"), rdm("Record"), ds.base.split(":")[2], g)
         ds.add(record, rdm("atCommit"), _commit(ds, root, head, g)[0], g)
+        # The version the evidence must be for: the commit of the repository the
+        # spec lives in (the product), the record's own when they are one.
+        spec = load_spec(dhf)
+        product_root = repo_root(spec.root) if spec is not None else None
+        if product_root is not None and product_root.resolve() != Path(root).resolve():
+            product = git(product_root, "rev-parse", "HEAD")
+            if product:
+                ds.add(record, rdm("productAt"), _commit(ds, product_root, product, g)[0], g)
+        else:
+            ds.add(record, rdm("productAt"), _commit(ds, root, head, g)[0], g)
     branch = default_branch(root)
     first_parent = set((git(root, "rev-list", "--first-parent", branch) or "").split()) if branch else set()
-    documents = controlled_documents(dhf, root)  # DI-35, DI-51: every controlled document
+    documents = controlled_documents(dhf, root)  # item-06-001, item-06-011: every controlled document
     latest = _latest_commits(root, [entry["path"] for entry in documents])
     landings: dict[str, str | None] = {}  # documents often share a commit
     for entry in documents:
@@ -347,7 +317,7 @@ def _git(ds: _Dataset, dhf: Path, root: Path) -> None:
 
 
 def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
-    """The risk register (DI-45): each risk's branch, chain, scores, evaluated
+    """The risk register (item-06-008): each risk's branch, chain, scores, evaluated
     levels, residual decision, status, controls and acceptance — and the
     release gate's own findings on it (``rdm:finding`` blocks,
     ``rdm:riskWarning`` warns), which the shapes report, so the two cannot
@@ -358,7 +328,9 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
     from rdm.risk.register import assess, policy_or_none, residual_decision
 
     policy = policy_or_none(dhf)
-    register, found = assess(dhf, design_input_ids(dhf), verified)
+    from rdm.specification.sdd import requirement_ids
+
+    register, found = assess(dhf, requirement_ids(dhf), verified)
     declared = Counter(r.id for r in register if r.id)
     doc_ids = {entry["path"]: entry["id"] for entry in controlled_documents(dhf, root)}
     g = "risks"
@@ -385,13 +357,13 @@ def _risks(ds: _Dataset, dhf: Path, root: Path, verified: set[str]) -> None:
             if value:
                 ds.add(node, rdm(prop), value, g)
         for control in r.controls:
-            ds.add(node, rdm("controlledBy"), ds.node("input", control), g)
+            ds.add(node, rdm("controlledBy"), ds.node("requirement", control), g)
         for link in r.linked:
             ds.add(node, rdm("linkedTo"), ds.node("risk", link), g)
         doc_id = doc_ids.get(_rel(dhf.parent / r.document, root))
         if doc_id:
             ds.add(node, rdm("declaredIn"), ds.node("doc", doc_id), g)
-        if policy_doc:  # DI-52: the policy the risk was evaluated against
+        if policy_doc:  # item-06-012: the policy the risk was evaluated against
             ds.add(node, rdm("evaluatedAgainst"), ds.node("doc", policy_doc), g)
         for finding in found:
             if finding.risk == index or (finding.risk is None and finding.blocking):
@@ -413,37 +385,26 @@ def project(
     allure_results_dir: Path | None = None,
     project_name: str | None = None,
     checklists: list[str] | None = None,
-    infer: bool = False,
-    unit_coverage: Path | None = None,
 ) -> list[ox.Quad]:
     """The record as quads, de-duplicated, in a stable order. ``checklists``
-    (built-in names or files) adds the checklists and references graphs;
-    ``infer`` adds what the vocabulary's rules derive, in the inferred graph
-    (DI-62); ``unit_coverage``, the unit tests' coverage report, adds each
-    measured component's lines run and measured (DI-67). Raises ValueError
-    when that report cannot be read."""
+    (built-in names or files) adds the checklists and references graphs."""
     dhf = Path(dhf_dir).resolve()
-    coverage = None
-    if unit_coverage is not None:
-        from rdm.release.verify import unit_coverage as component_coverage
-
-        coverage = component_coverage(dhf, Path(unit_coverage))
     repo = repo_root(dhf.parent)
     root = repo or dhf.parent
     results = Path(allure_results_dir) if allure_results_dir is not None and Path(allure_results_dir).exists() else None
     ds = _Dataset(project_name or (repo or dhf.parent).name)
     _record(ds, dhf, root)
     _record_findings(ds, dhf, results)
-    project_manual(ds, controlled_documents(dhf, root), dhf.parent, design_input_ids(dhf), rdm)
-    tests = _tests(ds, dhf, root)
+    from rdm.specification.sdd import requirement_ids
+
+    ids = requirement_ids(dhf)
     verified: set[str] = set()
     if results is not None:
-        _executions(ds, results, tests, design_input_ids(dhf))
-        verified = set(reconcile(design_input_ids(dhf), results).verified)
+        _executions(ds, results)
+        verified = set(reconcile(ids, results).verified)
     if repo is not None:
         _git(ds, dhf, root)
     _risks(ds, dhf, root, verified)
-    project_architecture(ds, dhf, root, rdm, coverage)  # after the runs: their source files belong to components
     if checklists:
         from rdm.graph.checklists import checklist_quads, reference_quads
 
@@ -452,10 +413,6 @@ def project(
         ds.quads.extend(reference_quads(controlled_documents(dhf, root), lambda doc_id: ds.node("doc", doc_id),
                                         clauses, ds.graph("references")))
     _ontology(ds)
-    if infer:
-        from rdm.graph.rules import infer as derive
-
-        ds.quads.extend(derive(ds.quads, ds.graph("inferred")))
     unique = {str(q): q for q in ds.quads}
     return [unique[k] for k in sorted(unique)]
 

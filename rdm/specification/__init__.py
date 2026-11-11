@@ -1,1 +1,1 @@
-"""The design specification: needs, design inputs, tagged tests, the design gate."""
+"""The specification: the spec read as Gherkin (requirements, user needs), init and adopt, validation records."""

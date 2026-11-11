@@ -1,62 +1,73 @@
 # RDM
 
-RDM keeps the design record of regulated health software as Markdown and tests
-in git: user needs, the design inputs that meet them, the risks and the controls
-that reduce them, and the evidence that each was verified. This glossary is the
-language of that record, aligned with the requirements and risk-analysis skills.
+RDM audits the record of regulated health software: the spec it is held to
+(written by whoever owns it, a factory such as Löyly or a team), the risks and the controls
+that reduce them, the checklists of the standards that apply, and the evidence
+that each requirement was verified. This glossary is the language of that
+record.
 
 ## Needs and requirements
 
-**User need**:
-What an intended user must be able to do, and the result they need, stated
-without reference to a solution. It is validated, not verified.
-_Avoid_: user story, feature, epic
+**Spec**:
+What the product must do, written the Löyly way: a plan of slices
+(`.pi/plan/`), one per bounded context, each with its accepted Gherkin
+scenarios, its Allium model and its event model, and an event storm behind
+them. RDM's contract with a spec is only Gherkin and Allure, so plain feature
+files work too (`spec:` in the DHF's configuration). RDM reads it and never
+writes it.
+_Avoid_: design inputs, SDD, the record (for the spec alone)
 
-**Design input**:
-A uniquely identified `shall` requirement on the system or one of its
-subsystems, owned by one bounded context and traced to the user need it refines.
-It is one acceptance criterion, accepted or not as a whole; what must be
-accepted separately is a separate design input. One `shall`: behaviours that
-could be accepted apart are never joined with "and".
-_Avoid_: spec item, story, ticket, the test, sub-criterion
+**User need**:
+What an actor needs, as the spec captures it: a screen of a context's event
+model, with the Allium surface it links (whom it faces, the rules it
+provides, what it guarantees) and the event-storm events behind it (in plain
+Gherkin, a Feature, its description the need). It is validated, not
+verified.
+_Avoid_: user story, feature, epic, UN-n
+
+**Requirement**:
+An accepted scenario of the spec, a concrete Given/When/Then example
+stamped with an id (`@item-02-001`; in plain Gherkin, any id-shaped tag): one
+acceptance criterion, accepted or not as a whole. It addresses the user
+needs whose Allium rules or guarantees its `@allium-…` tags cover (in plain
+Gherkin, the Feature it sits under). A test
+run claims it with an Allure `tag` label of the same id.
+_Avoid_: design input, DI-n, spec item, story, ticket, the test, sub-criterion
+
+**Stamp**:
+The id tag a scenario carries: never renumbered, never reused, kept when the
+scenario is reworded. Whoever owns the spec stamps it (a factory's stamper,
+or a person); a scenario without one blocks a release. RDM never stamps.
+_Avoid_: id assignment, numbering
 
 **Baseline acceptance criterion**:
-A design input that follows from a user need alone and mentions no risk.
+A requirement that no risk's controls name.
 _Avoid_: functional requirement, happy path
 
 **Risk-based acceptance criterion**:
-A design input allocated as a risk control. It counts as met only when it is
+A requirement a risk's `controls` name. It counts as met only when it is
 verified and the residual risk of the risk it controls is acceptable.
 _Avoid_: safety requirement, mitigation requirement
 
 **Bounded context**:
-The unit of design that owns design inputs and the components that implement
-them; what the requirements skill calls a subsystem. Exactly one design
-document describes each. In the architecture it is a boundary around
-components, which may sit in more than one container. It is drawn where the
-language changes, not where the workflow does: the stages of a design input's
-lifecycle are one context, and a context is named for its domain, never for
-what its code does or the technology it uses.
+A unit of design: one context of the spec, one slice of its plan. It is drawn
+where the language changes, not where the workflow does, and named for its
+domain, never for what its code does or the technology it uses.
 _Avoid_: module, component, service, container, stage, layer
-
-**Realising context**:
-A bounded context that implements part of a design input another context owns.
-It does not own the input and is not where the input is declared.
-_Avoid_: co-owner, contributor
 
 **Task acceptance criterion**:
 A checklist item on a planning task. Planning, never the record: it is not a
-design input and nothing verifies it.
+requirement and nothing verifies it.
 _Avoid_: acceptance criterion (unqualified), requirement
 
 ## The record and its gates
 
 **Design record**:
-Everything authored under control: user needs, design inputs, design
-documents, the design review, the risk register, the architecture workspace and
-the tagged tests, in git. It is the only source of truth, and only a reviewed
-pull request changes it.
-_Avoid_: database, docs, spec
+Everything RDM audits, in git: the spec, the design documents, the risk
+register, the validation records, the controlled documents and the tests. It
+is the only source of truth; the spec changes in the factory's own process,
+the rest only by a reviewed pull request.
+_Avoid_: database, docs
 
 **Design history file**:
 The design record as a regulator receives it: the documents rendered from the
@@ -67,21 +78,19 @@ _Avoid_: the record (for the rendered output)
 
 **Frontmatter**:
 The YAML block between `---` lines at the top of a Markdown document: its id,
-revision and title, and the record's declarations (user needs, design inputs,
-risks). The gates read the record from it.
+revision and title, and the record's declarations (risks, the risk policy,
+the contexts and references of a document). The gates read them from it.
 _Avoid_: header, metadata block
 
 **Design document**:
-The one controlled document per bounded context that declares the design
-inputs it owns and describes how the context meets them.
+The controlled document of one bounded context that describes how the
+context meets the requirements of its slice of the spec.
 _Avoid_: spec, SDD (unqualified)
 
 **Design output**:
-The architecture that meets a bounded context's design inputs: its components
-and their relationships in the C4 model (the component view), and a dynamic
-view where the order of interactions matters. It names components, never
-source files or functions: the architecture workspace maps each component to
-its code.
+The architecture that meets a bounded context's requirements: its components,
+what each is responsible for, and how they relate, in its design document. It
+names components, never source files or functions.
 _Avoid_: implementation notes, module list, code walkthrough
 
 **Controlled document**:
@@ -89,7 +98,7 @@ A document with an id and a revision whose every change goes through review.
 _Avoid_: doc, file
 
 **Approved**:
-Said of a design document or design review that is committed and merged
+Said of a design document that is committed and merged
 through a reviewed pull request. Git is the approval record; no sign-off table
 repeats it.
 _Avoid_: signed off, accepted
@@ -99,38 +108,28 @@ Approval of a pull request by someone other than its author: the record's
 independent verification. An agent never gives it.
 _Avoid_: code review (unqualified), self-review
 
-**Chain review**:
-Reading one design input together with its user needs, its design prose, its
-tagged test and verification steps, its component labels and its last run, and
-deciding whether the test proves the text; recorded as a design review, input
-by input, before each release. A person's judgement, never a gate.
-_Avoid_: faithfulness gate, audit, test review
-
 **Code coverage**:
 How much of a unit's code its unit tests run: a unit-test measure. Never
 acceptance evidence, never carried in Allure, never in the record's
-traceability; what an acceptance test exercises is the components it names
-or reaches. Not checklist coverage (the clauses the documents reference).
-_Avoid_: coverage (unqualified), test coverage (for the design inputs a test verifies)
-
-**Design gate**:
-The check that blocks implementation until the design record is complete and
-approved, and every id in it is declared once.
-_Avoid_: pre-commit check, lint
+traceability; RDM does not read it. Not checklist coverage (the clauses the
+documents reference).
+_Avoid_: coverage (unqualified), test coverage (for the requirements a test verifies)
 
 **Release gate**:
-The check that blocks a release until the design gate passes, every design
-input is verified, every user need is refined by a design input, and the risk
-rules raise no blocking finding. It warns, never blocks, on a user need with no
+The check that blocks a release until the spec is read whole (every scenario
+stamped, no id twice), it holds at least one requirement, every requirement
+is verified, every user need is addressed by a requirement covering its rules
+or guarantees, and the risk rules raise no blocking finding. It warns, never blocks, on a user need with no
 approved validation record. Whether the runs are release-grade evidence is
 shown by the verification report and the knowledge graph, not decided by the
 gate.
 _Avoid_: CI, green build
 
 **Design specification**:
-The core bounded context: user needs, design inputs, tagged tests, the design
-review, and the design gate that guards them. It depends on no other context;
-every other context conforms to its ids.
+The core bounded context: the spec, read — its user needs and
+requirements. It depends on no other context; every other context conforms to
+its ids. It reads a specification and never polices how one is written: that
+is the factory's (ADR 0002).
 _Avoid_: design controls (for this context; the term names the regulatory
 process RDM as a whole implements), requirements module
 
@@ -144,7 +143,7 @@ _Avoid_: deployment, CI (for the context)
 **Shared kernel**:
 The helpers every bounded context may use and that use none: YAML and files,
 ids, git, frontmatter, the reconcile helpers. Not a context: it has no
-language of its own and owns no design input.
+language of its own and owns no requirement.
 _Avoid_: utils, common, core (the core is the design specification)
 
 **Composition root**:
@@ -152,68 +151,17 @@ The one place that wires the command line to every context (`rdm/main.py`).
 It is in no context, so it may import any.
 _Avoid_: main module, glue
 
-## Architecture
-
-**Software system**:
-The product in scope, or a significant external system it depends on; the
-top level of the C4 model.
-_Avoid_: application, platform, project
-
-**Container**:
-Something that runs or stores data within a software system: an application,
-a command-line process, a data store, a queue. Not a Docker image unless the
-image is the thing that runs.
-_Avoid_: service, module, deployment, image
-
-**Component**:
-A logical building block inside exactly one container, owned by one bounded
-context and naming the code that implements it.
-_Avoid_: module, class, bounded context, service
-
-**Person**:
-A human role that uses the software system.
-_Avoid_: user (unqualified), actor, account
-
-**Relationship**:
-A directed dependency between two architecture elements, labelled with what
-the source does to the target.
-_Avoid_: link, connection, arrow
-
-**Architecture workspace**:
-The one Structurizr workspace (`dhf/c4/workspace.dsl`) that holds the C4 model
-and its views. It is written by people and is the source of every view.
-_Avoid_: diagram (for the model), architecture file
-
-**Architecture view**:
-One view of the architecture workspace at one level: system context,
-container or component. Its image is drawn from the workspace and stamped with
-it; it is never edited.
-_Avoid_: diagram (for the model), picture
-
-**Dynamic view**:
-An architecture view of one important runtime scenario: the same elements,
-their interactions numbered in order, each step along a relationship the model
-declares. Added only when the order matters and a component view cannot show
-it, never one per feature.
-_Avoid_: sequence diagram (it is drawn as numbered steps, not lifelines), flow
-
-**Architecture**:
-The bounded context that owns the architecture workspace, its views, and the
-conformance of the code and the record to it. The system architecture document
-describes the system; this context keeps its C4 model.
-_Avoid_: c4 (for the context), diagrams
-
 ## Verification and validation
 
 **Test**:
-An automated check tagged with the design input it verifies. It verifies the
+An automated check tagged with the requirement it verifies. It verifies the
 acceptance criterion; it is not the criterion.
 _Avoid_: acceptance criterion, scenario, spec
 
 **Verification step**:
 One named check within a test, with its own result; a test is the ordered set
 of its verification steps. It belongs to the test, never to the acceptance
-criterion: a failed step fails the test, and the design input stays one
+criterion: a failed step fails the test, and the requirement stays one
 criterion however many steps check it.
 _Avoid_: acceptance criterion, clause, sub-criterion, assertion
 
@@ -228,23 +176,18 @@ _Avoid_: runner, agent (for the executor)
 
 **Test evidence**:
 The bounded context that takes test results in the formats tools write them
-(Allure, xunit) and translates them into test runs of the record's tests,
-labelled with the record at test time. The tools' own words (result, label,
+(Allure) and translates them into test runs of the record's tests,
+labelled with the commit under test. The tools' own words (result, label,
 container) stop at its boundary.
 _Avoid_: test results (for the context), reports
 
-**Mutation probe**:
-A reviewer's check that one test fails when the behaviour it verifies is
-deliberately broken: evidence that the test proves its design input.
-_Avoid_: mutation testing (for a whole suite)
-
 **Verified**:
-Said of a design input with a passing run of a test tagged with it and no
+Said of a requirement with a passing run of a test tagged with it and no
 failed one. It shows the requirement is met, not that the test proves it.
 _Avoid_: validated, tested, done
 
 **Release-grade evidence**:
-Verification in which every design input is verified, no run failed, and every
+Verification in which every requirement is verified, no run failed, and every
 run tested the record's commit with no uncommitted changes.
 _Avoid_: green build, passing CI
 
@@ -254,7 +197,7 @@ reach its result.
 _Avoid_: verified, accepted
 
 **Traceability matrix**:
-The table from user need to design input to test to result, generated from the
+The table from user need to requirement to test to result, generated from the
 record and the test runs. It is never edited.
 _Avoid_: trace table, RTM (unqualified)
 
@@ -289,7 +232,7 @@ _Avoid_: finding, missing item (unqualified)
 A checklist clause's key written in a controlled document inside `[[ … ]]`
 (`[[62304:5.1.1]]`), saying where the document meets the clause. Only text
 inside the brackets counts; a bare mention does not.
-_Avoid_: tag (a tag names a design input on a test), citation
+_Avoid_: tag (a tag names a requirement on a test), citation
 
 ## Risk
 
@@ -332,7 +275,7 @@ analysis and may link to a safety risk; it does not replace it.
 _Avoid_: vulnerability, attack (for the classified threat)
 
 **Risk control**:
-Something done to reduce a risk, allocated to a design input that implements it.
+Something done to reduce a risk, allocated to a requirement that implements it.
 Defined once and referenced from every harm pathway it bears on.
 _Avoid_: measure, mitigation, safeguard
 
@@ -396,18 +339,15 @@ _Avoid_: document list, register (the risk register is another thing)
 **Instructions for use (IFU)**:
 The product's instructions for anyone who uses it; in plain words, its user
 manual (RDM's is its documentation site). A design output, listed page by page
-by a controlled document of kind `manual`, so the DMR index holds it. Its
-pages are projected into the knowledge graph with the design inputs they name
-and the labels of the test examples they show. What it must teach is stated
-as design inputs.
+by a controlled document of kind `manual`, so the DMR index holds it. What it
+must teach is stated as requirements.
 _Avoid_: docs (unqualified), help
 
 ## Knowledge graph
 
 **Knowledge graph**:
-The design record, with its test runs, history, risks, checklists and
-architecture, projected into RDF with RDM's vocabulary, rules and derived
-relations, for people and agents to query. Read-only and rebuilt from the
+The record — the spec, its test runs, history, risks and checklists —
+projected into RDF with RDM's vocabulary, for people and agents to query. Read-only and rebuilt from the
 record: never edited, never the source of a fact. `graph` names it in commands
 and code.
 _Avoid_: database, knowledge base, graph model, the record (for the graph)
@@ -426,73 +366,3 @@ _Avoid_: schema (for the vocabulary), data model
 A shape over the knowledge graph. A violation blocks a release; a warning only
 informs the reviewer.
 _Avoid_: lint, constraint (unqualified)
-
-**Derived relation**:
-A fact a rule infers, kept apart from what the record states and never stated
-by it.
-_Avoid_: computed field, cache
-
-## Domain model
-
-The tactical terms each design document's *Commands and events* use, after
-the PensionBee DDD workshop: an actor issues a command, resulting in one of
-its events, which affects an entity.
-
-**Command**:
-An intent to change something or to reach a verdict, issued by an actor:
-declare a design input, commit the design record, decide a release. A command
-a user types (`rdm story release-gate`) is an interface, named only where a
-reviewer needs it.
-_Avoid_: action, request, function
-
-**Domain event**:
-A fact a command produced, named in the past tense: *Design Input Declared*,
-*Release Permitted*. A **success event** is the command's intended outcome; a
-**fail event** names the business rule that refused it, after a slash:
-*Release Blocked / Input Untested*. A **warning** names its rule the same way,
-with *Warned* before the slash (*Release Warned / Orphan Tag*), and never
-fails a command. A gate concludes every event its rules
-produce, not the first: a verdict such as *Release Permitted* is a conclusion
-over all of them, and a warning does not withhold it.
-_Avoid_: message, log line, error (for a fail event), notification
-
-**Business rule**:
-What a command checks before its success event may happen; each one broken is
-named by a fail event. The rules of a gate are its checks.
-_Avoid_: invariant (in prose), validation, guard
-
-**Actor**:
-Whoever issues a command: a contributor (a person or an agent), a reviewer,
-CI. A command with no actor is a reaction's.
-_Avoid_: user (unqualified), role
-
-**Entity**:
-A thing of the domain with an id and a lifecycle: a user need (UN-nnn), a
-design input (DI-n), a risk, a design document, a test result. An
-**aggregate** is the entity whose rules must hold as one: a design document
-and the design inputs it owns, the risk register and its risk policy, and
-the record as a whole for the rules that cross documents (an id declared
-once, a design input never restated).
-_Avoid_: object, record (for one entity), model
-
-**Design input lifecycle**:
-*Declared* (in an uncommitted design document) → *approved* (committed, and
-merged through a reviewed pull request) → *verified* (a passing tagged test)
-→ *released* (the release gate permits the commit); and amended or retired
-from any stage. An edit to its design document re-opens approval until the
-edit is approved. Stages of one design input, not bounded contexts.
-_Avoid_: phase, status (unqualified), draft, done, workflow context
-
-**Reaction**:
-"Whenever this event, then that command", with no actor of its own: whenever
-a design input is declared, a stub test is written; whenever a commit is made,
-the design gate runs (the hook); whenever a branch is pushed, the gates run
-(CI).
-_Avoid_: policy (RDM's only policy is the risk policy), trigger, handler
-
-**Read model**:
-A view built from events and the record for someone to read, never changed
-directly: the traceability matrix, the verification data, the verification
-report, the knowledge graph. Publishing and the knowledge graph hold only
-read models.
-_Avoid_: report (unqualified), dashboard, cache

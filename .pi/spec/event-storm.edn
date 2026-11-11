@@ -1,0 +1,114 @@
+;; Big Picture EventStorming board for RDM, as data: the events of keeping a regulated
+;; product's design record, in order, each with what causes it. An event an actor causes,
+;; and that a screen's command produces, shows with that user need (rdm's Löyly adapter).
+;; The human board is event-storm.md.
+{:meta {:title "RDM: Big Picture EventStorming"
+        :date "2026-11-10"
+        :participants [:regulatory-author :release-manager :reviewer :agent]
+        :status "drafted from RDM's spec; not yet reviewed by the product owner"}
+
+ :phases
+ [{:id :specify
+   :name "Specify (upstream: the spec's owner)"
+   :kind :upstream
+   :events
+   [{:id :scenario-stamped :name "Scenario stamped"
+     :caused-by {:kind :actor :name "Spec author, in the spec's own factory"}
+     :pivotal? false :unhappy-of nil
+     :notes "RDM reads the spec; it never writes it (ADR 0002). A stamped scenario is a requirement."
+     :hot-spots []}]}
+
+  {:id :set-up
+   :name "Bring a product under RDM"
+   :kind :main
+   :events
+   [{:id :project-scaffolded :name "Project scaffolded"
+     :caused-by {:kind :actor :name "Regulatory author"}
+     :pivotal? false :unhappy-of nil
+     :notes "rdm init: the document templates, the build, and a spec skeleton the Löyly way."
+     :hot-spots []}
+    {:id :repository-adopted :name "Repository adopted"
+     :caused-by {:kind :actor :name "Regulatory author"}
+     :pivotal? true :unhappy-of nil
+     :notes "rdm adopt: the DHF skeleton and the CI gates, never overwriting what exists."
+     :hot-spots []}]}
+
+  {:id :keep-the-record
+   :name "Keep the record"
+   :kind :main
+   :events
+   [{:id :document-rendered :name "Document rendered"
+     :caused-by {:kind :actor :name "Regulatory author"}
+     :pivotal? false :unhappy-of nil
+     :notes "A controlled document rendered from its template and the record's data."
+     :hot-spots []}
+    {:id :gaps-reported :name "Gaps reported"
+     :caused-by {:kind :actor :name "Regulatory author"}
+     :pivotal? false :unhappy-of nil
+     :notes "rdm gap: the checklist clauses no document references."
+     :hot-spots []}
+    {:id :coverage-reported :name "Coverage reported"
+     :caused-by {:kind :actor :name "Regulatory author"}
+     :pivotal? false :unhappy-of nil
+     :notes "rdm gap --coverage: total, missing, covered, percent per checklist."
+     :hot-spots []}]}
+
+  {:id :verify
+   :name "Verify from executed tests"
+   :kind :main
+   :events
+   [{:id :verification-recorded :name "Verification recorded"
+     :caused-by {:kind :actor :name "Regulatory author, or CI"}
+     :pivotal? true :unhappy-of nil
+     :notes "Each requirement verified, failed or untested from the Allure tag labels of executed runs."
+     :hot-spots []}
+    {:id :graph-built :name "Graph built"
+     :caused-by {:kind :actor :name "Regulatory author"}
+     :pivotal? false :unhappy-of nil
+     :notes "The record projected into its named graphs; never edited."
+     :hot-spots []}
+    {:id :graph-validated :name "Graph validated"
+     :caused-by {:kind :actor :name "Regulatory author, or CI"}
+     :pivotal? false :unhappy-of nil
+     :notes "The gate shapes over the projection: violations block, warnings inform."
+     :hot-spots []}
+    {:id :explorer-file-written :name "Explorer file written"
+     :caused-by {:kind :actor :name "Regulatory author"}
+     :pivotal? false :unhappy-of nil
+     :notes "The graph for AWS Graph Explorer."
+     :hot-spots []}
+    {:id :agent-served :name "Record served to an agent"
+     :caused-by {:kind :actor :name "Agent harness"}
+     :pivotal? false :unhappy-of nil
+     :notes "Read-only: an agent queries and traces, and cannot change the record."
+     :hot-spots []}]}
+
+  {:id :validate
+   :name "Validate with people"
+   :kind :main
+   :events
+   [{:id :user-need-validated :name "User need validated"
+     :caused-by {:kind :actor :name "Reviewer"}
+     :pivotal? false :unhappy-of nil
+     :notes "An approved validation record, through a reviewed pull request; its absence warns, never blocks."
+     :hot-spots []}]}
+
+  {:id :release
+   :name "Release"
+   :kind :main
+   :events
+   [{:id :release-gate-passed :name "Release gate passed"
+     :caused-by {:kind :actor :name "Release manager, or CI"}
+     :pivotal? true :unhappy-of nil
+     :notes "Every requirement verified, every need addressed, every risk evaluated."
+     :hot-spots []}
+    {:id :release-blocked :name "Release blocked"
+     :caused-by {:kind :actor :name "Release manager, or CI"}
+     :pivotal? false :unhappy-of :release-gate-passed
+     :notes "A blocking finding: unverified or failed requirement, unaddressed need, unread spec, risk."
+     :hot-spots []}
+    {:id :evidence-bundle-written :name "Evidence bundle written"
+     :caused-by {:kind :actor :name "Release manager, or CI"}
+     :pivotal? false :unhappy-of nil
+     :notes "The retained evidence of the release, with its manifest and the verification report."
+     :hot-spots []}]}]}

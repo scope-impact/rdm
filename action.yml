@@ -1,7 +1,7 @@
 name: 'RDM PDF Generator'
 description: >-
   Render a repository's regulatory documents to PDF with RDM, Pandoc and
-  Typst, in the RDM image of the release this action is pinned to (DI-63).
+  Typst, in the RDM image of the release this action is pinned to (item-04-004).
 
 inputs:
   dhf_path:

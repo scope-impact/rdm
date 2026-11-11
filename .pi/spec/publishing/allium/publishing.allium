@@ -1,0 +1,120 @@
+-- allium: 3
+-- .pi/spec/publishing/allium/publishing.allium
+--
+-- Scope: the publishing context: a design history file compiled from the record
+-- (Markdown templates rendered against data files, the filters of a traceability table,
+-- post-processing, snippets from source) and RDM's own user manual. The surfaces are
+-- the needs this context is home to: compile-dhf and user-manual (event-model/area.edn).
+-- The device-master-record index and the verification report are generated here too;
+-- the need they serve, release-evidence, is the release context's
+-- (../../release/allium/release.allium, surface ReleaseEvidence).
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- The spec RDM reads (specification): its requirements and the needs they address.
+external entity Spec {}
+
+-- The person who keeps the record.
+external entity AuthorAccount {}
+
+-- Anyone who reads RDM's user manual to keep a record the way a release enforces.
+external entity Reader {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+-- A Markdown document rendered from a template and the data files supplied.
+entity RenderedDocument {
+    template: String
+    data_files: List<String>
+    markdown: String
+}
+
+-- A named code snippet, from the lines between RDOC <key> and ENDRDOC in a source file.
+entity Snippet {
+    key: String
+    source: String
+    text: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Render a Markdown template with Jinja2 against the data files supplied, each under
+-- its file name; then post-process the Markdown (numbering, a second pass with the
+-- first pass's words, auditor-note exclusion) as the render configuration names.
+rule Render {
+    when: Render(author, template, data_files)
+    -- 1. every value the template uses is supplied by the data (refused, naming it)
+    requires: for value in template.values_used: supplied(value, data_files)
+    -- 2. the template exists (refused, naming it)
+    requires: exists template
+    ensures:
+        RenderedDocument.created(template: template, data_files: data_files)
+        DocumentRendered(template: template)
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor RegulatoryAuthor {
+    identified_by: AuthorAccount where true
+}
+
+actor User {
+    identified_by: Reader where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+-- A regulatory author can compile a design history file from the system of record:
+-- the spec, the executed tests and git.
+surface CompileDhf {
+    facing author: RegulatoryAuthor
+    context spec: Spec
+
+    provides:
+        Render(author, template, data_files)
+
+    @guarantee SpecReadAsTaggedGherkin
+        -- The spec's requirements are its Gherkin scenarios tagged with an id, each
+        -- with its Feature, Rule, title, source and tags; a scenario with none is
+        -- listed, never silently dropped.
+
+    @guarantee TraceabilityFilters
+        -- A template has invert_dependencies, join_to and md_indent to build a
+        -- traceability table; join_to refuses an id its table lacks.
+
+    @guarantee MarkdownPostProcessed
+        -- Rendered Markdown is numbered, given the words its first render produced, and
+        -- stripped of auditor-only notes, leaving code exactly as written.
+
+    @guarantee SnippetsFromSource
+        -- Code between RDOC <key> and ENDRDOC is a snippet under its key; a key
+        -- collected twice is refused, naming both files.
+}
+
+-- A user learns from RDM's user manual, a controlled document of each release, how to
+-- keep the record the way that release's gates enforce.
+surface UserManual {
+    facing user: User
+
+    @guarantee ManualInReadingOrder
+        -- IFU-001 lists the manual's pages in the reading order of instructions for use,
+        -- behind a cover naming the product, its release and the manual's id and revision.
+
+    @guarantee PublishedPerRelease
+        -- The manual is published once per release tag and once for the development
+        -- version; every release is kept and selectable, the newest the default.
+
+    @guarantee RisksDisclosedById
+        -- The manual discloses each risk of RDM's register by its id, with what the user
+        -- must do about its residual risk.
+}

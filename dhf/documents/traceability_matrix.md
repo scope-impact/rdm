@@ -1,15 +1,14 @@
 ---
 id: TM-001
-revision: 1
+revision: 2
 title: Traceability Matrix and Verification Status
 ---
 
 # Purpose
 
-The verification status of each **design input**, grouped under the **user
-need** it traces to, generated from the system of record: the design inputs
-declared in the per-context design documents (`kind: design`) reconciled against
-executed Allure results. Do not edit by hand. Regenerate with:
+The verification status of each **requirement** of the spec (a Gherkin
+scenario tagged with its id), grouped under the **user need** it addresses, generated from the
+spec reconciled against executed Allure results. Do not edit by hand. Regenerate with:
 
 ```
 uv run pytest tests/acceptance --clean-alluredir --alluredir=dhf/allure-results
@@ -20,49 +19,34 @@ rdm render dhf/documents/traceability_matrix.md dhf/config.yml dhf/data/verifica
 {% if verification is defined %}
 # Summary
 
-| Verified | Failed | Untested | Total design inputs | Allure results |
+| Verified | Failed | Untested | Total requirements | Allure results |
 | --- | --- | --- | --- | --- |
 | {{ verification.summary.verified }} | {{ verification.summary.failed }} | {{ verification.summary.untested }} | {{ verification.summary.total }} | {{ verification.summary.results_found }} |
 
 # Traceability matrix
 
-Runs: passed / failed / skipped.
+Each user need, with the requirements (tagged scenarios of the spec) that
+address it. Runs: passed / failed / skipped.
 
 {% for group in verification.groups %}
 ## {{ group.user_need }}
 
-| Input | Status | Runs | Verifying tests | Output |
-| ------------ | ------------ | ---------- | ------------------------------------ | ---------------------------- |
-{%- for di in group.design_inputs %}
-| {{ di.design_input }} | {{ di.status }} | {{ di.passed }}/{{ di.failed }}/{{ di.skipped }} | {{ di.tests|join(', ') if di.tests else '—' }} | {{ di.outputs|join(', ') if di.outputs else '—' }} |
+{% if group.text %}{{ group.text }}{% endif %}{% if group.actors %} Facing: {{ group.actors|join(', ') }}.{% endif %}
+
+| Requirement | Scenario | Status | Runs | Verifying tests |
+| ------------ | ------------------------------------ | ------------ | ---------- | ------------------------------------ |
+{%- for r in group.requirements %}
+| {{ r.requirement }} | {{ r.text }} | {{ r.status }} | {{ r.passed }}/{{ r.failed }}/{{ r.skipped }} | {{ r.tests|join(', ') if r.tests else '—' }} |
 {%- endfor %}
 {% endfor %}
 
 {% if verification.orphans %}
 # Orphan test tags
 
-Allure tags matching no declared design input:
+Allure tags matching no requirement:
 {% for orphan in verification.orphans %}
 - {{ orphan }}
 {%- endfor %}
-{% endif %}
-{% if verification.unit_coverage is defined %}
-# Unit-test code coverage
-
-How much of each component's code its unit tests ran, from the unit tests' coverage report: evidence of unit verification (IEC 62304 5.5), shown beside the design inputs, not inside them. A design input is verified by its acceptance test, never by coverage.
-
-| Component | Context | Lines run | Lines measured | Coverage |
-| --- | --- | --- | --- | --- |
-{%- for c in verification.unit_coverage.components %}
-| {{ c.name }} | {{ c.context or '—' }} | {{ c.executed }} | {{ c.measured }} | {{ c.percent }}% |
-{%- endfor %}
-{% if verification.unit_coverage.unmeasured %}
-
-Components whose code the report does not measure:
-{% for c in verification.unit_coverage.unmeasured %}
-- {{ c.name }} ({{ c.context or '—' }})
-{%- endfor %}
-{% endif %}
 {% endif %}
 {% else %}
 No `verification` data was provided. Run `rdm story verify` to generate

@@ -1,0 +1,91 @@
+-- allium: 3
+-- .pi/spec/compliance/allium/compliance.allium
+--
+-- Scope: the compliance context: gap analysis of a document set against the checklist of a
+-- standard, the coverage report, and the checklists RDM ships. A reference is a delimited
+-- [[KEY]] (or [[KEY: annotation]]); a bare mention, or a longer key, never covers a key.
+-- The surface is the need this context is home to: gap-analysis (event-model/area.edn).
+
+------------------------------------------------------------
+-- External Entities
+------------------------------------------------------------
+
+-- A document of the record, Markdown, holding [[KEY]] references.
+external entity Document {}
+
+-- The person who keeps the record.
+external entity AuthorAccount {}
+
+------------------------------------------------------------
+-- Entities
+------------------------------------------------------------
+
+-- A checklist: clauses under unique keys, with `include` of other checklists (by built-in
+-- name or by path), resolved once each.
+entity Checklist {
+    name: String
+    clauses: List<Clause>
+    includes: List<Checklist>
+}
+
+entity Clause {
+    key: String
+    description: String
+}
+
+------------------------------------------------------------
+-- Rules
+------------------------------------------------------------
+
+-- Report the checklist's keys that no document references (rdm gap). Exits 3 on a gap, 0
+-- when every clause is referenced; warns of a document that still holds a placeholder.
+rule Gap {
+    when: Gap(author, checklist, documents)
+    -- 1. the checklist, and every checklist it includes, can be read
+    requires: readable(checklist)
+    -- 2. the checklist holds at least one clause
+    requires: checklist.clauses != []
+    -- 3. every document can be read
+    requires: for d in documents: readable(d)
+    ensures: GapsReported(checklist: checklist, missing: missing(checklist, documents))
+}
+
+-- Tabulate, per checklist, total, missing, covered and percent (rdm gap --coverage); in
+-- verbose mode, name the missing keys. Exits as Gap does.
+rule Coverage {
+    when: Coverage(author, checklists, documents)
+    -- 1. each checklist can be read and holds at least one clause
+    requires: for c in checklists: readable(c) and c.clauses != []
+    ensures: CoverageReported(checklists: checklists)
+}
+
+------------------------------------------------------------
+-- Actor Declarations
+------------------------------------------------------------
+
+actor RegulatoryAuthor {
+    identified_by: AuthorAccount where true
+}
+
+------------------------------------------------------------
+-- Surfaces
+------------------------------------------------------------
+
+-- A regulatory author can check that documents contain the references a chosen standard's
+-- checklist requires (gap analysis).
+surface GapAnalysis {
+    facing author: RegulatoryAuthor
+    context checklist: Checklist
+
+    provides:
+        Gap(author, checklist, documents)
+        Coverage(author, checklists, documents)
+
+    @guarantee BuiltInChecklistsCompose
+        -- The standards' checklists ship built in, each with unique keys, and an include
+        -- of another checklist by built-in name or path requires its clauses too.
+
+    @guarantee Part11ChecklistShipped
+        -- A 21 CFR Part 11 document-control checklist ships built in, and RDM's own
+        -- document-control statement passes gap analysis against it.
+}

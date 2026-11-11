@@ -1,0 +1,67 @@
+# Computer software validation (CSV) of a tool used in production or the
+# quality management system, and of the record system that keeps its
+# validation: an agentic software factory (RDM's worked example validates
+# Löyly's pi harness), or RDM itself (RDM's own CSV-001).
+#
+# The keys are mnemonics, not the documents' own numbering;
+# each item names its section and page below. This checklist does not replace
+# reading the guidance and the standard.
+#
+# Sources:
+#   [CSA] FDA, Computer Software Assurance for Production and Quality Management
+#         System Software, Guidance for Industry and FDA Staff, issued
+#         February 3, 2026 (supersedes the September 24, 2025 issue); 41 PDF pages,
+#         printed page 1 = PDF page 4:
+#         https://www.fda.gov/media/188844/download
+#         (listed at https://www.fda.gov/regulatory-information/search-fda-guidance-documents/computer-software-assurance-production-and-quality-management-system-software;
+#         docket FDA-2022-D-0795; it supersedes Section 6, Validation of Automated
+#         Process Equipment and Quality System Software, of FDA's General Principles
+#         of Software Validation, https://www.fda.gov/media/73141/download, per its
+#         footnote 3, printed p. 2 (PDF p. 5))
+#         §V Computer Software Assurance, printed p. 5 (PDF p. 8);
+#         §V.A Computer Software Assurance Risk Framework, printed p. 6 (PDF p. 9);
+#         §V.B Considerations for Electronic Records Requirements, printed p. 21 (PDF p. 24).
+#   [ISO] ISO 13485:2016, Medical devices - Quality management systems -
+#         Requirements for regulatory purposes, subclauses 4.1.6, 7.5.6 and 7.6,
+#         as cited by [CSA] §V.A(1), printed p. 6 (PDF p. 9). The standard is
+#         sold, not published: https://www.iso.org/standard/59752.html (no page
+#         numbers are given for it here; cite the subclause).
+#   [P11] 21 CFR Part 11 (4-1-24 Edition), §11.10(a), printed p. 244 (PDF p. 4):
+#         https://www.govinfo.gov/content/pkg/CFR-2024-title21-vol1/pdf/CFR-2024-title21-vol1-part11.pdf
+#   [P11G] FDA, Guidance for Industry, Part 11, Electronic Records; Electronic
+#         Signatures - Scope and Application (August 2003); printed page 1 = PDF page 4:
+#         https://www.fda.gov/media/75414/download
+#         §III.C.1 Validation, printed p. 6 (PDF p. 9), lines 216-236.
+#
+# How Part 11 and CSV fit: [CSA] §V.B (printed pp. 21-22) says a document
+# required as evidence of validation and kept in electronic form is generally
+# a Part 11 electronic record, so the system that keeps the validation record
+# is held to Part 11 (the built-in part11_document_control checklist). For
+# that system's own validation, Part 11 §11.10(a) asks for validation and
+# [P11G] §III.C.1 asks that it rest on "a justified and documented risk
+# assessment": the risk-based approach of [CSA], which this checklist follows.
+#
+# Source: [CSA] §V.A(1) Identifying the Intended Use, printed pp. 6-8 (PDF pp. 9-11)
+CSA:intended-use the intended use of the software, and whether it is used directly as part of production or the quality management system, or to support them
+# Source: [CSA] §V.A(2) Determining the Risk-Based Approach, printed pp. 8-11 (PDF pp. 11-14); high process risk defined on printed p. 9 (PDF p. 12)
+CSA:risk the process risk: whether a failure of the software to perform as intended may result in a quality problem that foreseeably compromises safety (high process risk) or not
+# Source: [CSA] §V.A(3) Production or Quality Management System Software Changes, printed pp. 11-12 (PDF pp. 14-15)
+CSA:change assurance of a change to the software, and how the change is reported, in proportion to whether it may foreseeably compromise safety
+# Source: [CSA] §V.A(4) Determining the Appropriate Assurance Activities, printed pp. 12-14 (PDF pp. 15-17); scripted and unscripted testing, printed p. 13 (PDF p. 16)
+CSA:assurance assurance activities commensurate with the medical device risk (high process risk) or the process risk: scripted or unscripted testing, automated testing, ongoing monitoring
+# Source: [CSA] §V.A(5) Additional Considerations for Assurance Activities, printed pp. 14-17 (PDF pp. 17-20)
+CSA:assurance-considerations what else the assurance relies on: the supplier's own assurance, the software's own controls, and the digital evidence it keeps
+# Source: [CSA] §V.A(6) Establishing the Appropriate Record, printed pp. 17-21 (PDF pp. 20-24); the record's contents, printed p. 17 (PDF p. 20); Table 1, printed p. 18 (PDF p. 21)
+CSA:record the record: intended use, result of the risk-based analysis, the testing conducted, issues found, a conclusion of acceptability for the intended use with any issue's resolution, who performed it and when, review and approval
+# Source: [CSA] §V.B Considerations for Electronic Records Requirements, printed pp. 21-22 (PDF pp. 24-25); [P11] §11.10(a)
+CSA:part11 an electronic record required as evidence of validation is a Part 11 electronic record: the system that keeps it is held to Part 11, and validated as this checklist does
+# Source: [ISO] 4.1.6, as cited by [CSA] §V.A(1), printed p. 6 (PDF p. 9)
+13485:4.1.6-procedure a documented procedure for validating computer software used in the quality management system
+# Source: [ISO] 4.1.6
+13485:4.1.6-before-use validation before initial use and, as appropriate, after changes to the software or its application
+# Source: [ISO] 4.1.6
+13485:4.1.6-proportionate the approach and activities proportionate to the risk associated with the use of the software
+# Source: [ISO] 4.1.6
+13485:4.1.6-records records of the validation kept
+# Source: [ISO] 7.5.6, as cited by [CSA] §V.A(1), printed p. 6 (PDF p. 9)
+13485:7.5.6-software validation of computer software used in production, before initial use and after changes

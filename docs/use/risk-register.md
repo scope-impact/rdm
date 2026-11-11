@@ -1,8 +1,7 @@
 # Risk register
 
 The risk register is part of the record: risks are frontmatter in
-`kind: risk` documents under the DHF, in the same way design inputs are
-frontmatter in `kind: design` ones. The release gate holds the register to
+`kind: risk` documents under the DHF. The release gate holds the register to
 the rules a machine can check, and the graph carries it, so a query or an
 agent can walk **risk → control → test → result**.
 
@@ -29,7 +28,7 @@ risks:
     harm: "A health record is missing at a doctor's visit."
     severity: Serious                # from the harm
     probability: Possible            # from the situation, never the hazard
-    controls: [DI-12, DI-14]         # each control is a design input
+    controls: [REQ-4, REQ-7]             # each control is a requirement of the spec
     residual: {probability: Rare}    # add severity: where a control limits the harm itself
     acceptance:                      # only where the policy says justify for the residual level
       by: "Jane Doe (QA lead)"       # who accepted it
@@ -44,12 +43,13 @@ risks:
 ---
 ```
 
-- **A control is a design input** — your subsystem `shall` requirement. That
-  gives the control a stated requirement, a tagged test and a result.
+- **A control is a requirement** — a tagged scenario of the spec, named by
+  its id. That gives the control a stated acceptance criterion, a
+  tagged test and a result.
 - **Levels are evaluated, not typed.** RDM looks them up in your risk
   policy. You may also write `level:`; the gate checks it matches.
 - **A residual is not evaluated until its controls are verified.** Until
-  every controlling design input has a passing test, the residual decision
+  every controlling requirement has a passing test, the residual decision
   is *not evaluated* and the release is blocked. A passing test shows the
   control was built as specified; whether it is *effective* is the
   reviewer's judgement.
@@ -99,7 +99,7 @@ monitors it).
 
 The release gate blocks on a register it cannot evaluate or whose residuals
 the policy does not accept, and warns on proposed ratings; the rules are
-DI-44 and DI-50 in the [risk design](../dhf/documents/design/risk.md), and
+item-02-002 and item-02-003 in the [risk design](../dhf/documents/design/risk.md), and
 `rdm graph validate` reports the same through its shapes. Whether a control
 is *effective*, whether a residual is as low as reasonably practicable, and
 whether the analysis is honest are the reviewer's, using the skills.
@@ -107,19 +107,17 @@ whether the analysis is honest are the reviewer's, using the skills.
 ## Tracing
 
 ```bash
-rdm graph query --allure-results dhf/allure-results 'SELECT ?risk ?decision ?input WHERE {
+rdm graph query --allure-results dhf/allure-results 'SELECT ?risk ?decision ?control WHERE {
   ?r a rdm:Risk ; rdfs:label ?risk ; rdm:residualDecision ?decision .
-  OPTIONAL { ?r rdm:controlledBy/rdfs:label ?input } } ORDER BY ?risk'
+  OPTIONAL { ?r rdm:controlledBy/rdfs:label ?control } } ORDER BY ?risk'
 ```
 
 An agent connected to `rdm graph mcp` calls `trace` with a risk id, and gets
-the chain, the scores, the residual decision and each controlling design
-input with its tests and runs; the agent's trace of a design input lists the
-risks it controls. That is the graph's trace: `rdm story trace` takes a user
-need or a design input and does not list risks, so from the command line use
-the query above.
+the chain, the scores, the residual decision and each controlling
+requirement with its runs; the agent's trace of a requirement lists the
+risks it controls. From the command line, use the query above.
 
-RDM's own [policy](../dhf/documents/risk/policy.md) and
-[register](../dhf/documents/risk/tool_risks.md) list the ways RDM itself could
+RDM's own policy and register, in its
+[computer software validation](../dhf/documents/tool_validation.md), list the ways RDM itself could
 misreport evidence; an agent wrote them, so they are proposed until a
 maintainer approves them.

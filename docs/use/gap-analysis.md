@@ -21,17 +21,22 @@ document that still holds a `TODO` placeholder is named in a warning: a fresh
 yet, so its coverage means nothing until they are written.
 
 The built-ins cover IEC 62304, ISO 14971, the FDA software, cybersecurity and
-human-factors guidances, and `part11_document_control`: the 21 CFR Part 11
-controls for document control in git. Audit your own document-control
-procedure against it:
+human-factors guidances, `part11_document_control`: the 21 CFR Part 11
+controls for document control in git, and `csv_tool_validation`: computer
+software validation of a tool used in production or the quality system (after
+FDA's Computer Software Assurance guidance and ISO 13485 4.1.6 and 7.5.6). Each
+item of these two names its source PDF, section and page. Audit your own
+document-control procedure and tool validation against them:
 
 ```bash
-rdm gap part11_document_control documents/document_control_procedure.md
+rdm gap part11_document_control dhf/documents/document_control.md
+rdm gap csv_tool_validation dhf/documents/tool_validation.md
 ```
 
-RDM holds [its own](../dhf/documents/document_control.md) to the same checklist,
-and the [worked example](https://github.com/scope-impact/rdm/tree/main/examples/github-document-control)
-is a complete project built on it.
+RDM holds [its own document control](../dhf/documents/document_control.md) and
+[its own tool validation](../dhf/documents/tool_validation.md) to them, and so
+does the [worked example](../reference/worked-example.md), for Löyly's pi
+harness.
 
 ## Your own checklists
 
@@ -55,8 +60,5 @@ Run gap analysis as a required check, so a document set cannot merge with a
 clause no document references:
 
 ```yaml
-- run: rdm gap part11_document_control documents/document_control_procedure.md
+- run: rdm gap 62304_2015_class_b dhf/documents/*.md
 ```
-
-The worked example verifies its DI-5 with exactly this, including a check
-that the check does detect a gap.

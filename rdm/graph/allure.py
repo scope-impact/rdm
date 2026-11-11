@@ -1,13 +1,11 @@
 """
-Allure results as RDF (DI-53, DI-54, DI-56).
+Allure results as RDF (item-06-013, item-06-014).
 
 Each ``*-result.json`` becomes an ``rdm:TestRun`` (a ``prov:Activity``) with
 what counts as evidence: uuid, full name, start and end times, status and its
-message and trace, parameters, steps and attachments. ``story`` labels link a
-run to the design inputs it verifies, ``output`` labels to the source files it
-exercises, and ``component`` labels name C4 components by key (linked, or
-recorded as unknown, once the model is read: rdm/graph/c4.py). Nothing else
-is projected (Design Review 18): other labels, links,
+message and trace, parameters, steps and attachments. Id-shaped ``tag``
+labels link a run to the requirements it claims, and ``output``
+labels to the source files it exercises. Nothing else is projected: other labels, links,
 test cases and container fixtures repeat the record or say nothing about
 design controls; the raw results keep them, in the evidence bundle.
 Attachment content stays in the files; the graph holds the reference.
@@ -21,9 +19,14 @@ from pathlib import Path
 import pyoxigraph as ox
 
 from rdm.graph.project import _DCT, _PROV, _XSD, _Dataset, _term, rdm
-from rdm.evidence.allure import COMMIT_LABEL, WORKTREE_LABEL, named_results, run_status, run_version
-from rdm.specification.tags import DESIGN_INPUT_LABELS
 from rdm.kernel.ids import is_id
+from rdm.evidence.allure import (
+    OUTPUT_LABEL,
+    named_results,
+    requirement_tags,
+    run_status,
+    run_version,
+)
 
 GRAPH = "executions"
 
@@ -45,7 +48,7 @@ def _times(ds: _Dataset, node: ox.NamedNode, raw: dict) -> None:
 
 
 def _evidence(ds: _Dataset, owner: ox.NamedNode, raw: dict, scope: str, key: str = "") -> None:
-    """Attachments and (recursively) steps of a run or step (DI-53)."""
+    """Attachments and (recursively) steps of a run or step (item-06-013)."""
     for item in raw.get("attachments") or []:
         if isinstance(item, dict) and item.get("source"):
             source = str(item["source"])
@@ -73,7 +76,7 @@ def _source(ds: _Dataset, value: str) -> ox.NamedNode:
     return source
 
 
-def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode], declared: set[str]) -> None:
+def _result(ds: _Dataset, path: Path, raw: dict) -> None:
     stem = path.stem
     run = ds.thing(ds.node("run", stem), rdm("TestRun"), str(raw.get("name") or stem), GRAPH)
     ds.add(run, rdm("status"), run_status(raw), GRAPH)  # a failed step fails the run, as the gates read it
@@ -93,36 +96,23 @@ def _result(ds: _Dataset, path: Path, raw: dict, tests: dict[str, ox.NamedNode],
             ds.add(node, rdm("name"), str(param["name"]), GRAPH)
             ds.add(node, rdm("value"), str(param.get("value", "")), GRAPH)
             ds.add(run, rdm("parameter"), node, GRAPH)
-    tested, dirty = run_version(raw)  # DI-60: the version tested
+    tested, dirty = run_version(raw)  # item-06-016: the version tested
     if tested:
         commit = ds.thing(ds.node("commit", tested), _term(_PROV + "Activity"), tested[:7], GRAPH)
         ds.add(run, rdm("testedAt"), commit, GRAPH)
     if dirty:
         ds.add(run, rdm("uncommittedChanges"), ox.Literal("true", datatype=_term(_XSD + "boolean")), GRAPH)
+    for ident in filter(is_id, requirement_tags(raw)):  # the requirements the run claims, by id-shaped tags
+        ds.add(run, rdm("exercises"), ds.node("requirement", ident), GRAPH)
     for label in raw.get("labels") or []:
-        if not isinstance(label, dict) or not label.get("name"):
-            continue
-        name, value = str(label["name"]), str(label.get("value", "")).strip()
-        if name in (COMMIT_LABEL, WORKTREE_LABEL):
-            continue
-        if name in DESIGN_INPUT_LABELS and (is_id(value) or value in declared):
-            ds.add(run, rdm("exercises"), ds.node("input", value), GRAPH)
-        elif name == "output" and value:  # DI-56: the code the run exercises
-            ds.add(run, rdm("exercisesOutput"), _source(ds, value), GRAPH)
-        elif name == "component" and value:  # DI-56: a component the run names, by its key in the model
-            ds.component_labels.append((run, value))
-    test = tests.get(str(raw.get("fullName") or ""))
-    if test is not None:  # DI-61: the test this run ran
-        ds.add(run, rdm("runOf"), test, GRAPH)
+        if isinstance(label, dict) and label.get("name") == OUTPUT_LABEL and str(label.get("value", "")).strip():
+            ds.add(run, rdm("exercisesOutput"), _source(ds, str(label["value"]).strip()), GRAPH)
     _evidence(ds, run, raw, stem)
 
 
-def project_results(ds: _Dataset, results_dir: Path, tests: dict[str, ox.NamedNode] | None = None,
-                    declared: set[str] = frozenset()) -> None:
+def project_results(ds: _Dataset, results_dir: Path) -> None:
     """Every result in an Allure results directory, read as the gates read it
-    (one that cannot be read is the record's finding, not a run), as quads;
-    ``tests`` maps the full names Allure gives runs to the tests in the tests
-    graph, and ``declared`` is the design input ids a story may name."""
+    (one that cannot be read is the record's finding, not a run), as quads."""
     named, _ = named_results(Path(results_dir))
     for raw, name in named:
-        _result(ds, Path(results_dir) / name, raw, tests or {}, declared)
+        _result(ds, Path(results_dir) / name, raw)

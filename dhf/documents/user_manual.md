@@ -1,10 +1,9 @@
 ---
 id: IFU-001
 kind: manual
-revision: 4
+revision: 6
 title: "Instructions for use (IFU) — RDM's user manual"
-# The pages of the manual in reading order, from the project root (DI-77,
-# DI-80). The "RDM on RDM" pages are not here: they publish this DHF.
+# The pages of the manual in reading order, from the project root (item-07-005). The "RDM on RDM" pages are not here: they publish this DHF.
 pages:
   - docs/index.md
   - docs/about/intended-use.md
@@ -15,7 +14,7 @@ pages:
   - docs/install/getting-started.md
   - docs/use/index.md
   - docs/use/changing-the-record.md
-  - docs/use/design-inputs-and-tests.md
+  - docs/use/spec-and-tests.md
   - docs/use/risk-register.md
   - docs/use/validation-evidence.md
   - docs/use/gates.md
@@ -46,11 +45,7 @@ they ship with.
 
 - **Approval:** each change to a page is a reviewed pull request; the
   release tag fixes the version that ships.
-- **Design inputs:** what the manual must teach is stated as design inputs
-  of the publishing context (DI-79), verified like any other.
-- **In the graph:** each listed page is projected (DI-77): the design inputs
-  it names, so the trace of a changed input lists the pages to re-read, and
-  the labels of each tagged-test example it shows, so a gate shape warns on
-  an example that names no component (DI-78).
+- **Requirements:** what the manual must hold is stated as requirements
+  of the publishing context (item-07-005, item-07-006, item-07-007), verified like any other.
 - **Changing this list:** adding or removing a page changes this document,
   so its revision is bumped.

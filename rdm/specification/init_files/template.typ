@@ -16,11 +16,47 @@
 
 // Pandoc compatibility
 #let horizontalrule = line(length: 100%, stroke: 0.5pt + rule-color)
+// Pandoc before 3.1.12 writes a block quote as #blockquote; later ones as #quote(block: true).
+#let blockquote(body) = quote(block: true, body)
+
+// Gherkin, highlighted in the document's palette: a feature file carried into a
+// document (the gherkin render filter) as a ```gherkin block.
+#let gherkin-syntax = bytes("%YAML 1.2\n---\nname: Gherkin\nfile_extensions: [feature, gherkin]\nscope: source.gherkin\ncontexts:\n  main:\n    - match: '^\\s*#.*$$'\n      scope: comment.line.gherkin\n    - match: '^\\s*(Feature|Rule|Background|Scenario Outline|Scenario Template|Scenario|Example|Examples|Scenarios)(:)'\n      captures:\n        1: keyword.control.gherkin\n    - match: '^\\s*(Given|When|Then|And|But|\\*)(?=\\s)'\n      captures:\n        1: keyword.other.step.gherkin\n    - match: '@[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\\d+(?=\\s|$$)'\n      scope: constant.other.requirement-id.gherkin\n    - match: '@[^\\s@]+'\n      scope: entity.name.tag.gherkin\n    - match: '\"[^\"]*\"'\n      scope: string.quoted.double.gherkin\n    - match: '<[^<>\\s]+>'\n      scope: variable.parameter.gherkin\n    - match: '\\|'\n      scope: punctuation.separator.table.gherkin\n")
+#let code-theme = bytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict><key>name</key><string>RDM</string><key>settings</key><array><dict><key>settings</key><dict><key>foreground</key><string>#2B2D31</string></dict></dict><dict><key>scope</key><string>keyword.control</string><key>settings</key><dict><key>foreground</key><string>#55111F</string><key>fontStyle</key><string>bold</string></dict></dict><dict><key>scope</key><string>keyword.other.step</string><key>settings</key><dict><key>foreground</key><string>#383EE9</string><key>fontStyle</key><string>bold</string></dict></dict><dict><key>scope</key><string>constant.other.requirement-id</string><key>settings</key><dict><key>foreground</key><string>#55111F</string><key>fontStyle</key><string>bold</string></dict></dict><dict><key>scope</key><string>entity.name.tag</string><key>settings</key><dict><key>foreground</key><string>#6B6E75</string><key>fontStyle</key><string>italic</string></dict></dict><dict><key>scope</key><string>string</string><key>settings</key><dict><key>foreground</key><string>#2E6B3A</string></dict></dict><dict><key>scope</key><string>variable.parameter</string><key>settings</key><dict><key>foreground</key><string>#9A5B00</string></dict></dict><dict><key>scope</key><string>comment</string><key>settings</key><dict><key>foreground</key><string>#8A8D93</string><key>fontStyle</key><string>italic</string></dict></dict><dict><key>scope</key><string>punctuation.separator.table</string><key>settings</key><dict><key>foreground</key><string>#A3A6AC</string></dict></dict><dict><key>scope</key><string>keyword, storage</string><key>settings</key><dict><key>foreground</key><string>#55111F</string></dict></dict><dict><key>scope</key><string>entity.name.function, support.function</string><key>settings</key><dict><key>foreground</key><string>#383EE9</string></dict></dict><dict><key>scope</key><string>constant.numeric, constant.language</string><key>settings</key><dict><key>foreground</key><string>#9A5B00</string></dict></dict></array></dict></plist>")
 
 // Fonts: Nunito Sans for text, JetBrains Mono for headings and code (both in
 // the RDM image); the fallbacks keep a document readable without them.
 #let body-font = ("Nunito Sans", "Noto Sans")
 #let mono-font = ("JetBrains Mono", "DejaVu Sans Mono")
+
+// The record's decorations (cards.lua turns the Markdown's marks into these calls).
+#let level-color = (Low: rgb("#2E7D4F"), Medium: rgb("#B7791F"), High: rgb("#C0392B"), Block: rgb("#5B0E0E"))
+#let status-color = (verified: rgb("#2E7D4F"), failed: rgb("#C0392B"), untested: rgb("#B7791F"))
+#let chip(kind, body) = {
+  if kind == "level" {
+    box(fill: level-color.at(body, default: charcoal), inset: (x: 5pt, y: 2pt), radius: 3pt,
+      text(fill: white, weight: "bold", size: 0.8em, body))
+  } else if kind == "id" {
+    box(fill: maroon, inset: (x: 5pt, y: 2pt), radius: 3pt, text(font: mono-font, fill: white, size: 0.8em, body))
+  } else if kind in status-color {
+    text(fill: status-color.at(kind), weight: "bold", size: 0.9em, body)
+  } else if kind == "covers" {
+    text(fill: muted, size: 0.78em, body)
+  } else {
+    box(stroke: 0.5pt + muted, inset: (x: 4pt, y: 1.5pt), radius: 3pt, text(fill: muted, size: 0.78em, body))
+  }
+}
+#let risk-card(level: "", body) = block(
+  stroke: (left: 3pt + level-color.at(level, default: muted)), fill: white,
+  inset: 10pt, radius: (right: 4pt), width: 100%, breakable: false, above: 1.2em, below: 1.2em, body)
+#let scenario-card(status: "", body) = block(
+  stroke: 0.5pt + rule-color, fill: white, inset: 10pt, radius: 4pt, width: 100%,
+  above: 0.9em, below: 0.9em, body)
+#let rule-line(title: "", body) = block(above: 1.4em, below: 0.6em,
+  [#text(size: 0.75em, fill: muted, tracking: 0.08em)[RULE] #h(4pt) #text(weight: "bold", title)])
+#let steps(..rows) = grid(columns: (3.6em, 1fr), row-gutter: 0.55em, column-gutter: 0.6em,
+  ..rows.pos().map(r => (align(right, text(fill: nexus, weight: "bold", r.at(0))), r.at(1))).flatten())
+
 
 // Document metadata (populated by Pandoc)
 #let doc-id = "DOC-000"
@@ -111,6 +147,16 @@
 
   // Code
   show raw: set text(font: mono-font)
+  set raw(syntaxes: gherkin-syntax, theme: code-theme)
+  // A long Gherkin line wraps under its own text, not at the margin.
+  show raw.where(block: true, lang: "gherkin"): it => {
+    set par(spacing: 0.32em, leading: 0.4em)
+    show raw.line: line => {
+      let indent = line.text.len() - line.text.trim(at: start).len()
+      par(hanging-indent: (indent + 2) * 0.6em, line.body)
+    }
+    it
+  }
 
   show raw.where(block: true): it => {
     set text(size: 8.5pt)

@@ -231,7 +231,7 @@ Changes made after the first regulatory release are made following most of the s
 
 3. **Git Hooks**
 
-    If desired, run the `rdm hooks` command to install git hooks that will automatically add change request numbers to your git commit messages.
+    If desired, install a git hook that adds change request numbers to your git commit messages.
 
 4. **Run Tests**
 
@@ -654,7 +654,7 @@ It's critical that the product owner be present during most sprint planning meet
     - Do not end the subject line with a period
     - Wrap the body at 72 characters
 
-    All commits should include a link back to the change request. E.g., `Issue #104`. The `rdm hooks` command, which may have been set up as part of the onboarding activity, uses the numbers in the git branch name to pre-populate these. However, if you're working on another change request within your current branch, that's okay---just be sure to update the numbers.
+    All commits should include a link back to the change request. E.g., `Issue #104`. A commit-message hook, if one was set up as part of the onboarding activity, can pre-populate these from the numbers in the git branch name. However, if you're working on another change request within your current branch, that's okay---just be sure to update the numbers.
 
     Push your commits to GitHub periodically to back up your work.
 

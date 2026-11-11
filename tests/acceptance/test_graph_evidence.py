@@ -1,6 +1,6 @@
-"""Acceptance test for test evidence in the graph (DI-53, see dhf/).
+"""Acceptance test for test evidence in the graph (item-06-013).
 
-Tagged `@allure.story("DI-53")`, over the real projection and the agent's
+Tagged `@allure.tag("item-06-013")`, over the real projection and the agent's
 trace, from an Allure result with nested steps and attachments. Skips
 cleanly if allure-pytest or the `graph` extra is not installed.
 """
@@ -28,15 +28,15 @@ def _att(name: str, source: str, kind: str) -> dict:
     return {"name": name, "source": source, "type": kind}
 
 
-@allure.story("DI-53")
+@allure.tag("item-06-013")
 @allure.label("output", "rdm/graph/project.py")
 def test_runs_carry_their_steps_and_attachments(tmp_path: Path) -> None:
-    """DI-53: each run's steps (name, status, order, nested under the parent)
+    """item-06-013: each run's steps (name, status, order, nested under the parent)
     and attachments (on the run or a step: name, media type, file) are in the
     graph, and trace lists them with the run."""
     dhf, results = _record(tmp_path)
     (results / "r1-result.json").write_text(json.dumps({
-        "name": "test_alarm", "status": "passed", "labels": [{"name": "story", "value": "DI-1"}],
+        "name": "test_alarm", "status": "passed", "labels": [{"name": "tag", "value": "item-01-001"}],
         "attachments": [_att("gate output", "out-attachment.txt", "text/plain")],
         "steps": [
             {"name": "step 1: alarms sound", "status": "passed",
@@ -63,7 +63,7 @@ def test_runs_carry_their_steps_and_attachments(tmp_path: Path) -> None:
                 (label, "waveform")} <= facts(wave)
 
     with verification_step("trace lists them with the run, nested and ordered"):
-        runs = trace(Record(dhf, results), "DI-1")["design_input"]["runs"]
+        runs = trace(Record(dhf, results), "item-01-001")["requirement"]["runs"]
         assert runs == [{
             "test": "test_alarm", "status": "passed",
             "attachments": [{"name": "gate output", "type": "text/plain", "file": "out-attachment.txt"}],

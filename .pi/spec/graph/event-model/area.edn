@@ -1,0 +1,14 @@
+;; .pi/spec/graph/event-model/area.edn
+;; Graph: the record as a read-only RDF graph, explored by people and read by agents.
+;; Allium: ../allium/graph.allium.
+{:graph
+ {:description "Graph: the record projected into RDF, stored, queried, served, validated by the gate shapes, written for Graph Explorer, and read by agents."
+  :screens
+  {:graph/explore-graph
+   {:description "A regulatory author can query and visually explore the record as a linked graph, without changing how the record is written."
+    :grain/allium [{:spec ".pi/spec/graph/allium/graph.allium" :kind :surface :name "ExploreGraph"}]
+    :commands #{:graph/build :graph/query :graph/serve :graph/validate :graph/explorer-file}}
+   :graph/agent-reads-record
+   {:description "An agent, in any harness, can read the record (query it, trace a requirement or need to its tests and results, check it against the gate rules) and cannot change it."
+    :grain/allium [{:spec ".pi/spec/graph/allium/graph.allium" :kind :surface :name "AgentReadsRecord"}]
+    :commands #{:graph/serve-agent}}}}}

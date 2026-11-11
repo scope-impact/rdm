@@ -1,47 +1,14 @@
 ---
 id: SDS-REN-001
-kind: design
+title: Publishing — software design
 context: publishing
-# Implements part of inputs other contexts own.
-realises: [DI-1, DI-4, DI-30, DI-63]
-design_inputs:
-  - id: DI-7
-    text: "RDM shall render a Markdown template file with Jinja2 against the data files supplied, each available under its file name, and refuse, naming it, a value the template uses that the data does not supply."
-    traces_to: [UN-001]
-  - id: DI-8
-    text: "RDM shall provide the invert_dependencies, join_to, and md_indent template filters used to build traceability tables."
-    traces_to: [UN-001]
-  - id: DI-9
-    text: "RDM shall post-process rendered Markdown: auto-number sections, give a template the words its first render produced by rendering it a second time, so a glossary lists only the terms the document uses, and exclude auditor-only notes from released output."
-    traces_to: [UN-001]
-  - id: DI-16
-    text: "RDM shall extract delimited code snippets from source files (RDOC/ENDRDOC), keyed by name, for inclusion in documents."
-    traces_to: [UN-001]
-  - id: DI-79
-    text: "RDM's user manual shall show each tagged-test example naming the C4 component it exercises by a component label."
-    traces_to: [UN-018]
-  - id: DI-80
-    text: "RDM's instructions for use shall be one manual whose controlled document lists its pages in reading order: a cover naming the product, the release it is for (filled in by the build: the release tag it is built from, or the development version otherwise), and the manual's own id and revision; then what RDM is for (its intended use); how it works; limits and risks; install; quick start; guides (the operating instructions); troubleshooting; reference; and changelog (the revision history)."
-    traces_to: [UN-018]
-  - id: DI-82
-    text: "RDM's instructions for use shall be published once per release tag and once for the development version, every published release kept and selectable beside the others, the newest release being the default."
-    traces_to: [UN-018]
-  - id: DI-81
-    text: "RDM's instructions for use shall disclose each risk of RDM's risk register by its id, with what the user must do about its residual risk."
-    traces_to: [UN-018, UN-016]
-  - id: DI-29
-    text: "RDM shall generate device-master-record index data from controlled documents' frontmatter, writing one entry per document (id, title, path, revision) to a data file the DMR index renders from."
-    traces_to: [UN-012]
-  - id: DI-64
-    text: "RDM shall render a verification report to PDF from the record and the Allure results it is given, for review by someone who did not run the tests: a header naming the repository, the record's commit, the commits tested, the executor and environment the results record, the RDM version and one SHA-256 over the result files; an evidence status that is release-grade only when every design input has a passing run, no run failed, and every run tested the record's commit with no uncommitted changes, and that otherwise names each reason; the anomalies (failed, broken or skipped runs, design inputs with no run, attachments not found, and tags naming no design input); a summary of the risk register's state; a traceability table of user need, design input, the risks it is a control for, its tests and their result; per design input, its text, context, user needs, outputs, whether it is a baseline or a risk-based acceptance criterion, and each risk it is a control for with that risk's status and residual decision, and for each run of a test tagged with it the test's file and function, its result, date and duration, its commit and worktree state where they differ from the header, any failure message and trace, its labels other than those the report already shows, its links, each step as a verification step with its own result, and the attachments the test made (text inline up to a limit, images embedded, any other file named with its SHA-256), with captured output and the copy of the requirement listed by name and SHA-256 only, and the Allure severity label left out; and an appendix listing every result file with its SHA-256. An unreadable result file or uncommitted changes to the record is a reason the evidence is not release-grade; text from the results is set as text, never markup; a symbolic link in the results is never read; and with no Typst available the report says so."
-    traces_to: [UN-012]
 ---
 
 # Publishing — Software Design
 
 ## Purpose
 
-Publishing renders the design record into controlled documents: a
+Publishing renders the record into controlled documents: a
 *template* (a controlled document's source, with placeholders) filled with
 *data* generated from the record, then post-processed Markdown, and from it
 PDF and DOCX. It owns the template engine and its filters, the Markdown
@@ -54,28 +21,21 @@ fed back into it.
 
 ## Design Outputs
 
-The design outputs are this context's architecture, in the C4 model of the
-architecture workspace: its components, what each is responsible for, and
-how they relate. They name components, never source code: the workspace maps
-each component to its code.
-
-![Components: publishing](../../c4/views/C3_publishing.svg)
-
 | Component | Responsibility | Meets |
 |-----------|----------------|-------|
-| Renderer | Fills a template with the data files as its context, each under its file name, in one or two passes, and post-processes the result; refuses a value the data does not supply, and `join_to` an id its table lacks | DI-7, DI-8 |
-| Markdown extensions | Number the sections, give the template the vocabulary the document uses, and remove auditor-only notes | DI-9 |
-| First-pass output | Holds the words a first render produced, for the second pass to test against | DI-9 |
-| Code snippets | Collects the delimited snippets of source files, by key, as a data file, refusing a key used twice, in one file or two | DI-16 |
-| DMR index | Writes one index entry per controlled document from its frontmatter | DI-29 |
-| Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF | DI-64 |
-| Report layout | Sets the report's pages, every value as text | DI-64 |
-| Evidence bundle | Writes the retained release evidence, the verification report among it, and, given the unit tests' coverage report, carries it as verify does and keeps it; refuses a record with no matrix template before writing anything | DI-64; realises DI-30 |
-| PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | realises part of DI-63 |
-| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; each tagged-test example names its component by key; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | DI-79, DI-80, DI-81, DI-82 |
+| Renderer | Fills a template with the data files as its context, each under its file name, in one or two passes, and post-processes the result; refuses a value the data does not supply, and `join_to` an id its table lacks | item-07-001, item-07-002 |
+| Markdown extensions | Number the sections, give the template the vocabulary the document uses, and remove auditor-only notes | item-07-003 |
+| First-pass output | Holds the words a first render produced, for the second pass to test against | item-07-003 |
+| Code snippets | Collects the delimited snippets of source files, by key, as a data file, refusing a key used twice, in one file or two | item-07-004 |
+| DMR index | Writes one index entry per controlled document from its frontmatter | item-07-008 |
+| Verification report | Builds the report's data from the record and the results it is given, and has it laid out as a PDF | item-07-009 |
+| Report layout | Sets the report's pages, every value as text | item-07-009 |
+| Evidence bundle | Writes the retained release evidence, the verification report among it; refuses a record with no matrix template before writing anything | item-04-003, item-07-009 |
+| PDF action | Renders a repository's documents in the RDM image of the release it is pinned to | item-04-004 |
+| User manual | The instructions for use (IFU): the documentation site's pages (`docs/`), listed by the controlled document `IFU-001` (`dhf/documents/user_manual.md`) and so in the DMR index; chapters in the order of an IFU, a cover naming its release and revision, and each residual risk disclosed | item-07-005, item-07-006, item-07-007 |
 | Docs build hooks | Publish the DHF pages and draw each traceability map from the graph while the site builds; not part of the manual | — |
 
-The PDF action is in the Reusable gates container; the others are in `rdm`.
+The PDF action is reusable CI; the others run in the `rdm` command.
 
 The rules a reviewer needs to judge the design:
 
@@ -108,16 +68,16 @@ The rules a reviewer needs to judge the design:
   a frontmatter id (a blank one is none), sorted by id, marked as generated. A document with no id
   is skipped with a warning; a directory with no controlled document is an
   error.
-- **Verification report.** The status of each design input is the release
+- **Verification report.** The status of each requirement is the release
   context's verification data; the report never decides it again. The
   evidence is release-grade only when no reason is found, and each reason is
-  named: a design input not verified; a result file that cannot be read; a
+  named: a requirement not verified; a result file that cannot be read; a
   test that failed or broke; a test run with uncommitted changes, or with no
-  commit; runs of another commit than the record's; a record with
+  commit; runs of another commit than the product's; a record with
   uncommitted changes; or a record whose commit is unknown. Every run
-  counts, tagged with a declared input or not. The anomalies are a design
-  input with no run, a run that did not pass, an unreadable result file, a
-  missing attachment and an orphan tag. With no Typst available the report is refused, and the
+  counts, whether it claims a requirement of the spec or not. The anomalies
+  are a requirement with no run, a run that did not pass, an unreadable result file, a
+  missing attachment and a tag that names no requirement. With no Typst available the report is refused, and the
   command says so, rather than written without its layout. Because the
   layout sets every value as text, never markup, nothing a test printed can
   change the document.
@@ -141,66 +101,36 @@ The relationships that matter, in the direction of the arrow:
   *give the template the first pass's words from* the First-pass output.
 - The Verification report *builds on* the Verification data (release),
   *reads results with* the Allure reader (test evidence), *reads the record
-  with* the record reader and *reads the tagged tests with* the test tags
+  with* the spec reader
   (specification), *reads risk status and residual decisions with* the Risk
   register (risk), and *lays out with* the Report layout.
 - The DMR index takes each document's frontmatter from the shared kernel.
 - The Evidence bundle *writes verification.yml with* the Verification data
-  (release), *finds the matrix template with* the record reader
-  (specification), *renders the matrix with* the Renderer and *writes the
+  (release), *finds the matrix template in* the DHF, *renders the matrix with* the Renderer and *writes the
   report PDF with* the Verification report.
 - The Gates action (release) *writes the evidence bundle with* the Evidence
   bundle: the one arrow into publishing from another context.
 - The PDF action *renders the documents in* the Documents image.
 
-**Realised here:** the rendering side of **DI-1** (specification) — the
-needs and design inputs read from frontmatter are what the documents
-render — and of **DI-4** (release) — the traceability matrix is the Renderer
-filling its template with the verification data; **DI-30** (release), by the
-Evidence bundle; and the part of **DI-63** (release) that renders the
-documents with the image of the same revision, by the PDF action.
-
-**Realised elsewhere:** of DI-64's last clause, the reusable gates workflow
-(release) includes the report by having the Gates action write the evidence
-bundle. The project build that runs Pandoc and Typst over the rendered
-Markdown is a template the specification's `rdm init` lays down.
-
 Assumptions and open questions:
 
-- The PDF action realises part of DI-63, but the frontmatter's `realises`
-  does not list it.
 - A snippet key repeated across two files is not an error: the later file's
   snippet silently replaces the earlier one.
 - The DMR index reads only the documents directly in the given directory,
   not those in its subdirectories (such as the design documents).
 
-### Dynamic view
+### Order
 
 The two passes of a render: the Renderer loads the data files as the
 template's context, keeps the words of the first pass, and post-processes the
 Markdown with the extensions, which give the second pass the first pass's
 words (so a glossary includes only the terms a document uses).
 
-![Scenario: rendering a document](../../c4/views/D_publishing_render.svg)
-
-## Commands and events
-
-Each row: the actor issues the command, resulting in its success event or a
-fail event (the rule broken, after the slash), which affects the entity.
-
-| Actor | Command | Success event | Fail events | Entity |
-|-------|---------|---------------|-------------|--------|
-| CI | Build evidence bundle | Evidence Bundle Built | Not Built / Results Missing | Evidence bundle |
-| CI | Write verification report | Report Written | Not Written / Typst Missing | Verification report |
-
-Everything this context writes is a read model.
-
 ## Dependencies
 
 Layer 5 of the dependency rule, a read model: it depends on every context it
 publishes from — `release` (the verification data), `test_evidence` (the
-Allure reader), `specification` (the record reader and test tags), `risk`
+Allure reader), `specification` (the spec reader), `risk`
 (the risk register) — and the shared kernel. Within the code, nothing
-depends on it but the composition root; in the architecture, the release
-context's Gates action calls the Evidence bundle from the Reusable gates
-container, as a command, not an import. No dependency breaks the rule.
+depends on it but the composition root; the release context's Gates action
+calls the Evidence bundle from reusable CI, as a command, not an import. No dependency breaks the rule.

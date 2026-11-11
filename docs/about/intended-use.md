@@ -1,17 +1,18 @@
 # What RDM is for
 
-RDM keeps the design record of regulated software — medical-device software
-first — next to the code, in git, and checks it on every commit. With it a
-team:
+RDM audits the record of regulated software — medical-device software
+first — next to the code, in git, on every commit. The spec is Gherkin,
+written by the team or by a factory that regenerates code from it; RDM reads
+it. With it a team:
 
-- writes user needs, design inputs (the requirements), risks and their
-  controls as Markdown in the repository;
-- tags the acceptance test that verifies each design input, and keeps each
+- holds the spec (tagged Gherkin scenarios as requirements, their Features as
+  user needs) to its tests and runs;
+- keeps its risks and their controls as Markdown in the repository;
+- tags the acceptance test that verifies each requirement, and keeps each
   test run tied to the commit it tested;
-- blocks code that lands before its design is approved, and a release while
-  any design input is unverified or any risk control fails (the gates);
-- keeps its architecture as C4 diagrams in the repository, and is warned
-  where the code, the tests and the diagrams disagree;
+- blocks a release while any requirement is unverified or any risk
+  control fails (the release gate);
+- checks its documents against the standards' checklists (gap analysis);
 - renders the regulatory documents from the record, and keeps each
   release's evidence with it;
 - queries the whole record as one read-only graph, by person or by agent.
@@ -25,9 +26,9 @@ and you can write your own.
 
 | You are | You use RDM to |
 |---|---|
-| a developer | declare design inputs, tag acceptance tests, run the gates |
-| a reviewer | approve each change in its pull request, helped by `trace` and the mutation probe |
-| a regulatory or quality person | write the record, render documents, read the gates and the graph |
+| a developer | tag acceptance tests with the requirements they verify, run the gates |
+| a reviewer | approve each change in its pull request, helped by `trace` and the verification report |
+| a regulatory or quality person | keep risks and documents, render documents, read the gates and the graph |
 | an AI agent, working for one of the above | read the record through the read-only agent server, and propose changes as pull requests |
 
 You need git and pull requests, Markdown, and a test suite you can run. You
@@ -44,11 +45,11 @@ do not need RDF or SPARQL to use the gates.
 
 - **Not a medical device, and not a quality system on its own.** It keeps
   one part of your evidence straight.
-- **Not a judge of your evidence.** It shows that each design input has a
-  passing tagged test. Whether that test proves the input is your
+- **Not an author of your spec.** It reads the Gherkin and never assigns
+  ids or edits it.
+- **Not a judge of your evidence.** It shows that each requirement has a
+  passing tagged test. Whether that test proves the requirement is your
   reviewer's call; whether the evidence is enough is your regulator's.
-- **Not usability testing.** Its persona runs find problems early; they do
-  not replace testing with real users.
 
 ## Using RDM in a regulated quality system
 
@@ -65,7 +66,6 @@ for the way you use it. Keep it proportionate:
    by tagged tests, and its design history is published beside these docs
    (the *Design history* tab).
 4. **Try it on your record:** run the gates on a copy with a known defect
-   (a failing test, an uncommitted design document) and check they block it;
-   `rdm story mutation-probe` does the same for your own tests.
+   (a failing test, an unreadable result) and check they block it.
 5. **Keep the result,** and do steps 2 to 5 again when you upgrade RDM,
    change how you use it, or add an extra.

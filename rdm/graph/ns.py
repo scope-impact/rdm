@@ -58,7 +58,7 @@ def read_only_query(store, sparql: str):
     """Answer a SPARQL query over ``store``'s named graphs as one union, with
     the standard prefixes; refuse SPARQL Update, a federated SERVICE call and
     anything that is not a query, so nothing changes the store or reaches the
-    network (DI-36, DI-42); and FROM, which the union would silently ignore."""
+    network (item-06-002, item-06-007); and FROM, which the union would silently ignore."""
     keywords = _NOT_KEYWORDS.sub(" ", sparql)
     if _SERVICE.search(keywords):
         raise ReadOnlyError("SERVICE is not accepted: the graph does not reach the network.")

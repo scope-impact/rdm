@@ -26,9 +26,9 @@ docker run --rm --network host \
   public.ecr.aws/neptune/graph-explorer
 ```
 
-Open <http://localhost/explorer>, search for a design input (for example
-`DI-3`), add it, and expand its neighbors: its user need, owning context,
-declaring document, verifying test file and test runs appear as edges.
+Open <http://localhost/explorer>, search for a requirement (for example
+`item-04-001`), add it, and expand its neighbors: its user need, its
+context and the test runs that claim it appear as edges.
 
 On macOS or Windows (Docker Desktop), drop `--network host`, add
 `-p 80:80`, and use `GRAPH_CONNECTION_URL=http://host.docker.internal:7878`.
@@ -46,7 +46,7 @@ Graph Explorer keeps these settings in the browser, so you set them once:
   Classes and edges then read `rdm:Clause`, `rdm:includes` instead of an
   auto-generated prefix.
 - **Styles → Resources → Customize** each type: set *Display Name* to
-  `rdfs:label`, so nodes show `DI-3`, `P11:11.10a`, `62304_2015_class_c`
+  `rdfs:label`, so nodes show `item-04-001`, `P11:11.10a`, `62304_2015_class_c`
   rather than IRIs. Every node in the graph carries a label. A different
   shape per type helps too (for example a star for standards and a tag for
   documents).

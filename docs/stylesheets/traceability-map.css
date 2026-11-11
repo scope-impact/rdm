@@ -7,8 +7,8 @@
   --bg: var(--rdm-ivory); --surface: var(--rdm-ivory); --sunk: rgba(43, 45, 49, 0.06); --fg: var(--rdm-charcoal);
   --muted: rgba(43, 45, 49, 0.62); --line: rgba(43, 45, 49, 0.16); --edge: rgba(43, 45, 49, 0.28);
   --charcoal: var(--rdm-charcoal); --maroon: var(--rdm-maroon); --nexus: var(--rdm-nexus); --lime: var(--rdm-lime); --white: var(--rdm-white);
-  --lime-ink: var(--rdm-charcoal); --on-maroon: var(--rdm-white); --input-ink: var(--rdm-nexus);
-  --need: var(--rdm-maroon); --risk: var(--rdm-maroon); --input: var(--rdm-nexus); --test: var(--rdm-lime); --component: var(--rdm-charcoal);
+  --lime-ink: var(--rdm-charcoal); --on-maroon: var(--rdm-white); --requirement-ink: var(--rdm-nexus);
+  --need: var(--rdm-maroon); --risk: var(--rdm-maroon); --requirement: var(--rdm-nexus); --test: var(--rdm-lime); --component: var(--rdm-charcoal);
   --context: var(--rdm-maroon); --other: rgba(43, 45, 49, 0.62); --hilite: var(--rdm-nexus); --focus: var(--rdm-nexus);
   --body: var(--rdm-font-body); --mono: var(--rdm-font-mono); --display: var(--rdm-font-display);
   display: grid; gap: 12px; margin-block: 1.5em; color: var(--fg); font-family: var(--body); font-size: 14px; line-height: 1.5;

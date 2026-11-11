@@ -53,7 +53,7 @@ _BASE = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 class _LOADER(_BASE):
     """YAML with each key once per mapping: a repeated key would keep only its
-    last value, so a second ``design_inputs`` block would hide the first."""
+    last value, so a second ``risks`` block would hide the first."""
 
     def construct_mapping(self, node, deep=False):
         seen = set()

@@ -4,3 +4,9 @@ md_extensions:
     #- 'rdm.md_extensions.AuditNoteExclusionExtension'
 
 reviews_required: True
+
+# The spec RDM holds the record to, relative to this directory: the plan of a
+# spec written the Löyly way (rdm init lays one down in .pi/). Requirements are
+# the stamped scenarios of each slice's spec.feature; user needs the screens of
+# its event model, with their Allium surfaces and the event storm.
+spec: .pi/plan
