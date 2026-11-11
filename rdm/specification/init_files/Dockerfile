@@ -1,6 +1,6 @@
 # ============================================================================
 # Regulatory Documentation Build Image
-# RDM (with the graph extra) + Pandoc + Typst, on Ubuntu LTS
+# RDM (with the graph extra) + Pandoc + Typst + Mermaid's mmdc, on Ubuntu LTS
 # ============================================================================
 
 # Pinned to an LTS release, never `latest`: the base changes only when we
@@ -58,6 +58,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/local/bin/pandoc /usr/local/bin/typst /usr/local/bin/
 COPY --from=builder /fonts/ /usr/share/fonts/truetype/
 RUN fc-cache -f && pandoc --version && typst --version
+
+# Mermaid's command line (mmdc): a ```mermaid diagram in a document becomes a
+# PNG in its PDF. It drives Puppeteer's headless Chrome shell, installed with
+# the system libraries it needs (--install-deps); mmdc's version is pinned.
+ARG MERMAID_CLI_VERSION=11.17.1
+ENV PUPPETEER_CACHE_DIR=/opt/puppeteer
+RUN set -e; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends nodejs npm; \
+    PUPPETEER_SKIP_DOWNLOAD=1 npm install -g --no-fund --no-audit "@mermaid-js/mermaid-cli@${MERMAID_CLI_VERSION}"; \
+    puppeteer="$(npm root -g)/@mermaid-js/mermaid-cli/node_modules/puppeteer"; \
+    if [ ! -d "$puppeteer" ]; then puppeteer="$(npm root -g)/puppeteer"; fi; \
+    shell="$(node "$puppeteer/lib/puppeteer/node/cli.js" browsers install chrome-headless-shell \
+        --install-deps --format '{{path}}' | tail -n 1)"; \
+    test -x "$shell"; \
+    ln -s "$shell" /usr/local/bin/chrome-headless-shell; \
+    rm -rf /var/lib/apt/lists/* /root/.npm
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chrome-headless-shell
+RUN printf 'flowchart LR\n  a --> b\n' > /tmp/check.mmd && \
+    echo '{"args":["--no-sandbox","--disable-dev-shm-usage"]}' > /tmp/check.json && \
+    mmdc -i /tmp/check.mmd -o /tmp/check.png -p /tmp/check.json && test -s /tmp/check.png && \
+    rm /tmp/check.*
 
 # RDM, with the graph extra (build, query, validate, serve, mcp), in its own
 # virtualenv (Ubuntu's system Python does not take pip installs): from a
