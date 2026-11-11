@@ -1,5 +1,13 @@
 [
   {
+    "version": "branch-claude-dazzling-thompson-0yg2hu",
+    "title": "branch-claude-dazzling-thompson-0yg2hu",
+    "aliases": [],
+    "properties": {
+      "hidden": true
+    }
+  },
+  {
     "version": "dev",
     "title": "dev",
     "aliases": []
