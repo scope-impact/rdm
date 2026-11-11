@@ -48,9 +48,11 @@
     the Part 11 one; RDM's separate risk policy and register move into
     CSV-001; the example's separate documents are gone.
   - New render filters `include` (a file as written, frontmatter left out),
-    `glob` (matching paths, sorted) and `gherkin` (a feature file laid out as
-    a document: bold rules, each scenario's id and title, bold step keywords,
-    tables for data and examples), so a document carries its spec's
+    `glob` (matching paths, sorted) and `gherkin` (a feature file written back
+    as a highlighted `gherkin` block: Feature, Rule, scenario and steps
+    indented by level, tags and id above each scenario, aligned tables,
+    comments left out); the PDF template highlights Gherkin in the document's
+    palette and wraps a long line under its own text, so a document carries its spec's
     feature files; item-07-002 states them. A document that holds Jinja is
     rendered with the DHF's config and generated data before it is published
     or made a PDF (`docs/_hooks/dhf.py`, `--dhf` for another project).

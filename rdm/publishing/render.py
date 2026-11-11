@@ -1,6 +1,7 @@
 import collections
 import os
 import re
+import textwrap
 from importlib import import_module
 
 from pathlib import Path
@@ -67,80 +68,80 @@ def include(path):
     return text.strip("\n")
 
 
-_MD_SPECIAL = str.maketrans({c: "\\" + c for c in "\\`*_[]<>$|#"})
-
-
-def _md(text):
-    """Text as Markdown shows it, its special characters escaped."""
-    return (text or "").translate(_MD_SPECIAL)
-
-
-def _table(rows):
-    cells = [[_md(c["value"]) for c in row["cells"]] for row in rows]
-    if not cells:
-        return []
-    lines = ["| " + " | ".join(cells[0]) + " |", "|" + "---|" * len(cells[0])]
-    return lines + ["| " + " | ".join(r) + " |" for r in cells[1:]]
+def _gherkin_table(rows, indent, width=100):
+    """A Gherkin table, its columns aligned when it fits ``width``; a table of
+    long cells stays unpadded, so no row grows to the longest one's length."""
+    cells = [[c["value"].replace("|", "\\|") for c in row["cells"]] for row in rows]
+    widths = [max(len(r[k]) for r in cells) for k in range(len(cells[0]))] if cells else []
+    if indent + sum(widths) + 3 * len(widths) + 1 > width:
+        widths = [0] * len(widths)
+    return [" " * indent + "| " + " | ".join(v.ljust(w) for v, w in zip(r, widths)) + " |" for r in cells]
 
 
 def gherkin(path):
-    """A feature file as a document reads it: parsed with Cucumber's own
-    parser and laid out in Markdown, not shown as code. The Feature's
-    description is a paragraph, each Rule a bold line, each scenario a bold
-    title led by its id with its other tags beneath it in italics, each step a
-    line with its keyword in bold, a data table or the Examples of an outline
-    a table, a doc string a code block. Comments are left out. Nothing is a
-    heading, so the document's own headings and numbering stay its own."""
+    """A feature file as a document shows it: parsed with Cucumber's parser and
+    written back as a ``gherkin`` code block, laid out to read: the Feature at
+    the margin, each Rule, Background and scenario indented under it, steps
+    under their scenario, a scenario's tags on one line and its id on the
+    next, data tables and Examples with their columns aligned, doc strings
+    kept, comments left out. The PDF template and the docs site highlight
+    Gherkin's syntax."""
     from gherkin.parser import Parser
     from gherkin.token_scanner import TokenScanner
 
     feature = Parser().parse(TokenScanner(Path(path).read_text(encoding="utf-8"))).get("feature") or {}
-    out = [f"**{_md(feature.get('keyword', 'Feature'))}: {_md(feature.get('name', ''))}**", ""]
+    out = [f"{feature.get('keyword', 'Feature')}: {feature.get('name', '')}"]
     description = " ".join(line.strip() for line in (feature.get("description") or "").splitlines() if line.strip())
-    if description:
-        out += [_md(description), ""]
+    out += textwrap.wrap(description, width=76, initial_indent="  ", subsequent_indent="  ")
 
-    def steps(block):
+    def steps(block, indent):
         lines = []
         for step in block.get("steps") or []:
-            lines.append(f"**{step['keyword'].strip()}** {_md(step['text'])}  ")
+            lines.append(" " * indent + f"{step['keyword'].strip()} {step['text']}")
             if step.get("dataTable"):
-                lines[-1] = lines[-1].rstrip()
-                lines += ["", *_table(step["dataTable"]["rows"]), ""]
+                lines += _gherkin_table(step["dataTable"]["rows"], indent + 2)
             if step.get("docString"):
-                lines[-1] = lines[-1].rstrip()
-                lines += ["", "```", step["docString"]["content"], "```", ""]
-        if lines:
-            lines[-1] = lines[-1].rstrip()
+                delimiter = step["docString"].get("delimiter", '"""')
+                lines += [" " * (indent + 2) + delimiter]
+                lines += [" " * (indent + 2) + line for line in step["docString"]["content"].splitlines()]
+                lines += [" " * (indent + 2) + delimiter]
         return lines
 
-    def scenario(node):
+    def scenario(node, indent):
         tags = [t["name"] for t in node.get("tags") or []]
         ids = [t for t in tags if re.fullmatch(r"@[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\d+", t)]
-        stamp = f"`{ids[-1][1:]}` " if ids else ""
-        lines = [f"{stamp}**{_md(node['name'])}**", ""]
         others = [t for t in tags if t not in ids[-1:]]
+        lines = [""]
         if others:
-            lines += ["*" + " ".join(_md(t) for t in others) + "*", ""]
-        lines += steps(node) + [""]
+            lines.append(" " * indent + " ".join(others))
+        if ids:
+            lines.append(" " * indent + ids[-1])
+        lines.append(" " * indent + f"{node['keyword']}: {node['name']}")
+        lines += steps(node, indent + 2)
         for examples in node.get("examples") or []:
-            title = f"{examples.get('keyword', 'Examples')}: {examples.get('name', '')}".rstrip(": ")
             header = [examples["tableHeader"]] if examples.get("tableHeader") else []
-            rows = header + (examples.get("tableBody") or [])
-            lines += [f"*{_md(title)}*", "", *_table(rows), ""]
+            title = f"{examples.get('keyword', 'Examples')}: {examples.get('name', '')}".rstrip(": ")
+            lines += ["", " " * (indent + 2) + title]
+            lines += _gherkin_table(header + (examples.get("tableBody") or []), indent + 4)
         return lines
 
-    for child in feature.get("children") or []:
-        if "background" in child:
-            out += [f"*{_md(child['background'].get('keyword', 'Background'))}*", "", *steps(child["background"]), ""]
-        elif "scenario" in child:
-            out += scenario(child["scenario"])
-        elif "rule" in child:
-            out += ["---", "", f"**{_md(child['rule']['keyword'])}: {_md(child['rule']['name'])}**", ""]
-            for grandchild in child["rule"].get("children") or []:
-                if "scenario" in grandchild:
-                    out += scenario(grandchild["scenario"])
-    return "\n".join(out).rstrip() + "\n"
+    def children(nodes, indent):
+        lines = []
+        for child in nodes or []:
+            if "background" in child:
+                lines += ["", " " * indent + f"{child['background']['keyword']}:"]
+                lines += steps(child["background"], indent + 2)
+            elif "scenario" in child:
+                lines += scenario(child["scenario"], indent)
+            elif "rule" in child:
+                lines += ["", " " * indent + f"{child['rule']['keyword']}: {child['rule']['name']}"]
+                lines += children(child["rule"].get("children"), indent + 2)
+        return lines
+
+    out += children(feature.get("children"), 2)
+    body = "\n".join(out).rstrip()
+    fence = "````" if "```" in body else "```"
+    return f"{fence}gherkin\n{body}\n{fence}"
 
 
 def glob(pattern):

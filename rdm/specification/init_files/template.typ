@@ -19,6 +19,11 @@
 // Pandoc before 3.1.12 writes a block quote as #blockquote; later ones as #quote(block: true).
 #let blockquote(body) = quote(block: true, body)
 
+// Gherkin, highlighted in the document's palette: a feature file carried into a
+// document (the gherkin render filter) as a ```gherkin block.
+#let gherkin-syntax = bytes("%YAML 1.2\n---\nname: Gherkin\nfile_extensions: [feature, gherkin]\nscope: source.gherkin\ncontexts:\n  main:\n    - match: '^\\s*#.*$$'\n      scope: comment.line.gherkin\n    - match: '^\\s*(Feature|Rule|Background|Scenario Outline|Scenario Template|Scenario|Example|Examples|Scenarios)(:)'\n      captures:\n        1: keyword.control.gherkin\n    - match: '^\\s*(Given|When|Then|And|But|\\*)(?=\\s)'\n      captures:\n        1: keyword.other.step.gherkin\n    - match: '@[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\\d+(?=\\s|$$)'\n      scope: constant.other.requirement-id.gherkin\n    - match: '@[^\\s@]+'\n      scope: entity.name.tag.gherkin\n    - match: '\"[^\"]*\"'\n      scope: string.quoted.double.gherkin\n    - match: '<[^<>\\s]+>'\n      scope: variable.parameter.gherkin\n    - match: '\\|'\n      scope: punctuation.separator.table.gherkin\n")
+#let code-theme = bytes("<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict><key>name</key><string>RDM</string><key>settings</key><array><dict><key>settings</key><dict><key>foreground</key><string>#2B2D31</string></dict></dict><dict><key>scope</key><string>keyword.control</string><key>settings</key><dict><key>foreground</key><string>#55111F</string><key>fontStyle</key><string>bold</string></dict></dict><dict><key>scope</key><string>keyword.other.step</string><key>settings</key><dict><key>foreground</key><string>#383EE9</string><key>fontStyle</key><string>bold</string></dict></dict><dict><key>scope</key><string>constant.other.requirement-id</string><key>settings</key><dict><key>foreground</key><string>#55111F</string><key>fontStyle</key><string>bold</string></dict></dict><dict><key>scope</key><string>entity.name.tag</string><key>settings</key><dict><key>foreground</key><string>#6B6E75</string><key>fontStyle</key><string>italic</string></dict></dict><dict><key>scope</key><string>string</string><key>settings</key><dict><key>foreground</key><string>#2E6B3A</string></dict></dict><dict><key>scope</key><string>variable.parameter</string><key>settings</key><dict><key>foreground</key><string>#9A5B00</string></dict></dict><dict><key>scope</key><string>comment</string><key>settings</key><dict><key>foreground</key><string>#8A8D93</string><key>fontStyle</key><string>italic</string></dict></dict><dict><key>scope</key><string>punctuation.separator.table</string><key>settings</key><dict><key>foreground</key><string>#A3A6AC</string></dict></dict><dict><key>scope</key><string>keyword, storage</string><key>settings</key><dict><key>foreground</key><string>#55111F</string></dict></dict><dict><key>scope</key><string>entity.name.function, support.function</string><key>settings</key><dict><key>foreground</key><string>#383EE9</string></dict></dict><dict><key>scope</key><string>constant.numeric, constant.language</string><key>settings</key><dict><key>foreground</key><string>#9A5B00</string></dict></dict></array></dict></plist>")
+
 // Fonts: Nunito Sans for text, JetBrains Mono for headings and code (both in
 // the RDM image); the fallbacks keep a document readable without them.
 #let body-font = ("Nunito Sans", "Noto Sans")
@@ -113,6 +118,16 @@
 
   // Code
   show raw: set text(font: mono-font)
+  set raw(syntaxes: gherkin-syntax, theme: code-theme)
+  // A long Gherkin line wraps under its own text, not at the margin.
+  show raw.where(block: true, lang: "gherkin"): it => {
+    set par(spacing: 0.32em, leading: 0.4em)
+    show raw.line: line => {
+      let indent = line.text.len() - line.text.trim(at: start).len()
+      par(hanging-indent: (indent + 2) * 0.6em, line.body)
+    }
+    it
+  }
 
   show raw.where(block: true): it => {
     set text(size: 8.5pt)
