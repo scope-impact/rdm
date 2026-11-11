@@ -131,3 +131,31 @@
 
 /* Marked text and the "copy" button use the palette. */
 [data-md-color-scheme="rdm"] .md-typeset mark { background: var(--rdm-lime); color: var(--rdm-charcoal); }
+
+/* The record's cards and chips: the marks the render filters put in the
+   Markdown (docs/_hooks/dhf.py turns them into these elements; the PDF
+   template draws the same marks). */
+.md-typeset .risk-card, .md-typeset .scenario-card {
+  background: #fff; border: 1px solid #D5D6D8; border-radius: 4px; padding: .6em 1em; margin: 1em 0;
+}
+.md-typeset .risk-card { border-left: 4px solid #6B6E75; border-radius: 0 4px 4px 0; }
+.md-typeset .risk-card[data-level="Low"] { border-left-color: #2E7D4F; }
+.md-typeset .risk-card[data-level="Medium"] { border-left-color: #B7791F; }
+.md-typeset .risk-card[data-level="High"] { border-left-color: #C0392B; }
+.md-typeset .risk-card[data-level="Block"] { border-left-color: #5B0E0E; }
+.md-typeset .rule-line { margin: 1.6em 0 .4em; }
+.md-typeset .steps { display: block; }
+.md-typeset .steps .kw { color: var(--rdm-nexus, #383EE9); font-weight: 700; display: inline-block; min-width: 3.4em; }
+.md-typeset .level { color: #fff; font-weight: 700; font-size: .8em; padding: .1em .45em; border-radius: 3px;
+  background: #6B6E75; white-space: nowrap; }
+.md-typeset .level[data-value="Low"] { background: #2E7D4F; }
+.md-typeset .level[data-value="Medium"] { background: #B7791F; }
+.md-typeset .level[data-value="High"] { background: #C0392B; }
+.md-typeset .level[data-value="Block"] { background: #5B0E0E; }
+.md-typeset .id { background: var(--rdm-maroon, #55111F); color: #fff; font-family: var(--md-code-font-family);
+  font-size: .8em; padding: .1em .45em; border-radius: 3px; }
+.md-typeset .tag { border: 1px solid #A3A6AC; color: #6B6E75; font-size: .78em; padding: 0 .4em; border-radius: 3px; }
+.md-typeset .verified { color: #2E7D4F; font-weight: 700; }
+.md-typeset .failed { color: #C0392B; font-weight: 700; }
+.md-typeset .untested { color: #B7791F; font-weight: 700; }
+.md-typeset .covers { color: #6B6E75; font-size: .8em; }

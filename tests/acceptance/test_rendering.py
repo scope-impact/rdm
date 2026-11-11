@@ -83,24 +83,28 @@ def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
         attach("rendered", out)
         assert out.strip() == ("[spec/a/spec.feature]Feature: A\n  Scenario: one[spec/b/spec.feature]Feature: B"
                                "|## Architecture"), out
-    with verification_step("gherkin: a feature file written back as a gherkin code block laid out to read: the "
-                           "Feature at the margin, the Rule, tags, id and scenario indented under it, steps under "
-                           "the scenario, an outline's Examples with aligned columns, comments left out"):
+    with verification_step("gherkin: a feature file as Markdown marked for the templates: each Rule a rule-line, "
+                           "each scenario a scenario-card led by its id and status with its steps' keywords "
+                           "marked, an outline's Examples a table, what its tags cover in words, the Markdown's "
+                           "characters escaped, comments left out"):
         (tmp_path / "f.feature").write_text(
             "Feature: Alarms\n  A nurse is alerted.\n\n  Rule: Within 2 s\n\n"
-            "    # a comment, left out\n    @smoke @REQ-12\n    Scenario: Alarm raised\n"
+            "    # a comment, left out\n    @smoke @allium-rule-success.Raise @REQ-12\n    Scenario: Alarm raised\n"
             "      Given the limit is $140\n      When a reading of <value> arrives\n      Then an alarm sounds\n\n"
             "    @REQ-13\n    Scenario Outline: Quiet\n      Given <x>\n\n      Examples: values\n"
-            "        | x   | y |\n        | a_b | c |\n")
-        out = render_from_string("{{ 'f.feature' | gherkin }}")
+            "        | x |\n        | a_b |\n")
+        verification = {"groups": [{"user_need": "Alarm", "requirements": [
+            {"requirement": "REQ-12", "status": "verified", "passed": 2, "failed": 0, "skipped": 0}]}]}
+        out = render_from_string("{{ 'f.feature' | gherkin(data) }}", context={"data": verification})
         attach("rendered", out)
-        lines = out.strip().splitlines()
-        assert lines[0] == "```gherkin" and lines[-1] == "```", lines
-        for expected in ("Feature: Alarms", "  A nurse is alerted.", "  Rule: Within 2 s", "    @smoke",
-                         "    @REQ-12", "    Scenario: Alarm raised", "      Given the limit is $140",
-                         "      When a reading of <value> arrives", "    Scenario Outline: Quiet",
-                         "      Examples: values", "        | x   | y |", "        | a_b | c |"):
-            assert expected in lines, (expected, lines)
+        assert "**Feature: Alarms**" in out and "A nurse is alerted." in out
+        assert '::: {.rule-line title="Within 2 s"}' in out
+        assert ':::: {.scenario-card status="verified"}' in out
+        assert "[REQ-12]{.id} [✓ verified · 2 runs]{.verified} **Alarm raised**" in out
+        assert "::: {.steps}" in out and "[Given]{.kw} the limit is \\$140" in out
+        assert "[When]{.kw} a reading of \\<value\\> arrives" in out
+        assert "[Covers: @smoke · rule Raise (success) · need Alarm]{.covers}" in out
+        assert "[REQ-13]{.id} **Quiet**" in out and "*Examples: values*" in out and "| a\\_b |" in out
         assert "a comment" not in out
     with verification_step("join_to refuses an id its table lacks, naming it: rdm render exits 2"):
         from rdm.main import cli

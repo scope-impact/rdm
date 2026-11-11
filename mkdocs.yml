@@ -61,6 +61,7 @@ plugins:
 
 markdown_extensions:
   - admonition
+  - md_in_html   # the record's cards and chips (docs/_hooks/dhf.py, html_marks)
   - pymdownx.details
   - toc:
       permalink: true

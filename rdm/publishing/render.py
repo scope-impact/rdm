@@ -1,7 +1,6 @@
 import collections
 import os
 import re
-import textwrap
 from importlib import import_module
 
 from pathlib import Path
@@ -68,80 +67,122 @@ def include(path):
     return text.strip("\n")
 
 
-def _gherkin_table(rows, indent, width=100):
-    """A Gherkin table, its columns aligned when it fits ``width``; a table of
-    long cells stays unpadded, so no row grows to the longest one's length."""
-    cells = [[c["value"].replace("|", "\\|") for c in row["cells"]] for row in rows]
-    widths = [max(len(r[k]) for r in cells) for k in range(len(cells[0]))] if cells else []
-    if indent + sum(widths) + 3 * len(widths) + 1 > width:
-        widths = [0] * len(widths)
-    return [" " * indent + "| " + " | ".join(v.ljust(w) for v, w in zip(r, widths)) + " |" for r in cells]
+_MD_SPECIAL = str.maketrans({c: "\\" + c for c in "\\`*_[]<>$|#"})
+_ID_TAG = re.compile(r"@[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\d+")
+_OBLIGATION = re.compile(r"@allium-([a-z]+)(?:-([a-z]+))?\.([A-Za-z0-9_]+)(?:\.(\d+))?")
 
 
-def gherkin(path):
-    """A feature file as a document shows it: parsed with Cucumber's parser and
-    written back as a ``gherkin`` code block, laid out to read: the Feature at
-    the margin, each Rule, Background and scenario indented under it, steps
-    under their scenario, a scenario's tags on one line and its id on the
-    next, data tables and Examples with their columns aligned, doc strings
-    kept, comments left out. The PDF template and the docs site highlight
-    Gherkin's syntax."""
+def _md(text):
+    """Text as Markdown shows it, its special characters escaped."""
+    return (text or "").translate(_MD_SPECIAL)
+
+
+def _md_table(rows):
+    cells = [[_md(c["value"]) for c in row["cells"]] for row in rows]
+    if not cells:
+        return []
+    lines = ["| " + " | ".join(cells[0]) + " |", "|" + "---|" * len(cells[0])]
+    return lines + ["| " + " | ".join(r) + " |" for r in cells[1:]]
+
+
+def _covers(tags):
+    """A scenario's Allium obligation tags in words: rule X (success), rule X
+    (refusal 2), guarantee Y, invariant Z; its other tags as they are."""
+    words = []
+    for tag in tags:
+        m = _OBLIGATION.fullmatch(tag)
+        if not m:
+            words.append(tag)
+        elif m.group(1) == "rule":
+            outcome = {"success": "success", "failure": "refusal"}.get(m.group(2) or "", m.group(2) or "")
+            words.append(f"rule {m.group(3)} ({outcome}{' ' + m.group(4) if m.group(4) else ''})")
+        else:
+            words.append(f"{m.group(1)} {m.group(3)}")
+    return " · ".join(words)
+
+
+def _status_of(requirement, verification):
+    for group in (verification or {}).get("groups") or []:
+        for row in group.get("requirements") or []:
+            if row.get("requirement") == requirement:
+                runs = (row.get("passed") or 0) + (row.get("failed") or 0) + (row.get("skipped") or 0)
+                return row.get("status"), runs, group.get("user_need")
+    return None, 0, None
+
+
+def gherkin(path, verification=None):
+    """A feature file as a document reads it: parsed with Cucumber's parser and
+    written as Markdown whose structure is marked for the templates (Pandoc's
+    fenced divs and bracketed spans): the Feature's description a paragraph,
+    each Rule a ``rule-line``, each scenario a ``scenario-card`` led by its id
+    (``.id``), its title and, given the verification data, its status
+    (``.verified``, ``.failed``, ``.untested``) and runs; its steps a
+    ``steps`` block, each keyword marked ``.kw``; a data table or an outline's
+    Examples a table; what its Allium tags cover, in words, last (``.covers``).
+    Comments are left out. The PDF template draws the marks as cards; the
+    text reads the same without them. The source as written stays the
+    ``include`` filter's."""
     from gherkin.parser import Parser
     from gherkin.token_scanner import TokenScanner
 
     feature = Parser().parse(TokenScanner(Path(path).read_text(encoding="utf-8"))).get("feature") or {}
-    out = [f"{feature.get('keyword', 'Feature')}: {feature.get('name', '')}"]
+    out = [f"**{_md(feature.get('keyword', 'Feature'))}: {_md(feature.get('name', ''))}**", ""]
     description = " ".join(line.strip() for line in (feature.get("description") or "").splitlines() if line.strip())
-    out += textwrap.wrap(description, width=76, initial_indent="  ", subsequent_indent="  ")
+    if description:
+        out += [_md(description), ""]
 
-    def steps(block, indent):
-        lines = []
+    def steps(block):
+        lines, run = [], []
         for step in block.get("steps") or []:
-            lines.append(" " * indent + f"{step['keyword'].strip()} {step['text']}")
+            run.append(f"[{_md(step['keyword'].strip())}]{{.kw}} {_md(step['text'])}  ")
+            extra = []
             if step.get("dataTable"):
-                lines += _gherkin_table(step["dataTable"]["rows"], indent + 2)
+                extra = _md_table(step["dataTable"]["rows"])
             if step.get("docString"):
-                delimiter = step["docString"].get("delimiter", '"""')
-                lines += [" " * (indent + 2) + delimiter]
-                lines += [" " * (indent + 2) + line for line in step["docString"]["content"].splitlines()]
-                lines += [" " * (indent + 2) + delimiter]
+                extra = ["```", step["docString"]["content"], "```"]
+            if extra:
+                lines += ["::: {.steps}", *run, ":::", "", *extra, ""]
+                run = []
+        if run:
+            lines += ["::: {.steps}", *run, ":::", ""]
         return lines
 
-    def scenario(node, indent):
+    def scenario(node):
         tags = [t["name"] for t in node.get("tags") or []]
-        ids = [t for t in tags if re.fullmatch(r"@[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\d+", t)]
-        others = [t for t in tags if t not in ids[-1:]]
-        lines = [""]
-        if others:
-            lines.append(" " * indent + " ".join(others))
-        if ids:
-            lines.append(" " * indent + ids[-1])
-        lines.append(" " * indent + f"{node['keyword']}: {node['name']}")
-        lines += steps(node, indent + 2)
+        ids = [t for t in tags if _ID_TAG.fullmatch(t)]
+        requirement = ids[-1][1:] if ids else ""
+        status, runs, need = _status_of(requirement, verification)
+        head = f"[{requirement}]{{.id}} " if requirement else ""
+        if status:
+            mark = {"verified": "✓ verified", "failed": "✗ failed"}.get(status, status)
+            head += f"[{mark} · {runs} run{'s' if runs != 1 else ''}]{{.{status}}} "
+        head += f"**{_md(node['name'])}**"
+        lines = [f":::: {{.scenario-card status=\"{status or ''}\"}}", head, "", *steps(node)]
         for examples in node.get("examples") or []:
-            header = [examples["tableHeader"]] if examples.get("tableHeader") else []
             title = f"{examples.get('keyword', 'Examples')}: {examples.get('name', '')}".rstrip(": ")
-            lines += ["", " " * (indent + 2) + title]
-            lines += _gherkin_table(header + (examples.get("tableBody") or []), indent + 4)
-        return lines
+            header = [examples["tableHeader"]] if examples.get("tableHeader") else []
+            lines += [f"*{_md(title)}*", "", *_md_table(header + (examples.get("tableBody") or [])), ""]
+        covers = _covers([t for t in tags if t not in ids[-1:]])
+        details = " · ".join(x for x in (covers, f"need {need}" if need else "") if x)
+        if details:
+            lines += [f"[Covers: {_md(details)}]{{.covers}}", ""]
+        return lines + ["::::", ""]
 
-    def children(nodes, indent):
+    def children(nodes):
         lines = []
         for child in nodes or []:
             if "background" in child:
-                lines += ["", " " * indent + f"{child['background']['keyword']}:"]
-                lines += steps(child["background"], indent + 2)
+                lines += [f"*{_md(child['background']['keyword'])}*", "", *steps(child["background"])]
             elif "scenario" in child:
-                lines += scenario(child["scenario"], indent)
+                lines += scenario(child["scenario"])
             elif "rule" in child:
-                lines += ["", " " * indent + f"{child['rule']['keyword']}: {child['rule']['name']}"]
-                lines += children(child["rule"].get("children"), indent + 2)
+                title = child["rule"]["name"].replace('"', "'")
+                lines += [f"::: {{.rule-line title=\"{title}\"}}", f"**Rule:** {_md(child['rule']['name'])}", ":::", ""]
+                lines += children(child["rule"].get("children"))
         return lines
 
-    out += children(feature.get("children"), 2)
-    body = "\n".join(out).rstrip()
-    fence = "````" if "```" in body else "```"
-    return f"{fence}gherkin\n{body}\n{fence}"
+    out += children(feature.get("children"))
+    return "\n".join(out).rstrip() + "\n"
 
 
 def glob(pattern):

@@ -304,7 +304,7 @@ The verification data is not part of this copy: run `run-acceptance.sh` and
 {% for feature in "../../loyly/.pi/plan/*/spec.feature" | glob %}
 ### {{ feature.split("/")[-2] }}
 
-{{ feature | gherkin }}
+{{ feature | gherkin(verification | default(none)) }}
 
 {% endfor %}
 

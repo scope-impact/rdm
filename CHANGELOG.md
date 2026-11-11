@@ -47,6 +47,14 @@
     both records, which share RDM's repository). The Löyly example replaces
     the Part 11 one; RDM's separate risk policy and register move into
     CSV-001; the example's separate documents are gone.
+  - Readable risks and scenarios, the Markdown still the source: the render
+    filters mark structure with Pandoc's own attributes (`::: {.risk-card}`,
+    `::: {.scenario-card}`, `[High]{.level}`), and the templates draw it: the
+    PDF's `cards.lua` and `template.typ` as cards and chips, the docs site as
+    HTML with CSS. Risks: a table of every risk at a glance (before, after,
+    decision), then a card per risk with its rating worked out and its
+    controls by title with their verification. Scenarios: a card each, led by
+    its id and status, steps in a keyword column, its Allium tags in words.
   - Architecture diagrams: RDM's context map (its parts, contexts and their
     dependencies in the code) and the Löyly harness's (its contexts and the
     events each hands to another) as Mermaid, in the documents' palette; the

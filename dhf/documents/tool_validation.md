@@ -232,7 +232,7 @@ The verification data is not part of this copy: run the acceptance tests and
 {% for feature in ".pi/spec/*/spec.feature" | glob %}
 ### {{ feature.split("/")[2] }}
 
-{{ feature | gherkin }}
+{{ feature | gherkin(verification | default(none)) }}
 
 {% endfor %}
 

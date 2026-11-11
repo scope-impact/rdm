@@ -29,6 +29,35 @@
 #let body-font = ("Nunito Sans", "Noto Sans")
 #let mono-font = ("JetBrains Mono", "DejaVu Sans Mono")
 
+// The record's decorations (cards.lua turns the Markdown's marks into these calls).
+#let level-color = (Low: rgb("#2E7D4F"), Medium: rgb("#B7791F"), High: rgb("#C0392B"), Block: rgb("#5B0E0E"))
+#let status-color = (verified: rgb("#2E7D4F"), failed: rgb("#C0392B"), untested: rgb("#B7791F"))
+#let chip(kind, body) = {
+  if kind == "level" {
+    box(fill: level-color.at(body, default: charcoal), inset: (x: 5pt, y: 2pt), radius: 3pt,
+      text(fill: white, weight: "bold", size: 0.8em, body))
+  } else if kind == "id" {
+    box(fill: maroon, inset: (x: 5pt, y: 2pt), radius: 3pt, text(font: mono-font, fill: white, size: 0.8em, body))
+  } else if kind in status-color {
+    text(fill: status-color.at(kind), weight: "bold", size: 0.9em, body)
+  } else if kind == "covers" {
+    text(fill: muted, size: 0.78em, body)
+  } else {
+    box(stroke: 0.5pt + muted, inset: (x: 4pt, y: 1.5pt), radius: 3pt, text(fill: muted, size: 0.78em, body))
+  }
+}
+#let risk-card(level: "", body) = block(
+  stroke: (left: 3pt + level-color.at(level, default: muted)), fill: white,
+  inset: 10pt, radius: (right: 4pt), width: 100%, breakable: false, above: 1.2em, below: 1.2em, body)
+#let scenario-card(status: "", body) = block(
+  stroke: 0.5pt + rule-color, fill: white, inset: 10pt, radius: 4pt, width: 100%,
+  above: 0.9em, below: 0.9em, body)
+#let rule-line(title: "", body) = block(above: 1.4em, below: 0.6em,
+  [#text(size: 0.75em, fill: muted, tracking: 0.08em)[RULE] #h(4pt) #text(weight: "bold", title)])
+#let steps(..rows) = grid(columns: (3.6em, 1fr), row-gutter: 0.55em, column-gutter: 0.6em,
+  ..rows.pos().map(r => (align(right, text(fill: nexus, weight: "bold", r.at(0))), r.at(1))).flatten())
+
+
 // Document metadata (populated by Pandoc)
 #let doc-id = "DOC-000"
 #let doc-rev = "1"

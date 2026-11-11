@@ -39,9 +39,9 @@ Feature: Publishing
       Given feature files spec/b/spec.feature ("Feature: B") and spec/a/spec.feature, and a document arch.md with frontmatter id SDS-1 and the heading "# Architecture"
       When a template includes every file 'spec/*/spec.feature' | glob gives, and 'arch.md' | include | md_indent(1)
       Then it carries spec/a/spec.feature, then spec/b/spec.feature, each as written, and "## Architecture" without the frontmatter
-      Given a feature file with a Rule "Within 2 s", a scenario tagged @smoke @REQ-12 whose steps hold "$140" and "<value>", an outline @REQ-13 with Examples, and a comment
-      When a template lays it out with gherkin
-      Then it is a gherkin code block: "Feature: Alarms" at the margin, its description and "Rule: Within 2 s" indented two, the tags "@smoke", the id "@REQ-12" and "Scenario: Alarm raised" four, the steps six, the outline's Examples with aligned columns, and the comment left out
+      Given a feature file with a Rule "Within 2 s", a scenario tagged @smoke @allium-rule-success.Raise @REQ-12 whose steps hold "$140" and "<value>", an outline @REQ-13 with Examples, and a comment
+      When a template lays it out with gherkin, given verification data in which REQ-12 is verified by 2 runs
+      Then it is Markdown marked for the templates: the Rule a rule-line, each scenario a scenario-card led by its id and, for REQ-12, "✓ verified · 2 runs", its steps' keywords marked, the outline's Examples a table, what its tags cover in words ("rule Raise (success)", "need Alarm"), "$" and "<" escaped, and the comment left out
       When rdm render joins the id r9 to a table holding only r1
       Then rendering exits with status 2, naming r9
 

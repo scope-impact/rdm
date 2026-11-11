@@ -93,19 +93,78 @@ def _entries(items: list) -> list[str]:
     return lines
 
 
+def _verification() -> dict:
+    """The DHF's generated verification data, or nothing when it is not there."""
+    path = DHF / "data" / "verification.yml"
+    return (yaml.safe_load(path.read_text(encoding="utf-8")) or {}) if path.is_file() else {}
+
+
+def _risks() -> list[str]:
+    """The register as a reader takes it in: a table of every risk at a glance
+    (its hazard, its level before and after its controls, the decision), then
+    a card per risk: its story (hazard, situation, harm), its rating worked
+    out against the policy, its controls by title with their verification,
+    and its acceptance. Levels and decisions are RDM's own evaluation
+    (``rdm.risk.register``); the marks are the templates' to draw."""
+    from rdm.risk.register import policy_or_none, residual_decision, risks
+
+    rows = {r["requirement"]: r for g in _verification().get("groups") or [] for r in g.get("requirements") or []}
+    verified = {i for i, r in rows.items() if r.get("status") == "verified"}
+    policy = policy_or_none(DHF)
+    register = risks(DHF, policy)
+
+    def level(value):
+        return f"[{value}]{{.level}}" if value else "not rated"
+
+    lines = ["| Risk | Hazard | Before | After | Decision |", "|---|---|---|---|---|"]
+    for r in register:
+        lines.append(f"| {r.id} | {_value(r.hazard)} | {level(r.level)} | {level(r.residual_level)} | "
+                     f"{residual_decision(r, policy, verified)} |")
+    for r in register:
+        decision = residual_decision(r, policy, verified)
+        tags = " ".join(f"[{_value(t)}]{{.tag}}" for t in (r.category, r.stride, r.status) if t)
+        residual = (r.residual_severity or r.severity, r.residual_probability or r.probability)
+        lines += ["", f'::: {{.risk-card level="{r.residual_level or ""}"}}',
+                  f"**{r.id}** {tags} {level(r.level)} → {level(r.residual_level)}", "",
+                  f"**Hazard** {_value(r.hazard)}  ", f"**Situation** {_value(r.situation)}  ",
+                  f"**Harm** {_value(r.harm)}  ",
+                  f"**Rating** {r.severity} × {r.probability} = {level(r.level)}; after its controls "
+                  f"{residual[0]} × {residual[1]} = {level(r.residual_level)}: {decision}", ""]
+        if r.controls:
+            lines += ["**Controls**", ""]
+            for c in r.controls:
+                row = rows.get(c, {})
+                status = row.get("status", "untested")
+                mark = {"verified": "✓ verified", "failed": "✗ failed"}.get(status, status)
+                lines.append(f"- `{c}` {_value(row.get('text', ''))} [{mark}]{{.{status}}}")
+            lines.append("")
+        else:
+            lines += ["**Controls** none", ""]
+        if r.accepted_by:
+            lines += [f"> **Accepted** by {_value(r.accepted_by)}: {_value(r.acceptance_rationale)}", ""]
+        lines.append(":::")
+    return lines
+
+
 def _policy(policy: dict) -> list[str]:
     """The levels as a severity-by-probability table, then each level's acceptability."""
     probabilities = policy.get("probabilities") or []
     lines = ["| Severity / probability | " + " | ".join(map(_value, probabilities)) + " |",
              "|" + "---|" * (len(probabilities) + 1)]
-    lines += [f"| {_value(s)} | " + " | ".join(map(_value, (policy.get("levels") or {}).get(s, []))) + " |"
+    levels = policy.get("levels") or {}
+    lines += [f"| {_value(s)} | " + " | ".join(f"[{_value(v)}]{{.level}}" for v in levels.get(s, [])) + " |"
               for s in policy.get("severities") or []]
     lines += ["", *[f"- **{_value(level)}** — {_value(verdict)}" for level, verdict in
                     (policy.get("acceptability") or {}).items()]]
     return lines
 
 
-def _section(value) -> list[str]:
+def _section(value, key: str = "") -> list[str]:
+    if key == "risks" and isinstance(value, list):
+        try:
+            return _risks()
+        except Exception as error:  # a register RDM cannot evaluate is the gate's to report; show it as written
+            log.warning("dhf: risks shown as written: %s", error)
     if isinstance(value, dict) and "levels" in value:
         return _policy(value)
     if isinstance(value, list) and value and all(isinstance(v, dict) for v in value):
@@ -158,9 +217,9 @@ def page(text: str, pdf: str | None = None) -> str:
         if own:  # at the end of the document's own section of that name
             i, level = own[0]
             end = next((j for j, lv, _ in headings if j > i and len(lv) <= len(level)), len(lines))
-            inserts.setdefault(end - 1, []).extend(["", *_section(value), ""])
+            inserts.setdefault(end - 1, []).extend(["", *_section(value, key), ""])
         else:
-            head += ["", f"## {name}", "", *_section(value)]
+            head += ["", f"## {name}", "", *_section(value, key)]
     inserts.setdefault(top, [])[:0] = head
     out = []
     for i, line in enumerate(lines):
@@ -235,7 +294,7 @@ def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
     if not (pandoc and shutil.which("typst")):
         log.info("dhf: no PDFs (pandoc and typst are not both on PATH)")
         return {}
-    for name in ("template.typ", "pandoc_pdf.yml"):
+    for name in ("template.typ", "pandoc_pdf.yml", "cards.lua"):
         shutil.copy(TEMPLATES / name, out / name)
 
     def one(rel: str, md: Path) -> tuple[str, Path | None]:
@@ -331,6 +390,35 @@ def spec_pages() -> dict[str, str]:
     return pages
 
 
+_DIV_OPEN = re.compile(r"^(:{3,})\s*\{([^}]*)\}\s*$")
+_DIV_CLOSE = re.compile(r"^:{3,}\s*$")
+_SPAN = re.compile(r"\[((?:\\.|[^\]\\])*)\]\{\.([A-Za-z-]+)\}")
+_ATTR = re.compile(r'([A-Za-z-]+)="([^"]*)"')
+
+
+def html_marks(text: str) -> str:
+    """The marks the render filters put in the Markdown (Pandoc's fenced divs
+    and bracketed spans) as the docs site's HTML: ``<div class=...>`` with
+    its Markdown kept (md_in_html) and ``<span class=...>``; the PDF template
+    draws the same marks (cards.lua). Code blocks are left as they are."""
+    out, code = [], [c for _, c in fenced(text.splitlines())]
+    for line, is_code in zip(text.splitlines(), code):
+        if is_code:
+            out.append(line)
+            continue
+        opened = _DIV_OPEN.match(line)
+        if opened:
+            classes = " ".join(c[1:] for c in opened.group(2).split() if c.startswith("."))
+            data = " ".join(f'data-{k}="{html.escape(v)}"' for k, v in _ATTR.findall(opened.group(2)))
+            out += ["", f'<div class="{classes}" {data} markdown="1">'.replace("  ", " "), ""]
+        elif _DIV_CLOSE.match(line):
+            out += ["", "</div>", ""]
+        else:
+            out.append(_SPAN.sub(lambda m: f'<span class="{m.group(2)}" data-value="{html.escape(m.group(1))}">'
+                                           f'{m.group(1)}</span>', line))
+    return "\n".join(out) + "\n"
+
+
 def on_files(files, config):
     from mkdocs.structure.files import File
 
@@ -342,8 +430,8 @@ def on_files(files, config):
         pdfs = build_pdfs(documents, Path(tempfile.mkdtemp(prefix="rdm-dhf-")))
     for rel, md in documents.items():
         pdf, name = pdfs.get(rel), Path(rel).with_suffix(".pdf")
-        files.append(File.generated(config, f"dhf/{rel}", content=page(text_of(md),
-                                                                       pdf and name.name)))
+        files.append(File.generated(config, f"dhf/{rel}", content=html_marks(page(text_of(md),
+                                                                                  pdf and name.name))))
         if pdf:
             files.append(File.generated(config, f"dhf/{name.as_posix()}", abs_src_path=str(pdf)))
     for path, content in spec_pages().items():
