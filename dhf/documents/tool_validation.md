@@ -217,6 +217,12 @@ linked to its Allium surface, is a user need. The table is each
 requirement's verification from the executed results; the feature files
 follow, laid out by the `gherkin` render filter.
 
+The spec was written after RDM's code, to describe it, so for this
+revision only the Gherkin is held to the code, by the tests that claim it;
+the Allium surfaces and event models are held to it by review. From the next
+change on, RDM is built the Löyly way, spec first and then regenerated, so
+the code cannot drift from any part of the spec.
+
 {% if verification is defined %}
 {{ verification.summary.verified }} of {{ verification.summary.total }} requirements verified ({{ verification.summary.failed }} failed, {{ verification.summary.untested }} untested), from {{ verification.summary.results_found }} executed test results.
 
