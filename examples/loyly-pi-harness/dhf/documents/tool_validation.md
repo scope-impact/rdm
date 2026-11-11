@@ -154,10 +154,10 @@ risks:
   - item-02-026
   - item-02-028
   residual:
-    probability: Possible
+    probability: Unlikely
   acceptance:
     by: The harness's product owner, who decided this scoring on 2026-11-06
-    rationale: The sealed, digest-approved graders were retired for spec-v2; until a grader is sealed again, a verdict's judgement is checked only by the operator's validation of each need and by comparing each scoreboard with the last measured cycle. This is the harness's weakest control, and the first to strengthen.
+    rationale: 'The sealed, digest-approved graders were retired for spec-v2, so no gate checks a verdict''s judgement; people do, before anything is released: a human reviews the code and the spec on every pull request (the branch ruleset, DC-001 §11.10(g)), and a human audits the evidence before release, reading the verification report and the scoreboard against the last measured cycle. A wrong verdict can mislead a cycle''s score, but not reach a release past them.'
 - id: RISK-HAR-009
   category: safety
   status: proposed
@@ -318,8 +318,9 @@ checklist and the scoreboard, which every candidate and every verdict must
 pass through. The guidance's risk framework applies to artificial
 intelligence and machine learning tools used this way (its §V.A, printed
 p. 6). The AI-specific risks are RISK-HAR-007 (the builder
-games the measure), RISK-HAR-008 (the grading agent misjudges: the weakest
-control, since nothing is sealed or approved for it), RISK-HAR-009 (the model
+games the measure), RISK-HAR-008 (the grading agent misjudges: no gate checks
+its judgement, so human code review, spec review and an audit of the evidence
+before release do), RISK-HAR-009 (the model
 changes under the same name) and RISK-HAR-010 (prompt injection steers the
 builder).
 
