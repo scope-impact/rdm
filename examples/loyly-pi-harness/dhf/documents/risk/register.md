@@ -69,6 +69,58 @@ risks:
     acceptance:
       by: "The harness's validation owner, by approving the pull request that records this register"
       rationale: "Evidence counts only for the commit it tested (RDM's verification report is release-grade only for the product's commit, and the graph warns on any other), and CSV-HAR-001 revalidates on every change to the pin; using another commit is outside the validated state by procedure."
+  - id: RISK-HAR-007
+    category: safety
+    status: proposed
+    hazard: "The builder (an LLM agent) games the measure: the candidate passes the checklist without doing what the scenarios mean."
+    situation: "The builder writes code shaped to the goldens or the grading, not to the spec's intent."
+    harm: "A candidate is accepted that meets the letter of its checklist and not the behaviour the spec states."
+    severity: Serious
+    probability: Possible
+    controls: [item-03-004, item-03-005, item-04-014, item-04-015]
+    residual: {probability: Unlikely}
+    acceptance:
+      by: "The harness's product owner, by approving the pull request that records this register"
+      rationale: "Goldens are written from the scenario and moved only for a recorded reason, and the builder sees no prior candidate and no scoring tool; gaming that survives this is judged by the operator's validation of each need (CSV-HAR-001, unscripted assurance)."
+  - id: RISK-HAR-008
+    category: safety
+    status: proposed
+    hazard: "The grading agent (an LLM agent) judges an item wrongly."
+    situation: "Spec-v2 cycles are scored by a black-box grading agent's verdicts file, with nothing sealed or approved for it (Löyly .pi/spec/decisions.md, 'How spec-v2 cycles are scored'); a verdict is checked for its form, never for its judgement."
+    harm: "A failing item is scored as passing, and the scoreboard overstates what was regenerated."
+    severity: Serious
+    probability: Possible
+    controls: [item-02-010, item-02-011, item-02-026, item-02-028]
+    residual: {probability: Possible}
+    acceptance:
+      by: "The harness's product owner, who decided this scoring on 2026-11-06"
+      rationale: "The sealed, digest-approved graders were retired for spec-v2; until a grader is sealed again, a verdict's judgement is checked only by the operator's validation of each need and by comparing each scoreboard with the last measured cycle. This is the harness's weakest control, and the first to strengthen."
+  - id: RISK-HAR-009
+    category: safety
+    status: proposed
+    hazard: "The model behind the builder or the grading agent changes under the same name."
+    situation: "The provider updates the model a name like openai-codex/gpt-6.1-sol points to, with no change to Löyly's commit."
+    harm: "The validated state changes unnoticed: candidates are built, or verdicts given, by a model no one assessed."
+    severity: Serious
+    probability: Possible
+    controls: []
+    acceptance:
+      by: "The harness's product owner, by approving the pull request that records this register"
+      rationale: "Every candidate is gated and graded, so a different builder changes what passes, not what is accepted without grading; each launch records the model and settings with their SHA-256 (Löyly's builder evidence). The grading agent drifting too is RISK-HAR-008's residual."
+  - id: RISK-HAR-010
+    category: security
+    stride: Elevation of privilege
+    status: proposed
+    hazard: "Content in the spec or the room steers the builder outside its task (prompt injection)."
+    situation: "Text the builder reads tells it to reach the network, the host or other rooms."
+    harm: "The builder exfiltrates or alters what it should not touch, outside the review the record is under."
+    severity: Serious
+    probability: Unlikely
+    controls: [item-04-013, item-04-014]
+    residual: {probability: Rare}
+    acceptance:
+      by: "The harness's product owner, by approving the pull request that records this register"
+      rationale: "Every builder tool call runs in a Gondolin VM that mounts only the room and reaches only a shortlist of hosts, other hosts refused before any lookup (Löyly .pi/harness/README.md, builder-host/policy.ts); this sandbox is provided, not specified, so its own checks are Löyly's, not this record's."
 ---
 
 # Risk register — pi harness

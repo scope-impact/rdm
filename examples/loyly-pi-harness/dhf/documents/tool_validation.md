@@ -40,10 +40,25 @@ guidance names (its §V.A(2)), for failures that are reasonably foreseeable:
 | Factor | Risks |
 |---|---|
 | Configuration and management | RISK-HAR-001 (a leaky clean room), RISK-HAR-005 (a claim lost by the bridge) |
-| Security | RISK-HAR-004 (a golden moved to hide a failure) |
-| Data integrity | RISK-HAR-002 (an unapproved grader), RISK-HAR-003 (a reused item identity) |
+| Security | RISK-HAR-004 (a golden moved to hide a failure), RISK-HAR-010 (prompt injection steers the builder) |
+| Data integrity | RISK-HAR-002 (an unapproved grader), RISK-HAR-003 (a reused item identity), RISK-HAR-007 (the builder games the measure), RISK-HAR-008 (the grading agent misjudges) |
 | Data storage, data transfer | as for RDM, the record system (DC-HAR-001; RDM's RISK-TOOL-009, RISK-TOOL-010) |
-| Operation error | RISK-HAR-006 (a commit other than the one validated) |
+| Operation error | RISK-HAR-006 (a commit other than the one validated), RISK-HAR-009 (the model changes under the same name) |
+
+## AI in the harness
+
+The harness drives two AI agents: the builder, which regenerates the code,
+and, for spec-v2 cycles, the grading agent, which judges each item. Neither is
+deterministic, so neither is what this validation validates: it validates
+the deterministic harness around them, the clean room, the gate, the
+checklist and the scoreboard, which every candidate and every verdict must
+pass through. The guidance's risk framework applies to artificial
+intelligence and machine learning tools used this way (its §V.A, printed
+p. 6). The AI-specific risks are RMF-HAR-001's RISK-HAR-007 (the builder
+games the measure), RISK-HAR-008 (the grading agent misjudges: the weakest
+control, since nothing is sealed or approved for it), RISK-HAR-009 (the model
+changes under the same name) and RISK-HAR-010 (prompt injection steers the
+builder).
 
 ## Assurance activities
 

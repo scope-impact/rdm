@@ -61,6 +61,12 @@
     read short), -009 (evidence not retrievable) and -010 (a decision on other
     results); the example's, RISK-HAR-005 and -006; each CSV document maps
     the guidance's six factors to its risks.
+  - AI-specific risk analysis for the Löyly example: the harness's builder
+    and, for spec-v2, its grading agent are LLM agents; CSV-HAR-001 validates
+    the deterministic harness around them, and the register adds
+    RISK-HAR-007 (gaming the measure), -008 (the grading agent misjudges,
+    nothing sealed or approved for it), -009 (the model changes under the
+    same name) and -010 (prompt injection steers the builder).
   - A slice of a Löyly plan with no spec.feature now blocks release (it was
     skipped quietly: a link to a folder git never received dropped its
     requirements). item-04-001 states it.
