@@ -62,9 +62,13 @@ RUN fc-cache -f && pandoc --version && typst --version
 # Mermaid's command line (mmdc): a ```mermaid diagram in a document becomes a
 # PNG in its PDF. It drives Puppeteer's headless Chrome shell, installed with
 # the system libraries it needs (--install-deps); mmdc's version is pinned.
+# amd64 only: Chrome for Testing has no Linux arm64 build, so on arm64 a
+# diagram stays as code in the PDF (RDM warns) and the site still draws it.
+ARG TARGETARCH
 ARG MERMAID_CLI_VERSION=11.17.1
 ENV PUPPETEER_CACHE_DIR=/opt/puppeteer
 RUN set -e; \
+    if [ "$TARGETARCH" != "amd64" ]; then echo "mmdc: not installed on $TARGETARCH"; exit 0; fi; \
     apt-get update; \
     apt-get install -y --no-install-recommends nodejs npm unzip; \
     PUPPETEER_SKIP_DOWNLOAD=1 npm install -g --no-fund --no-audit "@mermaid-js/mermaid-cli@${MERMAID_CLI_VERSION}"; \
@@ -74,12 +78,13 @@ RUN set -e; \
         --install-deps --format '{{path}}' | tail -n 1)"; \
     test -x "$shell"; \
     ln -s "$shell" /usr/local/bin/chrome-headless-shell; \
-    rm -rf /var/lib/apt/lists/* /root/.npm
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chrome-headless-shell
-RUN printf 'flowchart LR\n  a --> b\n' > /tmp/check.mmd && \
-    echo '{"args":["--no-sandbox","--disable-dev-shm-usage"]}' > /tmp/check.json && \
-    mmdc -i /tmp/check.mmd -o /tmp/check.png -p /tmp/check.json && test -s /tmp/check.png && \
+    rm -rf /var/lib/apt/lists/* /root/.npm; \
+    printf 'flowchart LR\n  a --> b\n' > /tmp/check.mmd; \
+    echo '{"args":["--no-sandbox","--disable-dev-shm-usage"],"executablePath":"/usr/local/bin/chrome-headless-shell"}' > /tmp/check.json; \
+    mmdc -i /tmp/check.mmd -o /tmp/check.png -p /tmp/check.json; \
+    test -s /tmp/check.png; \
     rm /tmp/check.*
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chrome-headless-shell
 
 # RDM, with the graph extra (build, query, validate, serve, mcp), in its own
 # virtualenv (Ubuntu's system Python does not take pip installs): from a
