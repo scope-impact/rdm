@@ -20,9 +20,9 @@ jobs:
           persist-credentials: false
           submodules: true # loyly (spec-v2): the adapter is checked against Löyly's own spec
       - name: Install uv
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       # The latest stable CPython, whichever that is on the day.
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         id: python
         with:
           python-version: '3.x'
@@ -48,10 +48,10 @@ jobs:
           persist-credentials: false
           submodules: true
       - name: Install uv
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - name: Install RDM
         run: uv sync --all-extras
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: '21'   # the JDK of Löyly's builder image
@@ -82,7 +82,7 @@ jobs:
             --checklist csv_tool_validation
           uv run rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
       - name: The harness's release evidence (verification report PDF, matrix, results)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: loyly-pi-harness-evidence
           path: examples/loyly-pi-harness/release-evidence
