@@ -1,5 +1,6 @@
 import collections
 import os
+import re
 from importlib import import_module
 
 from pathlib import Path
@@ -64,6 +65,81 @@ def include(path):
         if end != -1:
             text = text[end + 5:]
     return text.strip("\n")
+
+
+_MD_SPECIAL = str.maketrans({c: "\\" + c for c in "\\`*_[]<>$|#"})
+
+
+def _md(text):
+    """Text as Markdown shows it, its special characters escaped."""
+    return (text or "").translate(_MD_SPECIAL)
+
+
+def _table(rows):
+    cells = [[_md(c["value"]) for c in row["cells"]] for row in rows]
+    if not cells:
+        return []
+    lines = ["| " + " | ".join(cells[0]) + " |", "|" + "---|" * len(cells[0])]
+    return lines + ["| " + " | ".join(r) + " |" for r in cells[1:]]
+
+
+def gherkin(path):
+    """A feature file as a document reads it: parsed with Cucumber's own
+    parser and laid out in Markdown, not shown as code. The Feature's
+    description is a paragraph, each Rule a bold line, each scenario a bold
+    title led by its id with its other tags beneath it in italics, each step a
+    line with its keyword in bold, a data table or the Examples of an outline
+    a table, a doc string a code block. Comments are left out. Nothing is a
+    heading, so the document's own headings and numbering stay its own."""
+    from gherkin.parser import Parser
+    from gherkin.token_scanner import TokenScanner
+
+    feature = Parser().parse(TokenScanner(Path(path).read_text(encoding="utf-8"))).get("feature") or {}
+    out = [f"**{_md(feature.get('keyword', 'Feature'))}: {_md(feature.get('name', ''))}**", ""]
+    description = " ".join(line.strip() for line in (feature.get("description") or "").splitlines() if line.strip())
+    if description:
+        out += [_md(description), ""]
+
+    def steps(block):
+        lines = []
+        for step in block.get("steps") or []:
+            lines.append(f"**{step['keyword'].strip()}** {_md(step['text'])}  ")
+            if step.get("dataTable"):
+                lines[-1] = lines[-1].rstrip()
+                lines += ["", *_table(step["dataTable"]["rows"]), ""]
+            if step.get("docString"):
+                lines[-1] = lines[-1].rstrip()
+                lines += ["", "```", step["docString"]["content"], "```", ""]
+        if lines:
+            lines[-1] = lines[-1].rstrip()
+        return lines
+
+    def scenario(node):
+        tags = [t["name"] for t in node.get("tags") or []]
+        ids = [t for t in tags if re.fullmatch(r"@[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-\d+", t)]
+        stamp = f"`{ids[-1][1:]}` " if ids else ""
+        lines = [f"{stamp}**{_md(node['name'])}**", ""]
+        others = [t for t in tags if t not in ids[-1:]]
+        if others:
+            lines += ["*" + " ".join(_md(t) for t in others) + "*", ""]
+        lines += steps(node) + [""]
+        for examples in node.get("examples") or []:
+            title = f"{examples.get('keyword', 'Examples')}: {examples.get('name', '')}".rstrip(": ")
+            rows = ([examples["tableHeader"]] if examples.get("tableHeader") else []) + (examples.get("tableBody") or [])
+            lines += [f"*{_md(title)}*", "", *_table(rows), ""]
+        return lines
+
+    for child in feature.get("children") or []:
+        if "background" in child:
+            out += [f"*{_md(child['background'].get('keyword', 'Background'))}*", "", *steps(child["background"]), ""]
+        elif "scenario" in child:
+            out += scenario(child["scenario"])
+        elif "rule" in child:
+            out += ["---", "", f"**{_md(child['rule']['keyword'])}: {_md(child['rule']['name'])}**", ""]
+            for grandchild in child["rule"].get("children") or []:
+                if "scenario" in grandchild:
+                    out += scenario(grandchild["scenario"])
+    return "\n".join(out).rstrip() + "\n"
 
 
 def glob(pattern):
@@ -136,6 +212,7 @@ def _create_jinja_environment(config, loaders=None):
     environment.filters['md_indent'] = md_indent
     environment.filters['include'] = include
     environment.filters['glob'] = glob
+    environment.filters['gherkin'] = gherkin
 
     return environment
 

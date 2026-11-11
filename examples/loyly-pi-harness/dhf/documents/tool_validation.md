@@ -268,8 +268,8 @@ reasonably foreseeable:
 The harness's spec, Löyly's spec v2, slice by slice: each accepted scenario,
 stamped `@item-NN-SSS`, is a requirement, verified by the harness's own
 acceptance suite through the bridge. The table is each requirement's
-verification from the executed results; the feature files follow, as
-written.
+verification from the executed results; the feature files follow,
+laid out by the `gherkin` render filter.
 
 {% if verification is defined %}
 {{ verification.summary.verified }} of {{ verification.summary.total }} requirements verified ({{ verification.summary.failed }} failed, {{ verification.summary.untested }} untested), from {{ verification.summary.results_found }} executed test results.
@@ -286,9 +286,7 @@ The verification data is not part of this copy: run `run-acceptance.sh` and
 {% for feature in "../../loyly/.pi/plan/*/spec.feature" | glob %}
 ### {{ feature.split("/")[-2] }}
 
-```gherkin
-{{ feature | include }}
-```
+{{ feature | gherkin }}
 
 {% endfor %}
 

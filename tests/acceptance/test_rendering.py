@@ -56,8 +56,8 @@ def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypat
 @allure.tag("item-07-002")
 @allure.label("output", "rdm/publishing/render.py")
 def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
-    """item-07-002: the invert_dependencies, join_to, md_indent, glob and include
-    filters, used from a template."""
+    """item-07-002: the invert_dependencies, join_to, md_indent, glob, include and
+    gherkin filters, used from a template."""
     with verification_step("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
         out = render_from_string("{% for b, a in items | invert_dependencies('id', 'deps') %}{{ b }}<-{{ a | sort }}"
                                  "{% endfor %}", context={"items": [{"id": "A", "deps": ["B"]}]})
@@ -83,6 +83,24 @@ def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
         attach("rendered", out)
         assert out.strip() == ("[spec/a/spec.feature]Feature: A\n  Scenario: one[spec/b/spec.feature]Feature: B"
                                "|## Architecture"), out
+    with verification_step("gherkin: a feature file laid out as a document reads it: its Rule a bold line, each "
+                           "scenario a bold title led by its id with its other tags beneath, each step with its "
+                           "keyword in bold, an outline's Examples a table, Markdown's characters escaped, no "
+                           "heading of its own"):
+        (tmp_path / "f.feature").write_text(
+            "Feature: Alarms\n  A nurse is alerted.\n\n  Rule: Within 2 s\n\n"
+            "    # a comment, left out\n    @smoke @REQ-12\n    Scenario: Alarm raised\n"
+            "      Given the limit is $140\n      When a reading of <value> arrives\n      Then an alarm sounds\n\n"
+            "    @REQ-13\n    Scenario Outline: Quiet\n      Given <x>\n\n      Examples: values\n"
+            "        | x |\n        | a_b |\n")
+        out = render_from_string("{{ 'f.feature' | gherkin }}")
+        attach("rendered", out)
+        assert "**Feature: Alarms**" in out and "A nurse is alerted." in out
+        assert "**Rule: Within 2 s**" in out and "`REQ-12` **Alarm raised**" in out and "*@smoke*" in out
+        assert "**Given** the limit is \\$140" in out and "**When** a reading of \\<value\\> arrives" in out
+        assert "`REQ-13` **Quiet**" in out and "*Examples: values*" in out and "| a\\_b |" in out
+        assert "a comment" not in out and "```" not in out
+        assert not any(line.startswith("#") for line in out.splitlines())
     with verification_step("join_to refuses an id its table lacks, naming it: rdm render exits 2"):
         from rdm.main import cli
 

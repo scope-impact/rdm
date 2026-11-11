@@ -215,7 +215,7 @@ concrete Given/When/Then example stamped `@item-NN-SSS`, is a requirement,
 verified by the acceptance test that claims it; each event-model screen,
 linked to its Allium surface, is a user need. The table is each
 requirement's verification from the executed results; the feature files
-follow, as written.
+follow, laid out by the `gherkin` render filter.
 
 {% if verification is defined %}
 {{ verification.summary.verified }} of {{ verification.summary.total }} requirements verified ({{ verification.summary.failed }} failed, {{ verification.summary.untested }} untested), from {{ verification.summary.results_found }} executed test results.
@@ -232,9 +232,7 @@ The verification data is not part of this copy: run the acceptance tests and
 {% for feature in ".pi/spec/*/spec.feature" | glob %}
 ### {{ feature.split("/")[2] }}
 
-```gherkin
-{{ feature | include }}
-```
+{{ feature | gherkin }}
 
 {% endfor %}
 
