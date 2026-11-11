@@ -125,7 +125,8 @@ def gherkin(path):
         lines += steps(node) + [""]
         for examples in node.get("examples") or []:
             title = f"{examples.get('keyword', 'Examples')}: {examples.get('name', '')}".rstrip(": ")
-            rows = ([examples["tableHeader"]] if examples.get("tableHeader") else []) + (examples.get("tableBody") or [])
+            header = [examples["tableHeader"]] if examples.get("tableHeader") else []
+            rows = header + (examples.get("tableBody") or [])
             lines += [f"*{_md(title)}*", "", *_table(rows), ""]
         return lines
 
