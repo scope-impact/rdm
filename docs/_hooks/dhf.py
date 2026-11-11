@@ -266,7 +266,7 @@ def mermaid_to_png(text: str, out: Path, stem: str) -> str:
         return text
     config = out / "puppeteer.json"
     if not config.exists():
-        settings = {"args": ["--no-sandbox"]}
+        settings = {"args": ["--no-sandbox", "--disable-dev-shm-usage"]}
         if os.environ.get("PUPPETEER_EXECUTABLE_PATH"):
             settings["executablePath"] = os.environ["PUPPETEER_EXECUTABLE_PATH"]
         config.write_text(json.dumps(settings))
