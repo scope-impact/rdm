@@ -40,14 +40,13 @@
   - `rdm init` and `rdm adopt` lay down a spec skeleton the Löyly way
     (`.pi/plan/01-core`, `.pi/spec/core/`, `.pi/spec/event-storm.edn`); adopt
     only when the repository has no spec yet, so a plain-Gherkin spec is kept.
-  - The Löyly pi harness example is a full example DHF in place of the Part 11
-    one: its architecture (six contexts, one per slice), a risk policy and a
-    register of four harness risks controlled by Löyly requirements, and its
-    validation as a tool: computer software validation (after FDA's CSA
-    guidance and ISO 13485 4.1.6, 7.5.6; CSV-HAR-001) and a CSV checklist
-    held to by `rdm gap` and graph validation in CI. Its record is held to
-    21 CFR Part 11 too (DC-HAR-001, checked against `part11_document_control`),
-    with the record system validated by the same CSV.
+  - The Löyly pi harness example, in place of the Part 11 one, is a computer
+    software validation, kept simple: one document (CSV-HAR-001) holds the
+    intended use, the process risk with ten risks as its frontmatter (four
+    about its AI agents: the builder games the measure, the grading agent
+    misjudges, the model changes under the same name, prompt injection), the
+    assurance, the record, Part 11 for the record system and change; checked
+    against `csv_tool_validation` and `part11_document_control` in CI.
   - New built-in checklist `csv_tool_validation`: computer software validation
     of a tool used in production or the quality system, after FDA's Computer
     Software Assurance guidance (3 Feb 2026) and ISO 13485 4.1.6 and 7.5.6,
@@ -59,14 +58,7 @@
     `part11_document_control` and `csv_tool_validation` (100% each).
   - Risk analysis by CSA factor: RDM's register gains RISK-TOOL-008 (the spec
     read short), -009 (evidence not retrievable) and -010 (a decision on other
-    results); the example's, RISK-HAR-005 and -006; each CSV document maps
-    the guidance's six factors to its risks.
-  - AI-specific risk analysis for the Löyly example: the harness's builder
-    and, for spec-v2, its grading agent are LLM agents; CSV-HAR-001 validates
-    the deterministic harness around them, and the register adds
-    RISK-HAR-007 (gaming the measure), -008 (the grading agent misjudges,
-    nothing sealed or approved for it), -009 (the model changes under the
-    same name) and -010 (prompt injection steers the builder).
+    results); each CSV document maps the guidance's six factors to its risks.
   - A slice of a Löyly plan with no spec.feature now blocks release (it was
     skipped quietly: a link to a folder git never received dropped its
     requirements). item-04-001 states it.

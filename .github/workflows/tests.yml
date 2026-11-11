@@ -76,8 +76,8 @@ jobs:
         run: |
           uv run rdm story verify --dhf dhf --allure-results dhf/allure-results -o dhf/data/verification.yml
           uv run rdm story release-gate --dhf dhf --allure-results dhf/allure-results
-          uv run rdm gap csv_tool_validation dhf/documents/*.md dhf/documents/risk/*.md
-          uv run rdm gap part11_document_control dhf/documents/document_control.md
+          uv run rdm gap csv_tool_validation dhf/documents/tool_validation.md
+          uv run rdm gap part11_document_control dhf/documents/tool_validation.md
           uv run rdm graph validate --dhf dhf --allure-results dhf/allure-results \
             --checklist csv_tool_validation --checklist part11_document_control
           uv run rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence

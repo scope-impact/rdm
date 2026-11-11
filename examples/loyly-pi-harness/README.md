@@ -1,4 +1,4 @@
-# Example DHF: Löyly's pi harness
+# Example: validating Löyly's pi harness (computer software validation)
 
 [Löyly](https://github.com/scope-impact/loyly) is an agentic software factory:
 its spec is the source of truth and the code is regenerated from it. Its pi
@@ -12,12 +12,8 @@ Löyly knows nothing of RDM or Allure.
 |---|---|
 | `../../loyly/` | RDM's `loyly` submodule (`spec-v2`): the spec and the code under test |
 | `dhf/config.yml` | `spec: ../../../loyly/.pi/plan`: RDM reads Löyly's plan and its needs |
-| `dhf/documents/architecture.md` | the six contexts, one per slice of Löyly's plan, each with its code (SDS-HAR-001) |
-| `dhf/documents/risk/` | the risk policy and a register of four harness risks (a leaky clean room, an unapproved grader, a reused item identity, a moved golden), each controlled by Löyly requirements; both **proposed** |
-| `dhf/documents/verification_and_validation_plan.md` | how the harness is verified and validated |
+| `dhf/documents/tool_validation.md` | **the validation, in one document** (CSV-HAR-001, proposed): intended use, process risk with the ten risks (four of them AI-specific) as its frontmatter, assurance activities, record, Part 11 for the record system, change |
 | `dhf/documents/traceability_matrix.md` | the matrix template, rendered from generated data |
-| `dhf/documents/tool_validation.md` | the harness validated as a tool (computer software validation, CSA): intended use, process risk, assurance activities, record, change (CSV-HAR-001, proposed) |
-| `dhf/documents/document_control.md` | git and GitHub as this record's document control, each 21 CFR Part 11 control mapped; §11.10(a) validation met by CSV (DC-HAR-001, proposed) |
 | `rdm/compliance/checklists/csv_tool_validation.txt` (built-in `csv_tool_validation`) | computer software validation of a production tool and of its record system, each item citing its source PDF, section and page (FDA's CSA guidance of 3 Feb 2026, ISO 13485 4.1.6 and 7.5.6, 21 CFR 11.10(a)); for `rdm gap` and graph validation |
 | `bridge/user.clj` | clojure.test to Allure, loaded into each test JVM from outside |
 | `run-acceptance.sh` | runs the six suites unchanged, in a copy of the checkout, and writes `dhf/allure-results/` |
@@ -32,8 +28,8 @@ git submodule update --init loyly        # from RDM's root
 cd examples/loyly-pi-harness
 ./run-acceptance.sh
 rdm story release-gate --dhf dhf --allure-results dhf/allure-results
-rdm gap csv_tool_validation dhf/documents/*.md dhf/documents/risk/*.md
-rdm gap part11_document_control dhf/documents/document_control.md
+rdm gap csv_tool_validation dhf/documents/tool_validation.md
+rdm gap part11_document_control dhf/documents/tool_validation.md
 rdm graph validate --dhf dhf --allure-results dhf/allure-results \
   --checklist csv_tool_validation --checklist part11_document_control
 rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
