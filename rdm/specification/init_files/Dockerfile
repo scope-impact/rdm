@@ -66,7 +66,7 @@ ARG MERMAID_CLI_VERSION=11.17.1
 ENV PUPPETEER_CACHE_DIR=/opt/puppeteer
 RUN set -e; \
     apt-get update; \
-    apt-get install -y --no-install-recommends nodejs npm; \
+    apt-get install -y --no-install-recommends nodejs npm unzip; \
     PUPPETEER_SKIP_DOWNLOAD=1 npm install -g --no-fund --no-audit "@mermaid-js/mermaid-cli@${MERMAID_CLI_VERSION}"; \
     puppeteer="$(npm root -g)/@mermaid-js/mermaid-cli/node_modules/puppeteer"; \
     if [ ! -d "$puppeteer" ]; then puppeteer="$(npm root -g)/puppeteer"; fi; \
