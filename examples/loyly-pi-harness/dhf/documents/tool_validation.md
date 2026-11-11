@@ -231,7 +231,25 @@ bounded context is one slice of Löyly's plan:
 | 06 | cycle-runner | runs a cycle: launches the builder, waits, hands verdicts in | `harness-impl/06-cycle-runner/` |
 
 The contexts meet only through the events each hands to another (each
-context's `event-model/handoffs.edn`) and the seams its `seam.md` describes.
+context's `event-model/handoffs.edn`) and the seams its `seam.md` describes;
+the cycle runner drives the other five through their seams:
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Nunito Sans, Noto Sans, sans-serif", "primaryColor": "#F7F5F3", "primaryBorderColor": "#55111F", "primaryTextColor": "#2B2D31", "lineColor": "#6B6E75", "clusterBkg": "#FFFFFF", "clusterBorder": "#D5D6D8", "edgeLabelBackground": "#FFFFFF"}}}%%
+flowchart TB
+    specification -- "scenario stamped" --> measurement
+    cycle_preparation["cycle-preparation"] -- "source cut pinned" --> measurement
+    cycle_preparation -- "source cut pinned" --> regeneration_cycle["regeneration-cycle"]
+    grader_lifecycle["grader-lifecycle"] -- "golden written, moved" --> regeneration_cycle
+    measurement -- "measurement filed · scoreboard · score failed" --> regeneration_cycle
+    regeneration_cycle -- "gate attempt passed" --> measurement
+    cycle_runner["cycle-runner"] -. drives .-> specification
+    cycle_runner -. drives .-> cycle_preparation
+    cycle_runner -. drives .-> regeneration_cycle
+    cycle_runner -. drives .-> measurement
+    cycle_runner -. drives .-> grader_lifecycle
+```
+
 The fence and the grader approval are where the architecture controls the
 risks below. This record is kept from outside Löyly: the spec and the code
 are RDM's `loyly` submodule, every acceptance suite runs unchanged, and the

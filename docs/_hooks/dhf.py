@@ -39,6 +39,7 @@ from the graph (``docs/_hooks/traceability.py``). Nothing here changes the recor
 from __future__ import annotations
 
 import html
+import json
 import logging
 import os
 import re
@@ -190,6 +191,43 @@ def pdf_source(text: str, path: Path) -> str:
     return "---\n" + yaml.safe_dump(meta, sort_keys=False, allow_unicode=True) + "---\n\n" + "\n".join(body) + "\n"
 
 
+_MERMAID = re.compile(r"^```mermaid[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
+
+
+def mermaid_to_png(text: str, out: Path, stem: str) -> str:
+    """Each ```mermaid block as a PNG the PDF shows: drawn with Mermaid's own
+    command line (``mmdc``, or ``RDM_MMDC``), with the Chromium that
+    ``PUPPETEER_EXECUTABLE_PATH`` names when it is set. Without ``mmdc`` the
+    block stays as code and a warning says why; the docs site draws Mermaid
+    itself."""
+    mmdc = os.environ.get("RDM_MMDC") or shutil.which("mmdc")
+    if not mmdc or "```mermaid" not in text:
+        if "```mermaid" in text:
+            log.warning("dhf: %s keeps its Mermaid as code (no mmdc on PATH)", stem)
+        return text
+    config = out / "puppeteer.json"
+    if not config.exists():
+        settings = {"args": ["--no-sandbox"]}
+        if os.environ.get("PUPPETEER_EXECUTABLE_PATH"):
+            settings["executablePath"] = os.environ["PUPPETEER_EXECUTABLE_PATH"]
+        config.write_text(json.dumps(settings))
+    count = 0
+
+    def draw(match):
+        nonlocal count
+        count += 1
+        source, png = out / f"{stem}-{count}.mmd", out / f"{stem}-{count}.png"
+        source.write_text(match.group(1), encoding="utf-8")
+        result = subprocess.run([mmdc, "-i", str(source), "-o", str(png), "-p", str(config), "-s", "3",
+                                 "-b", "white", "-w", "1200"], capture_output=True, text=True)
+        if result.returncode or not png.is_file():
+            log.warning("dhf: a Mermaid diagram of %s stays as code: %s", stem, result.stderr.strip()[-300:])
+            return match.group(0)
+        return f"![]({png})"
+
+    return _MERMAID.sub(draw, text)
+
+
 def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
     """Each document's PDF, built with the template ``rdm init`` ships; none
     without pandoc and typst on PATH. A document that fails is a warning."""
@@ -204,7 +242,8 @@ def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
         source, pdf = out / "src" / rel, out / "pdf" / Path(rel).with_suffix(".pdf")
         source.parent.mkdir(parents=True, exist_ok=True)
         pdf.parent.mkdir(parents=True, exist_ok=True)
-        source.write_text(pdf_source(text_of(md), md), encoding="utf-8")
+        stem = rel.replace("/", "-").removesuffix(".md")
+        source.write_text(mermaid_to_png(pdf_source(text_of(md), md), out, stem), encoding="utf-8")
         result = subprocess.run([pandoc, "--defaults=pandoc_pdf.yml", f"--resource-path={md.parent}:{DHF}",
                                  str(source), "-o", str(pdf)], cwd=out, capture_output=True, text=True)
         if result.returncode:

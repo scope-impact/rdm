@@ -24,7 +24,9 @@ dev environment (`graph` extra) for real evidence; a map says why otherwise. The
 the RDM image (the Docs workflow's `pdfs` job, which also renders a scaffolded
 project's PDFs), and the docs build takes them as an artifact
 (`RDM_DHF_PDFS=<dir>`); locally they are built when `pandoc` and `typst` are
-on PATH, and the pages carry no PDF link otherwise.
+on PATH (and `mmdc`, Mermaid's command line, to draw a ```mermaid diagram
+as a PNG; without it the diagram stays as code), and the pages carry no PDF
+link otherwise.
 
 Documentation is a [MkDocs](https://www.mkdocs.org/) site (Material theme):
 the Markdown prose under `docs/` plus an API reference generated from the source

@@ -35,6 +35,50 @@ This document holds **design only**: RDM's own requirements and user needs
 are its spec, written the Löyly way in `.pi/` (a slice of `.pi/plan/` per
 bounded context), read like any project's.
 
+## Context map
+
+Each bounded context in its part; an arrow is a dependency in the code (the
+context imports the one it points to), downwards only, as the dependency
+rule requires (below).
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Nunito Sans, Noto Sans, sans-serif", "primaryColor": "#F7F5F3", "primaryBorderColor": "#55111F", "primaryTextColor": "#2B2D31", "lineColor": "#6B6E75", "clusterBkg": "#FFFFFF", "clusterBorder": "#D5D6D8", "edgeLabelBackground": "#FFFFFF"}}}%%
+flowchart TB
+    subgraph Documents
+        publishing
+    end
+    subgraph Graph
+        graph_ctx[graph]
+    end
+    subgraph Gates
+        release
+        compliance
+    end
+    subgraph Record
+        test_evidence
+        specification
+        risk
+    end
+    kernel[(shared kernel)]
+    publishing --> release
+    publishing --> test_evidence
+    publishing --> specification
+    publishing --> risk
+    graph_ctx --> release
+    graph_ctx --> test_evidence
+    graph_ctx --> specification
+    graph_ctx --> risk
+    graph_ctx --> compliance
+    release --> test_evidence
+    release --> specification
+    release --> risk
+    test_evidence --> specification
+    specification --> kernel
+    risk --> kernel
+    test_evidence --> kernel
+    release --> kernel
+```
+
 ## The four parts
 
 | Part | Responsibility | Writes to the record? |

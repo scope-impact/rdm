@@ -47,6 +47,10 @@
     both records, which share RDM's repository). The Löyly example replaces
     the Part 11 one; RDM's separate risk policy and register move into
     CSV-001; the example's separate documents are gone.
+  - Architecture diagrams: RDM's context map (its parts, contexts and their
+    dependencies in the code) and the Löyly harness's (its contexts and the
+    events each hands to another) as Mermaid, in the documents' palette; the
+    docs site draws them, and the PDF build draws each as a PNG with `mmdc`.
   - New render filters `include` (a file as written, frontmatter left out),
     `glob` (matching paths, sorted) and `gherkin` (a feature file written back
     as a highlighted `gherkin` block: Feature, Rule, scenario and steps
