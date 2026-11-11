@@ -186,7 +186,7 @@ risks:
     probability: Rare
   acceptance:
     by: The harness's product owner, by approving the pull request that records this register
-    rationale: Every builder tool call runs in a Gondolin VM that mounts only the room and reaches only a shortlist of hosts, other hosts refused before any lookup (Löyly .pi/harness/README.md, builder-host/policy.ts); this sandbox is provided, not specified, so its own checks are Löyly's, not this record's.
+    rationale: Every builder tool call runs in a Gondolin VM that mounts only the room and reaches only a shortlist of hosts, other hosts refused before any lookup (Löyly .pi/harness/README.md, builder-host/policy.ts); the builder never runs directly on the host. The sandbox is a platform control, tested by platform engineering as part of the platform, not by this record's tests; this record relies on that assurance (the guidance's §V.A(5), printed pp. 14-17).
 ---
 
 # Computer software validation — Löyly's pi harness
@@ -344,7 +344,8 @@ Proportionate to that risk ([[CSA:assurance]], [[13485:4.1.6-proportionate]]):
 
 Beside its own tests, the assurance relies on what the harness keeps
 itself ([[CSA:assurance-considerations]]): its event store and the run
-evidence of each cycle, and Löyly's own review of the spec it is built from.
+evidence of each cycle, Löyly's own review of the spec it is built from,
+and the builder sandbox, tested by platform engineering (RISK-HAR-010).
 
 ## Record
 
