@@ -40,13 +40,18 @@
   - `rdm init` and `rdm adopt` lay down a spec skeleton the Löyly way
     (`.pi/plan/01-core`, `.pi/spec/core/`, `.pi/spec/event-storm.edn`); adopt
     only when the repository has no spec yet, so a plain-Gherkin spec is kept.
-  - The Löyly pi harness example, in place of the Part 11 one, is a computer
-    software validation, kept simple: one document (CSV-HAR-001) holds the
-    intended use, the process risk with ten risks as its frontmatter (four
-    about its AI agents: the builder games the measure, the grading agent
-    misjudges, the model changes under the same name, prompt injection), the
-    assurance, the record, Part 11 for the record system and change; checked
-    against `csv_tool_validation` and `part11_document_control` in CI.
+  - One final document each, rendered from the record: RDM's CSV-001 and the
+    Löyly pi harness's CSV-HAR-001 (computer software validation with the
+    architecture, the risk policy and risks, the whole spec and each
+    requirement's verification), and DC-001 for Part 11 (one statement for
+    both records, which share RDM's repository). The Löyly example replaces
+    the Part 11 one; RDM's separate risk policy and register move into
+    CSV-001; the example's separate documents are gone.
+  - New render filters `include` (a file as written, frontmatter left out)
+    and `glob` (matching paths, sorted), so a document carries its spec's
+    feature files; item-07-002 states them. A document that holds Jinja is
+    rendered with the DHF's config and generated data before it is published
+    or made a PDF (`docs/_hooks/dhf.py`, `--dhf` for another project).
   - New built-in checklist `csv_tool_validation`: computer software validation
     of a tool used in production or the quality system, after FDA's Computer
     Software Assurance guidance (3 Feb 2026) and ISO 13485 4.1.6 and 7.5.6,

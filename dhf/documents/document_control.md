@@ -6,8 +6,12 @@ title: "Document Control — git as the document control system for RDM's record
 
 # Purpose
 
-States how RDM's own controlled records — this Design History File, RDM's
-spec (`.pi/spec/`), its tests and the source that meets them — are controlled. RDM keeps its record **in git, with GitHub as the service
+States how the controlled records in RDM's repository are controlled: RDM's
+own — this Design History File, its computer software validation (CSV-001),
+its spec (`.pi/spec/`), its tests and the source that meets them — and the
+worked example's, the computer software validation of Löyly's pi harness
+(`examples/loyly-pi-harness/`, CSV-HAR-001). This is the one Part 11 document
+for both: they share this repository, its history and its review. RDM keeps its record **in git, with GitHub as the service
 provider**; this statement maps each applicable 21 CFR Part 11 control to the
 mechanism that meets it, and it must pass gap analysis against RDM's own
 shipped `part11_document_control` checklist (item-05-004 — the same checklist any

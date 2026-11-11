@@ -2,6 +2,8 @@ import collections
 import os
 from importlib import import_module
 
+from pathlib import Path
+
 import jinja2
 from jinja2.environment import TemplateStream
 
@@ -49,6 +51,25 @@ def join_to(foreign_keys, table, primary_key='id'):
             raise ValueError(f"join_to: no row with {primary_key} {foreign_key!r} in the table")
         joined.append(selected_row)
     return joined
+
+
+def include(path):
+    """A text file's content, its YAML frontmatter (if any) left out, so a
+    document can carry another file as written: a feature file of the spec,
+    another document. The path is relative to where ``rdm render`` runs (the
+    project's root); a file that is missing is refused, naming it."""
+    text = Path(path).read_text(encoding="utf-8")
+    if text.startswith("---\n"):
+        end = text.find("\n---\n", 4)
+        if end != -1:
+            text = text[end + 5:]
+    return text.strip("\n")
+
+
+def glob(pattern):
+    """The paths matching ``pattern``, sorted, relative to where ``rdm render``
+    runs: every feature file of a spec, say, to ``include`` one by one."""
+    return sorted(str(path) for path in Path(".").glob(pattern))
 
 
 def md_indent(snippet, header_shift=0):
@@ -113,6 +134,8 @@ def _create_jinja_environment(config, loaders=None):
     environment.filters['invert_dependencies'] = invert_dependencies
     environment.filters['join_to'] = join_to
     environment.filters['md_indent'] = md_indent
+    environment.filters['include'] = include
+    environment.filters['glob'] = glob
 
     return environment
 

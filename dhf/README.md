@@ -26,10 +26,9 @@ documents/
   verification_and_validation_plan.md how RDM is verified and validated
   architecture.md                    the parts, the bounded contexts and the dependency rule
   design/<context>.md                the design output of one bounded context
-  risk/policy.md                     risk acceptability policy (RMP-001, proposed)
-  risk/tool_risks.md                 register of RDM's tool risks (RMF-001, proposed)
   document_control.md                git and GitHub as this record's document control (DC-001, Part 11-mapped)
-  tool_validation.md                 RDM validated as a tool: computer software assurance (CSV-001, proposed)
+  tool_validation.md                 RDM's final document (CSV-001, proposed): its validation as a tool,
+                                     with its architecture, risk policy and risks, and its whole spec, rendered
   user_manual.md                     the IFU: the docs site's pages, in reading order (IFU-001)
   traceability_matrix.md             the matrix template, rendered from generated data, never hand-edited
 decisions/

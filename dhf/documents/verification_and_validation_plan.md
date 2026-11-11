@@ -55,7 +55,7 @@ counts once it is verified and its risk's residual is acceptable.
 | `release/release-evidence` | maintainer review that a produced evidence bundle and DMR index are complete and agree with the record they were generated from | dogfooding: `rdm story dmr` / `evidence-bundle` run against RDM's own DHF |
 | `graph/explore-graph` | maintainer review that the projected graph agrees with the record it was built from (the spec's needs and requirements, contexts, documents, results, commits) and is explorable in a graph browser | dogfooding: RDM's own DHF projected, queried, and browsed in AWS Graph Explorer |
 | `graph/agent-reads-record` | maintainer review that an agent harness connected to the server answers traceability questions about RDM's own record correctly and has no way to change it | dogfooding: agent sessions on RDM itself using `rdm graph mcp` |
-| `risk/risk-register` | maintainer review that the gate's risk findings match a manual review of the same register with the risk-analysis method | dogfooding: RDM's own tool-risk register (`dhf/documents/risk/`) held to the release gate |
+| `risk/risk-register` | maintainer review that the gate's risk findings match a manual review of the same register with the risk-analysis method | dogfooding: RDM's own tool-risk register (in CSV-001, `dhf/documents/tool_validation.md`) held to the release gate |
 | `publishing/user-manual` | maintainer review that the manual's pages teach what the gates enforce | dogfooding: RDM's own manual (`dhf/documents/user_manual.md`), published per release |
 
 Formative evidence never gates release.

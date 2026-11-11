@@ -56,8 +56,8 @@ def test_renders_template_against_data_context(tmp_path: Path, capsys, monkeypat
 @allure.tag("item-07-002")
 @allure.label("output", "rdm/publishing/render.py")
 def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
-    """item-07-002: the invert_dependencies, join_to and md_indent filters, used from
-    a template."""
+    """item-07-002: the invert_dependencies, join_to, md_indent, glob and include
+    filters, used from a template."""
     with verification_step("invert_dependencies: edge A→B inverts to B being depended-on by {A}"):
         out = render_from_string("{% for b, a in items | invert_dependencies('id', 'deps') %}{{ b }}<-{{ a | sort }}"
                                  "{% endfor %}", context={"items": [{"id": "A", "deps": ["B"]}]})
@@ -70,6 +70,19 @@ def test_traceability_filters(tmp_path: Path, capsys, monkeypatch) -> None:
     with verification_step("md_indent: shift headings deeper by header_shift"):
         out = render_from_string("{{ snippet | md_indent(header_shift=1) }}", context={"snippet": "# Title"})
         assert out.strip() == "## Title", out
+    with verification_step("glob and include: every feature file of a spec, carried into a document as "
+                           "written, a document's frontmatter left out, paths from where rdm render runs"):
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "spec" / "b").mkdir(parents=True)
+        (tmp_path / "spec" / "a").mkdir(parents=True)
+        (tmp_path / "spec" / "b" / "spec.feature").write_text("Feature: B\n")
+        (tmp_path / "spec" / "a" / "spec.feature").write_text("Feature: A\n  Scenario: one\n")
+        (tmp_path / "arch.md").write_text("---\nid: SDS-1\n---\n# Architecture\n")
+        out = render_from_string("{% for f in 'spec/*/spec.feature' | glob %}[{{ f }}]{{ f | include }}{% endfor %}"
+                                 "|{{ 'arch.md' | include | md_indent(1) }}")
+        attach("rendered", out)
+        assert out.strip() == ("[spec/a/spec.feature]Feature: A\n  Scenario: one[spec/b/spec.feature]Feature: B"
+                               "|## Architecture"), out
     with verification_step("join_to refuses an id its table lacks, naming it: rdm render exits 2"):
         from rdm.main import cli
 

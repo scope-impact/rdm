@@ -27,7 +27,7 @@ Feature: Publishing
     # publishing.allium, surface CompileDhf, guarantee TraceabilityFilters
     @allium-guarantee.TraceabilityFilters
     @item-07-002
-    Scenario: invert_dependencies, join_to and md_indent build traceability tables
+    Scenario: invert_dependencies, join_to, md_indent, glob and include build traceability tables and final documents
       Given items with id A depending on B
       When a template inverts them with invert_dependencies('id', 'deps')
       Then B is depended on by ['A']
@@ -36,6 +36,9 @@ Feature: Publishing
       Then it reads the rows in that order: "2;1;"
       When a template indents the snippet "# Title" with md_indent(header_shift=1)
       Then it reads "## Title"
+      Given feature files spec/b/spec.feature ("Feature: B") and spec/a/spec.feature, and a document arch.md with frontmatter id SDS-1 and the heading "# Architecture"
+      When a template includes every file 'spec/*/spec.feature' | glob gives, and 'arch.md' | include | md_indent(1)
+      Then it carries spec/a/spec.feature, then spec/b/spec.feature, each as written, and "## Architecture" without the frontmatter
       When rdm render joins the id r9 to a table holding only r1
       Then rendering exits with status 2, naming r9
 

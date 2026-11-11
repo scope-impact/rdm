@@ -16,6 +16,12 @@ from the directory ``RDM_DHF_PDFS`` names when it is set -- CI renders them
 once, in the RDM image, and hands them to the docs build as an artifact:
 
     python docs/_hooks/dhf.py OUT     # every document's PDF, OUT/<path>.pdf
+    python docs/_hooks/dhf.py --dhf examples/loyly-pi-harness/dhf OUT   # another project's
+
+A document that holds Jinja is a template: it is rendered with ``rdm render``
+(the DHF's config and its generated ``data/*.yml``, from the project root)
+before it becomes a page or a PDF, so a final document carries the spec it
+``include``s and the evidence it reads.
 
 -- and are otherwise built here when ``pandoc`` and ``typst`` are on PATH;
 without either the pages carry no link.
@@ -198,7 +204,7 @@ def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
         source, pdf = out / "src" / rel, out / "pdf" / Path(rel).with_suffix(".pdf")
         source.parent.mkdir(parents=True, exist_ok=True)
         pdf.parent.mkdir(parents=True, exist_ok=True)
-        source.write_text(pdf_source(md.read_text(encoding="utf-8"), md), encoding="utf-8")
+        source.write_text(pdf_source(text_of(md), md), encoding="utf-8")
         result = subprocess.run([pandoc, "--defaults=pandoc_pdf.yml", f"--resource-path={md.parent}:{DHF}",
                                  str(source), "-o", str(pdf)], cwd=out, capture_output=True, text=True)
         if result.returncode:
@@ -208,6 +214,27 @@ def build_pdfs(documents: dict[str, Path], out: Path) -> dict[str, Path]:
 
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
         return {rel: pdf for rel, pdf in pool.map(lambda item: one(*item), documents.items()) if pdf}
+
+
+def text_of(md: Path) -> str:
+    """A document as published: as written, or, when it is a template (it holds
+    Jinja), rendered with ``rdm render`` from its project's root (the DHF's
+    parent: the paths its filters read are relative to it), with the DHF's
+    ``config.yml`` and the generated data in ``data/*.yml`` when there is any.
+    A final document carries its project's spec and evidence this way."""
+    text = md.read_text(encoding="utf-8")
+    if "{{" not in text and "{%" not in text:
+        return text
+    import contextlib
+
+    from rdm.kernel.util import load_yaml
+    from rdm.publishing.render import context_from_data_files, render_template_to_string
+
+    project = DHF.parent
+    config = load_yaml(str(DHF / "config.yml")) if (DHF / "config.yml").is_file() else {}
+    data = sorted(str(p.relative_to(project)) for p in (DHF / "data").glob("*.yml")) if (DHF / "data").is_dir() else []
+    with contextlib.chdir(project):
+        return render_template_to_string(config or {}, str(md.relative_to(project)), context_from_data_files(data))
 
 
 def published() -> dict[str, Path]:
@@ -276,7 +303,7 @@ def on_files(files, config):
         pdfs = build_pdfs(documents, Path(tempfile.mkdtemp(prefix="rdm-dhf-")))
     for rel, md in documents.items():
         pdf, name = pdfs.get(rel), Path(rel).with_suffix(".pdf")
-        files.append(File.generated(config, f"dhf/{rel}", content=page(md.read_text(encoding="utf-8"),
+        files.append(File.generated(config, f"dhf/{rel}", content=page(text_of(md),
                                                                        pdf and name.name)))
         if pdf:
             files.append(File.generated(config, f"dhf/{name.as_posix()}", abs_src_path=str(pdf)))
@@ -289,7 +316,11 @@ if __name__ == "__main__":  # render every document's PDF into a directory, as C
     import sys
 
     logging.basicConfig(format="%(levelname)s %(message)s")
-    out = Path(sys.argv[1]).resolve()
+    args = sys.argv[1:]
+    if args[:1] == ["--dhf"]:  # another project's DHF: the worked example's final document, say
+        DHF = Path(args[1]).resolve()
+        args = args[2:]
+    out = Path(args[0]).resolve()
     documents = published()
     built = build_pdfs(documents, Path(tempfile.mkdtemp(prefix="rdm-dhf-")))
     for rel, pdf in built.items():

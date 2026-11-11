@@ -86,6 +86,10 @@ def on_pre_build(config) -> None:
         subprocess.run([sys.executable, "-m", "pytest", "tests/acceptance", "-q",
                         "--clean-alluredir", "--alluredir", "dhf/allure-results"],
                        cwd=ROOT, capture_output=True, timeout=600)
+        # The verification data the final documents (RDM's CSV-001) render from.
+        from rdm.release.verify import verify_command
+
+        verify_command(ROOT / "dhf", ROOT / "dhf" / "allure-results", ROOT / "dhf" / "data" / "verification.yml")
     except Exception:
         pass  # the map then shows the results the record already has, or none
 

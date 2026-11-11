@@ -117,7 +117,7 @@ the chain, the scores, the residual decision and each controlling
 requirement with its runs; the agent's trace of a requirement lists the
 risks it controls. From the command line, use the query above.
 
-RDM's own [policy](../dhf/documents/risk/policy.md) and
-[register](../dhf/documents/risk/tool_risks.md) list the ways RDM itself could
+RDM's own policy and register, in its
+[computer software validation](../dhf/documents/tool_validation.md), list the ways RDM itself could
 misreport evidence; an agent wrote them, so they are proposed until a
 maintainer approves them.

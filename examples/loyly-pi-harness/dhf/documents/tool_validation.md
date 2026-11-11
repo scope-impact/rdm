@@ -194,10 +194,13 @@ risks:
 **Proposed, not yet approved.** The validation of Löyly's pi harness as a
 tool, an agentic software factory that regenerates software from its spec,
 and of the record system that keeps that validation (git, GitHub and RDM),
-the computer software assurance way ([[13485:4.1.6-procedure]]). This one
-document is the whole record: intended use, risk analysis (the risks are its
-frontmatter, which RDM's release gate evaluates), assurance, record, Part 11
-and change; the evidence of each run is the bundle RDM writes.
+the computer software assurance way ([[13485:4.1.6-procedure]]). This is the
+harness's final document: its intended use, architecture, risk analysis (the
+risk policy and the risks are its frontmatter, which RDM's release gate
+evaluates), its whole spec with each requirement's verification, the AI in
+it, the assurance, the record and change. It is a template: `rdm render`
+fills in the spec with the `include` and `glob` filters and the verification
+from `data/verification.yml`; Part 11 is RDM's DC-001.
 
 ## Intended use
 
@@ -208,6 +211,31 @@ by a grading agent). Its output, a regenerated candidate and its scoreboard, is 
 decide whether a regeneration of a product's software may proceed: it is
 used directly in production of software, and its scoreboard is a quality
 record ([[CSA:intended-use]], [[13485:7.5.6-software]]).
+
+## Architecture
+
+The pi harness is Löyly's regeneration harness: it stamps a spec, prepares a
+cycle on a pinned source cut, fences a clean room, has a builder regenerate
+the code from the spec alone, gates the candidate, and grades it against the
+spec's checklist. Its requirements are the 201 stamped scenarios of Löyly's
+spec v2; its user needs, the screens of each context's event model. Each
+bounded context is one slice of Löyly's plan:
+
+| Slice | Context | What it owns | Code |
+|---|---|---|---|
+| 01 | specification | stamping: an item identity per accepted scenario, never reused | `harness-impl/01-specification/` |
+| 02 | measurement | the checklist of a source cut, item verdicts, scores and the scoreboard | `harness-impl/02-measurement/` |
+| 03 | grader-lifecycle | instrument goldens, written from the scenario and moved only for a recorded reason | `harness-impl/03-grader-lifecycle/` |
+| 04 | regeneration-cycle | the self-check, the fence and its clean room, the gate and its attempts | `harness-impl/04-regeneration-cycle/` |
+| 05 | cycle-preparation | the pinned source cut | `harness-impl/05-cycle-preparation/` |
+| 06 | cycle-runner | runs a cycle: launches the builder, waits, hands verdicts in | `harness-impl/06-cycle-runner/` |
+
+The contexts meet only through the events each hands to another (each
+context's `event-model/handoffs.edn`) and the seams its `seam.md` describes.
+The fence and the grader approval are where the architecture controls the
+risks below. This record is kept from outside Löyly: the spec and the code
+are RDM's `loyly` submodule, every acceptance suite runs unchanged, and the
+evidence is their Allure results, each tied to the Löyly commit it tested.
 
 ## Process risk
 
@@ -234,6 +262,35 @@ reasonably foreseeable:
 ## Risk policy
 
 ## Risks
+
+## Specification
+
+The harness's spec, Löyly's spec v2, slice by slice: each accepted scenario,
+stamped `@item-NN-SSS`, is a requirement, verified by the harness's own
+acceptance suite through the bridge. The table is each requirement's
+verification from the executed results; the feature files follow, as
+written.
+
+{% if verification is defined %}
+{{ verification.summary.verified }} of {{ verification.summary.total }} requirements verified ({{ verification.summary.failed }} failed, {{ verification.summary.untested }} untested), from {{ verification.summary.results_found }} executed test results.
+
+| Requirement | Scenario | User need | Status |
+|---|---|---|---|
+{% for group in verification.groups %}{% for req in group.requirements %}| {{ req.requirement }} | {{ req.text }} | {{ group.user_need }} | {{ req.status }} |
+{% endfor %}{% endfor %}
+{% else %}
+The verification data is not part of this copy: run `run-acceptance.sh` and
+`rdm story verify` (`dhf/data/verification.yml`), then render it again.
+{% endif %}
+
+{% for feature in "../../loyly/.pi/plan/*/spec.feature" | glob %}
+### {{ feature.split("/")[-2] }}
+
+```gherkin
+{{ feature | include }}
+```
+
+{% endfor %}
 
 ## AI in the harness
 
@@ -287,47 +344,11 @@ records it.
 
 The validation record is required as evidence of a validated state and is
 kept electronically, so it is a Part 11 electronic record and the system
-that keeps it is held to Part 11 ([[CSA:part11]]): git as the document
-control system, GitHub as its service provider, RDM's gates. Each control:
-
-- **Validation** [[P11:11.10a]] — the record system (git, GitHub and RDM's
-  gates) is validated by this document, as the harness is: on a justified,
-  documented risk assessment, with assurance activities proportionate to it,
-  and a record of each run. RDM's own acceptance tests verify the gates it
-  runs; altered records are discernible by construction, as any change
-  produces a new commit SHA.
-- **Copies** [[P11:11.10b]] — the evidence bundle holds the verification
-  report (PDF, human-readable) and the results, the verification data and the
-  matrix (electronic); `git archive` at any commit reproduces the record.
-- **Retention and retrieval** [[P11:11.10c]] — every clone is a full replica
-  of the history; the evidence bundle of each validation is kept as a CI
-  artifact and with its release.
-- **Access** [[P11:11.10d]] — write access is limited to the repository's
-  authorized members, with two-factor authentication.
-- **Audit trail** [[P11:11.10e]] — the git history: SHA-chained,
-  computer-generated, time-stamped and attributed; a later change never
-  obscures an earlier one.
-- **Sequencing** [[P11:11.10f]] — CI runs the harness's suites, then verify,
-  the release gate, gap analysis, graph validation and the evidence bundle,
-  in that order, and a failing step stops the rest.
-- **Authority** [[P11:11.10g]] — only an authorized reviewer other than the
-  author approves a pull request into the default branch.
-- **Device checks** [[P11:11.10h]] — every writing client authenticates with
-  a credential bound to an individual's two-factor-protected account.
-- **Training** [[P11:11.10i]] — contributors, human or agent, are directed by
-  the repository's contributor guides before changing the record.
-- **Signature accountability** [[P11:11.10j]] — a pull-request approval is
-  the approver's electronic signature, and the approver is accountable for
-  what it approves.
-- **Systems documentation control** [[P11:11.10k]] — this statement, the
-  validation and the CI workflow are controlled in the same repository and
-  change only through the path they describe.
-- **Signature manifestation** [[P11:11.50]] — the review records the
-  approver, the UTC time and the meaning (approved).
-- **Signature–record linking** [[P11:11.70]] — a review is bound to the
-  commit SHA it approves.
-- **Signature uniqueness** [[P11:11.100]] — one account per individual, never
-  reused or reassigned.
+that keeps it is held to Part 11 ([[CSA:part11]]). This record lives in
+RDM's repository, so that system is RDM's own (git as the document control
+system, GitHub as its service provider, RDM's gates), and RDM's Part 11
+document, DC-001, maps its controls; its §11.10(a) validation is RDM's
+CSV-001, done as this one is.
 
 ## Change
 
