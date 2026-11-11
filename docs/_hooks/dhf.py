@@ -59,7 +59,7 @@ _HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 
 def _value(value) -> str:
     if isinstance(value, list):
-        return ", ".join(_value(v) for v in value)
+        return ", ".join(_value(v) for v in value) if value else "none"
     if isinstance(value, dict):
         return "; ".join(f"{k} {_value(v)}" for k, v in value.items())
     return html.escape(str(value), quote=False)
