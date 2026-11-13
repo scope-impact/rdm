@@ -91,11 +91,11 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/local/bin/chrome-headless-shell
 # wheel in dist/ next to this Dockerfile when there is one, else the RDM
 # release this project was laid down with, from git. The Dockerfile is copied
 # too only so the COPY never matches nothing when there is no dist/.
-ARG RDM_SPEC="rdm[graph] @ git+https://github.com/scope-impact/rdm@v{rdm_version}"
+ARG RDM_SPEC="rdm[graph,pdf] @ git+https://github.com/scope-impact/rdm@v{rdm_version}"
 COPY Dockerfile dist* /tmp/rdm-build/
 RUN python3 -m venv /opt/rdm && \
     wheel="$(ls /tmp/rdm-build/*.whl 2>/dev/null | head -n 1)" && \
-    if [ -n "$wheel" ]; then /opt/rdm/bin/pip install --no-cache-dir "${wheel}[graph]"; \
+    if [ -n "$wheel" ]; then /opt/rdm/bin/pip install --no-cache-dir "${wheel}[graph,pdf]"; \
     else /opt/rdm/bin/pip install --no-cache-dir "$RDM_SPEC"; fi && \
     rm -rf /tmp/rdm-build
 ENV PATH="/opt/rdm/bin:${PATH}"
