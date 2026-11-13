@@ -33,7 +33,23 @@ jobs:
       - name: Lint
         run: uv run ruff check .
       - name: Tests
-        run: uv run pytest tests
+        run: uv run pytest tests --alluredir allure-results
+      # CSV-001 rendered with this run's results: the copy of RDM's tool
+      # validation that users keep with their evaluations. Written when tests
+      # fail too, so a failure shows in the record.
+      - name: RDM's tool validation (CSV-001), with this run's verification
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p tool-validation dhf/data
+          uv run rdm story verify --dhf dhf --allure-results allure-results -o dhf/data/verification.yml
+          uv run rdm render dhf/documents/tool_validation.md dhf/config.yml dhf/data/verification.yml \
+            > tool-validation/rdm-tool-validation.md
+      - name: Upload the tool validation
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tool-validation-rdm
+          path: tool-validation/rdm-tool-validation.md
 
   # Löyly's pi harness, audited from outside (examples/loyly-pi-harness): its
   # six clojure.test suites run unchanged, a bridge writes Allure, and RDM's
@@ -81,6 +97,9 @@ jobs:
           uv run rdm graph validate --dhf dhf --allure-results dhf/allure-results \
             --checklist csv_tool_validation
           uv run rdm story evidence-bundle --dhf dhf --allure-results dhf/allure-results -o release-evidence
+          # CSV-HAR-001 rendered with this run's verification, for the evaluations users keep.
+          uv run rdm render dhf/documents/tool_validation.md dhf/config.yml dhf/data/verification.yml \
+            > release-evidence/loyly-pi-harness-tool-validation.md
       - name: The harness's release evidence (verification report PDF, matrix, results)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
