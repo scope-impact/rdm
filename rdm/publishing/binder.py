@@ -133,25 +133,67 @@ def _page(title: str, subtitle: str, kind: str, style: dict | None = None):
 def _number_pages(writer, title: str, style: dict) -> None:
     """Stamp each page but the cover with the binder's own page number, in the
     bottom margin under the documents' footers, so a page can be cited in the
-    binder (each document numbers its pages from 1)."""
-    PdfReader, _, colors, _, cm, canvas = _require_pdf_dependencies()
+    binder (each document numbers its pages from 1).
+
+    The stamp is a few operators appended to each page's content, in a
+    built-in font shared by every page. Merging a stamp page instead
+    (pypdf's merge_page) gives each page its own copy of the resources it
+    shares with its document's other pages: a 260-page binder grew from
+    3 MB to 13 MB.
+    """
+    from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NameObject
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
     style = {**DEFAULT_STYLE, **(style or {})}
-    font = _font(style["text_font"], "Helvetica")
+    colour = colors.HexColor(style["page_number_color"])
+    font_name = NameObject("/RdmBinderPageNumber")
+    font = writer._add_object(DictionaryObject({
+        NameObject("/Type"): NameObject("/Font"),
+        NameObject("/Subtype"): NameObject("/Type1"),
+        NameObject("/BaseFont"): NameObject("/Helvetica"),
+        NameObject("/Encoding"): NameObject("/WinAnsiEncoding"),
+    }))
+
+    def stream(data: bytes):
+        s = DecodedStreamObject()
+        s.set_data(data)
+        return writer._add_object(s)
+
+    # The page's own content runs in a saved graphics state, so whatever
+    # state it leaves cannot move or recolour the stamp.
+    save = stream(b"q\n")
     total = len(writer.pages)
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer)
     for number, page in enumerate(writer.pages, start=1):
-        width, height = float(page.mediabox.width), float(page.mediabox.height)
-        c.setPageSize((width, height))
-        if number > 1:
-            c.setFillColor(colors.HexColor(style["page_number_color"]))
-            c.setFont(font, 7)
-            c.drawRightString(width - 2 * cm, 0.7 * cm, f"{title} · page {number} of {total}")
-        c.showPage()
-    c.save()
-    buffer.seek(0)
-    for page, stamp in zip(writer.pages, PdfReader(buffer).pages):
-        page.merge_page(stamp)
+        if number == 1:
+            continue
+        text = f"{title} \u00b7 page {number} of {total}"
+        encoded = text.encode("cp1252", "replace")
+        escaped = encoded.replace(b"\\", b"\\\\").replace(b"(", b"\\(").replace(b")", b"\\)")
+        x0, _, x1, _ = (float(v) for v in page.mediabox)
+        x = x1 - 2 * cm - stringWidth(text, "Helvetica", 7)
+        y = float(page.mediabox[1]) + 0.7 * cm
+        stamp = stream(
+            b"Q\nq BT /RdmBinderPageNumber 7 Tf "
+            + f"{colour.red:.3f} {colour.green:.3f} {colour.blue:.3f} rg {x:.2f} {y:.2f} Td (".encode()
+            + escaped + b") Tj ET Q\n"
+        )
+        contents = page.get("/Contents")
+        if contents is None:
+            parts = []
+        elif isinstance(contents.get_object(), ArrayObject):
+            parts = list(contents.get_object())
+        else:
+            parts = [page.raw_get("/Contents")]
+        page[NameObject("/Contents")] = ArrayObject([save, *parts, stamp])
+
+        if "/Resources" not in page:
+            page[NameObject("/Resources")] = DictionaryObject()
+        resources = page["/Resources"].get_object()
+        if "/Font" not in resources:
+            resources[NameObject("/Font")] = DictionaryObject()
+        resources["/Font"].get_object()[font_name] = font
 
 
 def _append_reader(writer, reader) -> int:
