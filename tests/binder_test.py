@@ -125,8 +125,11 @@ def test_a_section_of_one_document_has_no_divider(tmp_path: Path) -> None:
 
     # cover, history, divider + A + B, divider + A
     assert pages == 7
-    assert "History" in PdfReader(str(output)).pages[1].extract_text()
-    assert _outline_titles(PdfReader(str(output)).outline) == [
+    reader = PdfReader(str(output))
+    assert "History" in reader.pages[1].extract_text()
+    # every bookmark lands on its page: the history's on the history itself
+    assert [reader.get_destination_page_number(o) for o in reader.outline if not isinstance(o, list)] == [0, 1, 2, 5]
+    assert _outline_titles(reader.outline) == [
         "Example DHF Binder",
         "Revision history",
         "Records", "Document A", "Document B",

@@ -199,20 +199,23 @@ def build_binder(
         # A section of one document opens on that document's own cover: a
         # divider before it would be a second cover. A section may say so
         # itself with divider: true or false.
+        section_bookmark = None
         if dividers and section.get("divider", len(files) != 1):
             section_start = _append_reader(
                 writer,
                 _page(section_title, str(section.get("subtitle") or ""), "divider", style),
             )
-        else:
-            section_start = len(writer.pages)
-        section_bookmark = writer.add_outline_item(section_title, section_start)
+            section_bookmark = writer.add_outline_item(section_title, section_start)
 
         for entry in files:
             input_path = Path(entry["path"])
             if not input_path.is_absolute():
                 input_path = base / input_path
             document_start = _append_reader(writer, PdfReader(str(input_path)))
+            # Without a divider the section's bookmark is its first document's
+            # first page, which exists only now.
+            if section_bookmark is None:
+                section_bookmark = writer.add_outline_item(section_title, document_start)
             # One document under a section of its own title: the section's
             # bookmark is enough.
             if len(files) != 1 or str(entry["title"]) != section_title:
