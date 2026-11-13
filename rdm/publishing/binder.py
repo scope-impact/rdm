@@ -38,12 +38,53 @@ def load_manifest(path: Path) -> dict[str, Any]:
     return data
 
 
-def _page(title: str, subtitle: str, kind: str):
-    _, _, colors, A4, cm, canvas = _require_pdf_dependencies()
+# The binder's own pages (cover, section dividers) by default; a manifest's
+# style: overrides any of these, so a binder can match its documents' template.
+DEFAULT_STYLE = {
+    "background": "#00414D",  # page fill
+    "accent": "#ED8023",      # the small label above the title
+    "text": "#FFFFFF",        # title and subtitle
+    "rule": "#22565E",        # the line under a section's title
+    "title_font": None,       # a TrueType file; none: Times-Bold
+    "text_font": None,        # a TrueType file; none: Helvetica
+    "label": "RELEASE BINDER",
+    "section_label": "BINDER SECTION",
+}
 
-    deep_teal = colors.HexColor("#00414D")
-    teal_mid = colors.HexColor("#22565E")
-    orange = colors.HexColor("#ED8023")
+
+def _font(path, fallback: str) -> str:
+    """A TrueType font registered once under its file's stem, or the fallback
+    built-in font when none is given or the file is missing."""
+    if not path or not Path(path).is_file():
+        return fallback
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    name = Path(path).stem
+    if name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(name, str(path)))
+    return name
+
+
+def _page(title: str, subtitle: str, kind: str, style: dict | None = None):
+    _, _, colors, A4, cm, canvas = _require_pdf_dependencies()
+    style = {**DEFAULT_STYLE, **(style or {})}
+
+    deep_teal = colors.HexColor(style["background"])
+    teal_mid = colors.HexColor(style["rule"])
+    orange = colors.HexColor(style["accent"])
+    ink = colors.HexColor(style["text"])
+    title_font = _font(style["title_font"], "Times-Bold")
+    text_font = _font(style["text_font"], "Helvetica")
+    label_font = text_font if style["text_font"] and text_font != "Helvetica" else "Helvetica-Bold"
+
+    def fitted(text: str, font: str, size: float, room: float) -> float:
+        """The size, shrunk until the text fits the room (a long title in a wide font)."""
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+
+        while size > 10 and stringWidth(text, font, size) > room:
+            size -= 1
+        return size
 
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -51,29 +92,29 @@ def _page(title: str, subtitle: str, kind: str):
 
     c.setFillColor(deep_teal)
     c.rect(0, 0, width, height, fill=1, stroke=0)
-    c.setFillColor(colors.white)
+    c.setFillColor(ink)
 
     if kind == "cover":
         c.setFillColor(orange)
-        c.setFont("Helvetica-Bold", 11)
-        c.drawCentredString(width / 2, height - 4.6 * cm, "RELEASE BINDER")
-        c.setFillColor(colors.white)
-        c.setFont("Times-Bold", 28)
+        c.setFont(label_font, 11)
+        c.drawCentredString(width / 2, height - 4.6 * cm, style["label"])
+        c.setFillColor(ink)
+        c.setFont(title_font, fitted(title, title_font, 28, width - 4 * cm))
         c.drawCentredString(width / 2, height - 6.2 * cm, title)
         if subtitle:
-            c.setFont("Helvetica", 14)
+            c.setFont(text_font, 14)
             c.drawCentredString(width / 2, height - 7.4 * cm, subtitle)
-        c.setFont("Helvetica", 10)
+        c.setFont(text_font, 10)
         c.drawCentredString(width / 2, 3.2 * cm, f"Generated {date.today().isoformat()}")
     else:
         c.setFillColor(orange)
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(2.6 * cm, height - 6.5 * cm, "BINDER SECTION")
-        c.setFillColor(colors.white)
-        c.setFont("Times-Bold", 25)
+        c.setFont(label_font, 10)
+        c.drawString(2.6 * cm, height - 6.5 * cm, style["section_label"])
+        c.setFillColor(ink)
+        c.setFont(title_font, fitted(title, title_font, 25, width - 5.2 * cm))
         c.drawString(2.6 * cm, height - 8.1 * cm, title)
         if subtitle:
-            c.setFont("Helvetica", 12)
+            c.setFont(text_font, 12)
             c.drawString(2.6 * cm, height - 9.0 * cm, subtitle)
         c.setStrokeColor(teal_mid)
         c.setLineWidth(1)
@@ -118,9 +159,10 @@ def build_binder(
     writer = PdfWriter()
 
     title = str(manifest.get("title") or "Release Binder")
+    style = manifest.get("style") or {}
     cover_start = _append_reader(
         writer,
-        _page(title, str(manifest.get("subtitle") or ""), "cover"),
+        _page(title, str(manifest.get("subtitle") or ""), "cover", style),
     )
     writer.add_outline_item(title, cover_start)
 
@@ -129,7 +171,7 @@ def build_binder(
         if dividers:
             section_start = _append_reader(
                 writer,
-                _page(section_title, str(section.get("subtitle") or ""), "divider"),
+                _page(section_title, str(section.get("subtitle") or ""), "divider", style),
             )
         else:
             section_start = len(writer.pages)

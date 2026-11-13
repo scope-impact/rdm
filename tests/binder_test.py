@@ -77,3 +77,23 @@ def test_missing_manifest_input_fails(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError, match="release/missing.pdf"):
         build_binder(manifest)
+
+
+def test_style_sets_the_binders_own_pages(tmp_path):
+    """A manifest's style: colours the cover and dividers; unknown fonts fall back."""
+    from pypdf import PdfReader as Reader
+
+    doc = tmp_path / "a.pdf"
+    _write_pdf(doc, "A")
+    manifest = tmp_path / "binder.json"
+    manifest.write_text(json.dumps({
+        "title": "A binder whose title is long enough to need a smaller size on the cover page",
+        "output": "out.pdf",
+        "style": {"background": "#55111F", "accent": "#F7F5F3", "text": "#FFFFFF",
+                  "title_font": str(tmp_path / "missing.ttf"), "label": "COMPLIANCE RECORD"},
+        "sections": [{"title": "One", "files": [{"title": "A", "path": "a.pdf"}]}],
+    }))
+    out, pages = build_binder(manifest)
+    assert pages == 3
+    cover = Reader(str(out)).pages[0].extract_text()
+    assert "COMPLIANCE RECORD" in cover and "RELEASE BINDER" not in cover
