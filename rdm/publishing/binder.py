@@ -38,12 +38,55 @@ def load_manifest(path: Path) -> dict[str, Any]:
     return data
 
 
-def _page(title: str, subtitle: str, kind: str):
-    _, _, colors, A4, cm, canvas = _require_pdf_dependencies()
+# The binder's own pages (cover, section dividers) by default; a manifest's
+# style: overrides any of these, so a binder can match its documents' template.
+DEFAULT_STYLE = {
+    "background": "#00414D",  # page fill
+    "accent": "#ED8023",      # the small label above the title
+    "text": "#FFFFFF",        # title and subtitle
+    "rule": "#22565E",        # the line under a section's title
+    "title_font": None,       # a TrueType file; none: Times-Bold
+    "text_font": None,        # a TrueType file; none: Helvetica
+    "label": "RELEASE BINDER",
+    "section_label": "BINDER SECTION",
+    "page_numbers": False,    # the binder's own page number on every page
+    "page_number_color": "#8A8A8A",  # legible on light and dark pages
+}
 
-    deep_teal = colors.HexColor("#00414D")
-    teal_mid = colors.HexColor("#22565E")
-    orange = colors.HexColor("#ED8023")
+
+def _font(path, fallback: str) -> str:
+    """A TrueType font registered once under its file's stem, or the fallback
+    built-in font when none is given or the file is missing."""
+    if not path or not Path(path).is_file():
+        return fallback
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    name = Path(path).stem
+    if name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(name, str(path)))
+    return name
+
+
+def _page(title: str, subtitle: str, kind: str, style: dict | None = None):
+    _, _, colors, A4, cm, canvas = _require_pdf_dependencies()
+    style = {**DEFAULT_STYLE, **(style or {})}
+
+    deep_teal = colors.HexColor(style["background"])
+    teal_mid = colors.HexColor(style["rule"])
+    orange = colors.HexColor(style["accent"])
+    ink = colors.HexColor(style["text"])
+    title_font = _font(style["title_font"], "Times-Bold")
+    text_font = _font(style["text_font"], "Helvetica")
+    label_font = text_font if style["text_font"] and text_font != "Helvetica" else "Helvetica-Bold"
+
+    def fitted(text: str, font: str, size: float, room: float) -> float:
+        """The size, shrunk until the text fits the room (a long title in a wide font)."""
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+
+        while size > 10 and stringWidth(text, font, size) > room:
+            size -= 1
+        return size
 
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -51,39 +94,64 @@ def _page(title: str, subtitle: str, kind: str):
 
     c.setFillColor(deep_teal)
     c.rect(0, 0, width, height, fill=1, stroke=0)
-    c.setFillColor(colors.white)
+    c.setFillColor(ink)
 
     if kind == "cover":
         c.setFillColor(orange)
-        c.setFont("Helvetica-Bold", 11)
-        c.drawCentredString(width / 2, height - 4.6 * cm, "RELEASE BINDER")
-        c.setFillColor(colors.white)
-        c.setFont("Times-Bold", 28)
+        c.setFont(label_font, 11)
+        c.drawCentredString(width / 2, height - 4.6 * cm, style["label"])
+        c.setFillColor(ink)
+        c.setFont(title_font, fitted(title, title_font, 28, width - 4 * cm))
         c.drawCentredString(width / 2, height - 6.2 * cm, title)
         if subtitle:
-            c.setFont("Helvetica", 14)
+            c.setFont(text_font, 14)
             c.drawCentredString(width / 2, height - 7.4 * cm, subtitle)
-        c.setFont("Helvetica", 10)
+        c.setFont(text_font, 10)
         c.drawCentredString(width / 2, 3.2 * cm, f"Generated {date.today().isoformat()}")
     else:
+        # Centred, as the cover and the documents' own covers are.
         c.setFillColor(orange)
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(2.6 * cm, height - 6.5 * cm, "BINDER SECTION")
-        c.setFillColor(colors.white)
-        c.setFont("Times-Bold", 25)
-        c.drawString(2.6 * cm, height - 8.1 * cm, title)
+        c.setFont(label_font, 10)
+        c.drawCentredString(width / 2, height - 4.6 * cm, style["section_label"])
+        c.setFillColor(ink)
+        c.setFont(title_font, fitted(title, title_font, 25, width - 4 * cm))
+        c.drawCentredString(width / 2, height - 6.2 * cm, title)
         if subtitle:
-            c.setFont("Helvetica", 12)
-            c.drawString(2.6 * cm, height - 9.0 * cm, subtitle)
+            c.setFont(text_font, 12)
+            c.drawCentredString(width / 2, height - 7.2 * cm, subtitle)
         c.setStrokeColor(teal_mid)
         c.setLineWidth(1)
-        c.line(2.6 * cm, height - 9.8 * cm, width - 2.6 * cm, height - 9.8 * cm)
+        c.line(width / 2 - 3 * cm, height - 8.0 * cm, width / 2 + 3 * cm, height - 8.0 * cm)
 
     c.showPage()
     c.save()
     buffer.seek(0)
     PdfReader, _, _, _, _, _ = _require_pdf_dependencies()
     return PdfReader(buffer)
+
+
+def _number_pages(writer, title: str, style: dict) -> None:
+    """Stamp each page but the cover with the binder's own page number, in the
+    bottom margin under the documents' footers, so a page can be cited in the
+    binder (each document numbers its pages from 1)."""
+    PdfReader, _, colors, _, cm, canvas = _require_pdf_dependencies()
+    style = {**DEFAULT_STYLE, **(style or {})}
+    font = _font(style["text_font"], "Helvetica")
+    total = len(writer.pages)
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer)
+    for number, page in enumerate(writer.pages, start=1):
+        width, height = float(page.mediabox.width), float(page.mediabox.height)
+        c.setPageSize((width, height))
+        if number > 1:
+            c.setFillColor(colors.HexColor(style["page_number_color"]))
+            c.setFont(font, 7)
+            c.drawRightString(width - 2 * cm, 0.7 * cm, f"{title} · page {number} of {total}")
+        c.showPage()
+    c.save()
+    buffer.seek(0)
+    for page, stamp in zip(writer.pages, PdfReader(buffer).pages):
+        page.merge_page(stamp)
 
 
 def _append_reader(writer, reader) -> int:
@@ -118,29 +186,43 @@ def build_binder(
     writer = PdfWriter()
 
     title = str(manifest.get("title") or "Release Binder")
+    style = manifest.get("style") or {}
     cover_start = _append_reader(
         writer,
-        _page(title, str(manifest.get("subtitle") or ""), "cover"),
+        _page(title, str(manifest.get("subtitle") or ""), "cover", style),
     )
     writer.add_outline_item(title, cover_start)
 
     for section in manifest.get("sections", []):
         section_title = str(section["title"])
-        if dividers:
+        files = section.get("files", [])
+        # A section of one document opens on that document's own cover: a
+        # divider before it would be a second cover. A section may say so
+        # itself with divider: true or false.
+        section_bookmark = None
+        if dividers and section.get("divider", len(files) != 1):
             section_start = _append_reader(
                 writer,
-                _page(section_title, str(section.get("subtitle") or ""), "divider"),
+                _page(section_title, str(section.get("subtitle") or ""), "divider", style),
             )
-        else:
-            section_start = len(writer.pages)
-        section_bookmark = writer.add_outline_item(section_title, section_start)
+            section_bookmark = writer.add_outline_item(section_title, section_start)
 
-        for entry in section.get("files", []):
+        for entry in files:
             input_path = Path(entry["path"])
             if not input_path.is_absolute():
                 input_path = base / input_path
             document_start = _append_reader(writer, PdfReader(str(input_path)))
-            writer.add_outline_item(str(entry["title"]), document_start, parent=section_bookmark)
+            # Without a divider the section's bookmark is its first document's
+            # first page, which exists only now.
+            if section_bookmark is None:
+                section_bookmark = writer.add_outline_item(section_title, document_start)
+            # One document under a section of its own title: the section's
+            # bookmark is enough.
+            if len(files) != 1 or str(entry["title"]) != section_title:
+                writer.add_outline_item(str(entry["title"]), document_start, parent=section_bookmark)
+
+    if style.get("page_numbers"):
+        _number_pages(writer, title, style)
 
     with output_path.open("wb") as stream:
         writer.write(stream)
