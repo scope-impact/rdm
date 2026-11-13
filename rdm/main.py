@@ -53,6 +53,14 @@ def cli(raw_arguments):
     elif args.command == 'adopt':
         from rdm.specification.adopt import adopt_command
         exit_code = adopt_command(args.target)
+    elif args.command == 'binder':
+        from rdm.publishing.binder import binder_command
+        exit_code = binder_command(
+            args.manifest,
+            root=args.root,
+            output=args.output,
+            no_dividers=args.no_dividers,
+        )
     elif args.command == 'collect':
         try:
             snippets = collect_from_files(args.files)
@@ -197,6 +205,17 @@ def parse_arguments(arguments):
     render_parser.add_argument('template')
     render_parser.add_argument('config', help='Path to project `config.yml` file')
     render_parser.add_argument('data_files', nargs='*')
+
+    binder_help = 'assemble rendered PDFs into a bookmarked release binder'
+    binder_parser = subparsers.add_parser('binder', help=binder_help)
+    binder_parser.add_argument('manifest', nargs='?', default='binder.json',
+                               help='JSON/YAML binder manifest (default: binder.json)')
+    binder_parser.add_argument('--root',
+                               help='base directory for manifest paths (default: manifest directory)')
+    binder_parser.add_argument('-o', '--output',
+                               help='override output PDF path from the manifest')
+    binder_parser.add_argument('--no-dividers', action='store_true',
+                               help='omit section divider pages while preserving bookmarks')
 
     gap_help = 'use checklist to verify documents have expected references to particular standard(s)'
     gap_parser = subparsers.add_parser('gap', help=gap_help)

@@ -22,6 +22,9 @@ all: $(RELEASE_MDS)
 
 pdfs: $(RELEASE_PDFS)
 
+binder: pdfs
+	rdm binder binder.yml
+
 docs: $(RELEASE_DOCS)
 
 release/%.md: documents/%.md $(CONFIG) $(DATA_FILES)
@@ -41,7 +44,7 @@ release/%.typ: release/%.md pandoc_pdf.yml template.typ
 	@mkdir -p $(@D)
 	pandoc --defaults=./pandoc_pdf.yml --resource-path=$(RESOURCE_PATH) -t typst $< -o $@
 
-.PHONY: all pdfs docs clean
+.PHONY: all pdfs binder docs clean
 
 clean:
 	rm -rf tmp release
