@@ -91,9 +91,68 @@ def test_style_sets_the_binders_own_pages(tmp_path):
         "output": "out.pdf",
         "style": {"background": "#55111F", "accent": "#F7F5F3", "text": "#FFFFFF",
                   "title_font": str(tmp_path / "missing.ttf"), "label": "COMPLIANCE RECORD"},
-        "sections": [{"title": "One", "files": [{"title": "A", "path": "a.pdf"}]}],
+        "sections": [{"title": "One", "divider": True, "files": [{"title": "A", "path": "a.pdf"}]}],
     }))
     out, pages = build_binder(manifest)
     assert pages == 3
     cover = Reader(str(out)).pages[0].extract_text()
     assert "COMPLIANCE RECORD" in cover and "RELEASE BINDER" not in cover
+
+
+def test_a_section_of_one_document_has_no_divider(tmp_path: Path) -> None:
+    from pypdf import PdfReader
+
+    _write_pdf(tmp_path / "release" / "history.pdf", "History")
+    _write_pdf(tmp_path / "release" / "a.pdf", "A")
+    _write_pdf(tmp_path / "release" / "b.pdf", "B")
+    manifest = tmp_path / "binder.json"
+    manifest.write_text(json.dumps({
+        "title": "Example DHF Binder",
+        "output": "release/binder.pdf",
+        "sections": [
+            {"title": "Revision history",
+             "files": [{"title": "Revision history", "path": "release/history.pdf"}]},
+            {"title": "Records", "files": [
+                {"title": "Document A", "path": "release/a.pdf"},
+                {"title": "Document B", "path": "release/b.pdf"},
+            ]},
+            {"title": "Forced", "divider": True,
+             "files": [{"title": "Document A again", "path": "release/a.pdf"}]},
+        ],
+    }))
+
+    output, pages = build_binder(manifest)
+
+    # cover, history, divider + A + B, divider + A
+    assert pages == 7
+    assert "History" in PdfReader(str(output)).pages[1].extract_text()
+    assert _outline_titles(PdfReader(str(output)).outline) == [
+        "Example DHF Binder",
+        "Revision history",
+        "Records", "Document A", "Document B",
+        "Forced", "Document A again",
+    ]
+
+
+def test_page_numbers_stamp_every_page_but_the_cover(tmp_path: Path) -> None:
+    from pypdf import PdfReader
+
+    _write_pdf(tmp_path / "release" / "a.pdf", "A")
+    _write_pdf(tmp_path / "release" / "b.pdf", "B")
+    manifest = tmp_path / "binder.json"
+    manifest.write_text(json.dumps({
+        "title": "Example Binder",
+        "output": "release/binder.pdf",
+        "style": {"page_numbers": True},
+        "sections": [{"title": "Records", "files": [
+            {"title": "Document A", "path": "release/a.pdf"},
+            {"title": "Document B", "path": "release/b.pdf"},
+        ]}],
+    }))
+
+    output, pages = build_binder(manifest)
+
+    texts = [p.extract_text() for p in PdfReader(str(output)).pages]
+    assert "page 1 of" not in texts[0]
+    assert "Example Binder · page 3 of 4" in texts[2]
+    assert "A" in texts[2]

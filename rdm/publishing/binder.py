@@ -49,6 +49,8 @@ DEFAULT_STYLE = {
     "text_font": None,        # a TrueType file; none: Helvetica
     "label": "RELEASE BINDER",
     "section_label": "BINDER SECTION",
+    "page_numbers": False,    # the binder's own page number on every page
+    "page_number_color": "#8A8A8A",  # legible on light and dark pages
 }
 
 
@@ -107,24 +109,49 @@ def _page(title: str, subtitle: str, kind: str, style: dict | None = None):
         c.setFont(text_font, 10)
         c.drawCentredString(width / 2, 3.2 * cm, f"Generated {date.today().isoformat()}")
     else:
+        # Centred, as the cover and the documents' own covers are.
         c.setFillColor(orange)
         c.setFont(label_font, 10)
-        c.drawString(2.6 * cm, height - 6.5 * cm, style["section_label"])
+        c.drawCentredString(width / 2, height - 4.6 * cm, style["section_label"])
         c.setFillColor(ink)
-        c.setFont(title_font, fitted(title, title_font, 25, width - 5.2 * cm))
-        c.drawString(2.6 * cm, height - 8.1 * cm, title)
+        c.setFont(title_font, fitted(title, title_font, 25, width - 4 * cm))
+        c.drawCentredString(width / 2, height - 6.2 * cm, title)
         if subtitle:
             c.setFont(text_font, 12)
-            c.drawString(2.6 * cm, height - 9.0 * cm, subtitle)
+            c.drawCentredString(width / 2, height - 7.2 * cm, subtitle)
         c.setStrokeColor(teal_mid)
         c.setLineWidth(1)
-        c.line(2.6 * cm, height - 9.8 * cm, width - 2.6 * cm, height - 9.8 * cm)
+        c.line(width / 2 - 3 * cm, height - 8.0 * cm, width / 2 + 3 * cm, height - 8.0 * cm)
 
     c.showPage()
     c.save()
     buffer.seek(0)
     PdfReader, _, _, _, _, _ = _require_pdf_dependencies()
     return PdfReader(buffer)
+
+
+def _number_pages(writer, title: str, style: dict) -> None:
+    """Stamp each page but the cover with the binder's own page number, in the
+    bottom margin under the documents' footers, so a page can be cited in the
+    binder (each document numbers its pages from 1)."""
+    PdfReader, _, colors, _, cm, canvas = _require_pdf_dependencies()
+    style = {**DEFAULT_STYLE, **(style or {})}
+    font = _font(style["text_font"], "Helvetica")
+    total = len(writer.pages)
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer)
+    for number, page in enumerate(writer.pages, start=1):
+        width, height = float(page.mediabox.width), float(page.mediabox.height)
+        c.setPageSize((width, height))
+        if number > 1:
+            c.setFillColor(colors.HexColor(style["page_number_color"]))
+            c.setFont(font, 7)
+            c.drawRightString(width - 2 * cm, 0.7 * cm, f"{title} · page {number} of {total}")
+        c.showPage()
+    c.save()
+    buffer.seek(0)
+    for page, stamp in zip(writer.pages, PdfReader(buffer).pages):
+        page.merge_page(stamp)
 
 
 def _append_reader(writer, reader) -> int:
@@ -168,7 +195,11 @@ def build_binder(
 
     for section in manifest.get("sections", []):
         section_title = str(section["title"])
-        if dividers:
+        files = section.get("files", [])
+        # A section of one document opens on that document's own cover: a
+        # divider before it would be a second cover. A section may say so
+        # itself with divider: true or false.
+        if dividers and section.get("divider", len(files) != 1):
             section_start = _append_reader(
                 writer,
                 _page(section_title, str(section.get("subtitle") or ""), "divider", style),
@@ -177,12 +208,18 @@ def build_binder(
             section_start = len(writer.pages)
         section_bookmark = writer.add_outline_item(section_title, section_start)
 
-        for entry in section.get("files", []):
+        for entry in files:
             input_path = Path(entry["path"])
             if not input_path.is_absolute():
                 input_path = base / input_path
             document_start = _append_reader(writer, PdfReader(str(input_path)))
-            writer.add_outline_item(str(entry["title"]), document_start, parent=section_bookmark)
+            # One document under a section of its own title: the section's
+            # bookmark is enough.
+            if len(files) != 1 or str(entry["title"]) != section_title:
+                writer.add_outline_item(str(entry["title"]), document_start, parent=section_bookmark)
+
+    if style.get("page_numbers"):
+        _number_pages(writer, title, style)
 
     with output_path.open("wb") as stream:
         writer.write(stream)
