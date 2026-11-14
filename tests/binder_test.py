@@ -159,3 +159,36 @@ def test_page_numbers_stamp_every_page_but_the_cover(tmp_path: Path) -> None:
     assert "page 1 of" not in texts[0]
     assert "Example Binder · page 3 of 4" in texts[2]
     assert "A" in texts[2]
+
+
+def test_page_numbers_do_not_copy_shared_resources(tmp_path: Path) -> None:
+    """Pages that share a resource (here a large form, as a document's pages
+    share its fonts) still share it once numbered: the binder stays the size
+    of what it binds."""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    doc = tmp_path / "shared.pdf"
+    c = canvas.Canvas(str(doc), pagesize=A4)
+    c.beginForm("shared")
+    for i in range(3000):
+        c.drawString(10, 10 + (i % 700), f"shared resource line {i} " * 3)
+    c.endForm()
+    for _ in range(30):
+        c.doForm("shared")
+        c.showPage()
+    c.save()
+
+    sizes = {}
+    for numbered in (False, True):
+        manifest = tmp_path / f"binder-{numbered}.json"
+        manifest.write_text(json.dumps({
+            "title": "Example Binder",
+            "output": f"binder-{numbered}.pdf",
+            "style": {"page_numbers": numbered},
+            "sections": [{"title": "Shared", "files": [{"title": "Shared", "path": "shared.pdf"}]}],
+        }))
+        output, _ = build_binder(manifest)
+        sizes[numbered] = output.stat().st_size
+
+    assert sizes[True] < sizes[False] * 1.2
